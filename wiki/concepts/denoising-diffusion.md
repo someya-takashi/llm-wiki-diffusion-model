@@ -6,8 +6,10 @@ related:
   - "[[score-based-generative-models]]"
   - "[[latent-diffusion]]"
   - "[[diffusion-sampling]]"
+  - "[[diffusion-model-architecture]]"
 summaries:
   - "[[summaries/2020-ddpm]]"
+  - "[[summaries/2021-adm]]"
 updated: 2026-06-23
 ---
 
@@ -73,14 +75,24 @@ $$
 - **アーキテクチャ**：時刻 $t$ を正弦波位置埋め込みで条件付けた **U-Net**（$16\times16$ 解像度に自己注意）。
 - **ε 予測＋$L_\text{simple}$** がサンプル品質に最も効く、というアブレーション結果。
 
+### アーキテクチャ改良：IDDPM・ADM
+
+DDPM の定式化（ε 予測・$L_\text{simple}$）はそのままに、ノイズ予測ネットワーク自身を強くする流れが続いた。**IDDPM（Nichol & Dhariwal 2021）** は分散 $\boldsymbol\Sigma_\theta$ を固定せず学習し（learned variance）、cosine ノイズスケジュールとハイブリッド目的 $L_\text{simple}+\lambda L_\text{vlb}$ を導入。続く **ADM（Dhariwal & Nichol 2021, [[summaries/2021-adm]]）** は、多解像度 attention・BigGAN residual block・**AdaGN（時刻とクラス埋め込みを GroupNorm のスケール／シフトとして注入）** といった U-Net 改良だけで FID を大きく押し下げ、拡散モデルが GAN を超える土台を築いた。これらアーキテクチャ設計の系譜は [[diffusion-model-architecture]] に整理している。
+
 DDPM 以降、専用ページ化に足る派生（DDIM、改良ノイズスケジュール、classifier-free guidance、潜在拡散など）が続くが、それらは本ページや [[diffusion-sampling]]・[[latent-diffusion]] 等の概念ページ内で扱う方針（CLAUDE.md §1）。
 
 ## 既存知識との接続
 
-- [[score-based-generative-models]]：DDPM の ε 予測目的関数は denoising score matching と等価で、サンプリングは学習スコアによる Langevin 動力学に対応する。拡散モデルとスコアベースモデルは同じものの二つの顔。
+- [[score-based-generative-models]]：DDPM の ε 予測目的関数は denoising score matching と等価で、サンプリングは学習スコアによる Langevin 動力学に対応する。拡散モデルとスコアベースモデルは同じものの二つの顔。連続時間で見ると **DDPM は VP-SDE（分散保存型 SDE）の離散化**にあたる（[[summaries/2021-score-sde]]）。
 - [[diffusion-sampling]]：DDPM の弱点である「$T=1000$ ステップで遅い」を解く DDIM 等の高速サンプラー。DDIM は学習済み DDPM をそのまま使い、再学習なしに 10〜50× 高速化する。
 - [[latent-diffusion]]：ピクセル空間で重い拡散を、オートエンコーダの潜在空間で行うことで高解像度・テキスト条件付き生成（Stable Diffusion）を実用化。
+- [[flow-matching]]：DDPM の拡散パス（VP/VE）は、フローマッチングのガウス条件付きパスの特別な場合として内包される。FM は拡散の確率的構築を経由せず確率パスを直接指定する一般化された見方を与える。
+- [[diffusion-model-architecture]]：ε 予測ネットワーク（U-Net）の設計。ADM の改良 U-Net・AdaGN が拡散モデルの標準アーキテクチャを確立した。
+- [[classifier-guidance]]：DDPM の枠組みに「条件忠実度↔多様性」のノブを与えた手法（ADM が導入）。
+- [[training-free-conditioning]]：学習済み無条件 DDPM を凍結したまま推論時だけ条件付ける応用（RePaint の inpainting 等）。順過程の閉形式 $q(x_t\mid x_0)$ をそのまま活用する。
+- [[subject-driven-generation]]：DreamBooth は拡散の二乗誤差損失の上に prior 保存項を足して少数画像で fine-tune し、特定被写体をモデルに埋め込む personalization。
 
 ## 参考文献（summaries）
 
 - [[summaries/2020-ddpm]] — Denoising Diffusion Probabilistic Models（Ho, Jain, Abbeel, NeurIPS 2020）
+- [[summaries/2021-adm]] — Diffusion Models Beat GANs on Image Synthesis（改良 U-Net・AdaGN・classifier guidance）

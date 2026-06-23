@@ -5,9 +5,13 @@ tags: [text-to-image-generation, latent-diffusion, generative-models, conditiona
 related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
+  - "[[controllable-generation]]"
+  - "[[subject-driven-generation]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
-updated: 2026-06-23
+  - "[[summaries/2023-controlnet]]"
+  - "[[summaries/2023-dreambooth]]"
+updated: 2026-06-24
 ---
 
 # Text-to-Image Generation（テキストからの画像生成）
@@ -40,14 +44,22 @@ text-to-image を成立させるには 2 つの要素が要る。
 
 ### その他の代表手法（今後の ingest で拡充）
 
-LDM と同時期に、拡散ベースの **GLIDE**・**Imagen**（いずれも大規模テキストエンコーダ＋ピクセル空間カスケード拡散）や、unCLIP ベースの **DALL·E 2** が登場した。これらは本 wiki に未取り込みで、専用の記述は今後の原典取り込み時に本ページへ追記する。
+LDM と同時期に、拡散ベースの **GLIDE**・**Imagen**（いずれも大規模テキストエンコーダ＋ピクセル空間カスケード拡散）や、unCLIP ベースの **DALL·E 2** が登場した。**Imagen**（Saharia ら 2022）は T5-XXL 言語モデルでテキストを埋め込み、64×64 のベース拡散モデル＋2 段の超解像（[[super-resolution]]）でカスケード生成する。これらは専用原典としては未取り込みだが、DreamBooth（[[summaries/2023-dreambooth]]）の土台モデルとして言及されている。専用の記述は今後の原典取り込み時に本ページへ追記する。
+
+## 下流応用：personalization（被写体駆動生成）
+
+汎用 text-to-image は「テキストで言えるもの」しか作れず、**特定個体（ユーザーの犬・バッグなど）の同一性を保ったまま**新文脈で再生成することは苦手である。これを補うのが **[[subject-driven-generation]]（被写体駆動生成 / personalization）** で、少数画像で T2I モデルを特定の被写体に適応させる。代表手法 **DreamBooth**（[[summaries/2023-dreambooth]]）は、Imagen / Stable Diffusion を 3〜5 枚の画像で fine-tune し、被写体を一意識別子「[V] [class noun]」に紐づけて再文脈化・視点変更・スタイル変換を可能にする。テキスト条件付け（本ページ）が「何を描くか」を制御するのに対し、personalization は「誰／どの個体を描くか」を制御する補完的な軸である。
 
 ## 既存知識との接続
 
 - [[latent-diffusion]]：cross-attention 条件付けと潜在空間拡散により text-to-image を実用解像度・計算量で実現した代表手法。
 - [[denoising-diffusion]]：text-to-image 拡散モデルの生成エンジンとなる拡散の基礎。
 - [[classifier-free-guidance]]：テキスト条件への忠実度を高める標準手法。LDM の高品質化も CFG に依存する。
+- [[controllable-generation]]：テキストだけでは難しい空間構図（姿勢・形・レイアウト）の精密制御を、ControlNet が空間条件画像で補完する。テキスト＋空間条件の併用が実用の主流。
+- [[subject-driven-generation]]：テキストでは指定しきれない「特定個体の同一性」を、少数画像の fine-tune（DreamBooth）で埋め込む下流 personalization。
 
 ## 参考文献（summaries）
 
 - [[summaries/2022-latent-diffusion]] — Latent Diffusion Models（cross-attention によるテキスト条件付き拡散の確立、Stable Diffusion の基盤）
+- [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（空間条件による text-to-image の制御）
+- [[summaries/2023-dreambooth]] — DreamBooth（少数画像による被写体駆動 personalization、Imagen/SD を fine-tune）

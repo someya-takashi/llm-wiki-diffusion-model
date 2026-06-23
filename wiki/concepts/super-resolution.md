@@ -5,9 +5,12 @@ tags: [super-resolution, latent-diffusion, generative-models, conditional-genera
 related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
+  - "[[flow-matching]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
-updated: 2026-06-23
+  - "[[summaries/2023-flow-matching]]"
+  - "[[summaries/2023-dreambooth]]"
+updated: 2026-06-24
 ---
 
 # Super-Resolution（超解像）
@@ -21,6 +24,7 @@ updated: 2026-06-23
 - **条件付け**：低解像度画像を生成モデルに与える。拡散モデルでは低解像度画像を（アップサンプルして）生成対象に**連結（concat）**するのが標準的（[[latent-diffusion]]、SR3）。
 - **評価指標のジレンマ**：**PSNR / SSIM**（ピクセル一致を測る古典的指標）は高いほど良いとされるが、これらは**ぼやけた平均的な出力を好み、人間の知覚と必ずしも一致しない**。一方 **FID** は写実的なテクスチャの再現を評価する。生成的な超解像はシャープで写実的だが PSNR は単純な回帰モデルに劣る、というトレードオフがよく現れる。
 - **汎化**：bicubic ダウンサンプリングだけで学習した SR モデルは、実世界の劣化（圧縮・ノイズ・ぼかしの複雑な重畳）にうまく汎化しない。多様な劣化過程で学習すると汎用アップサンプラーになる。
+- **cascaded SR（カスケード超解像）**：ピクセル空間の高解像度 T2I は、低解像度生成→SR を段階接続する。**Imagen** は 64×64 ベース＋$64{\to}256{\to}1024$ のテキスト条件付き SR スタックで、各 SR に **noise conditioning augmentation**（中間画像を特定強度のノイズで破損させ、その強度で SR を条件付け）を使う。被写体駆動の fine-tune（**DreamBooth**, [[summaries/2023-dreambooth]]）では、この SR スタックも fine-tune し、**noise augmentation を $10^{-3}\to10^{-5}$ に下げる**と被写体の高周波細部の hallucination／ぼけを防げる。
 
 ## 代表手法
 
@@ -29,6 +33,10 @@ updated: 2026-06-23
 [[latent-diffusion]] は、低解像度画像を潜在に連結する形で超解像に適用した。ImageNet の $4\times$ 超解像で、拡散ベースの先行手法 **SR3** を **FID で上回る**（SR3 は IS でやや上）。PSNR/SSIM では単純な画像回帰モデルに劣るが、これは前述の「PSNR はぼやけを好む」ジレンマによるもので、ユーザー調査では LDM-SR が好まれた（[[summaries/2022-latent-diffusion]] 表5、図10）。
 
 固定の bicubic 劣化で学習した LDM-SR は前処理が違う画像に汎化しないため、JPEG 圧縮・センサーノイズ・各種補間・ガウスぼかし等をランダムに適用する **BSR 劣化**で学習した汎用版 **LDM-BSR** も提案され、任意入力の汎用アップサンプラーとして $1024^2$ までアップスケールできる。
+
+### Flow Matching（FM-OT, Lipman ら 2023）
+
+[[flow-matching]] も超解像（条件付き生成）に適用できる。ImageNet の 64→256 アップサンプリングで、FM-OT は **SR3 を FID（3.4 vs 5.2）・IS で上回り**、PSNR/SSIM は同程度（[[summaries/2023-flow-matching]] 表2）。低解像度画像を条件に与え、OT パスで少 NFE 生成する。
 
 <figure>
 
@@ -42,7 +50,10 @@ updated: 2026-06-23
 - [[latent-diffusion]]：低解像度画像を潜在へ連結する条件付けで超解像に適用した代表手法（LDM-SR / LDM-BSR）。
 - [[denoising-diffusion]]：超解像拡散モデルの生成エンジンとなる拡散の基礎。
 - [[image-inpainting]]：同じく「空間的に整列した条件を連結する」密な条件付きタスクで、LDM では共通の枠組みで扱われる。
+- [[flow-matching]]：拡散に限らず CNF/FM でも超解像は条件付き生成として解け、FM-OT が SR3 を FID/IS で上回る。
 
 ## 参考文献（summaries）
 
 - [[summaries/2022-latent-diffusion]] — Latent Diffusion Models（LDM-SR / LDM-BSR による超解像）
+- [[summaries/2023-flow-matching]] — Flow Matching（FM-OT による 64→256 超解像、SR3 比較）
+- [[summaries/2023-dreambooth]] — DreamBooth（Imagen の cascaded SR を fine-tune、低ノイズ増強で細部保持）

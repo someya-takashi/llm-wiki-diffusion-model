@@ -7,8 +7,10 @@ related:
   - "[[text-to-image-generation]]"
   - "[[image-inpainting]]"
   - "[[super-resolution]]"
+  - "[[controllable-generation]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
+  - "[[summaries/2023-controlnet]]"
 updated: 2026-06-23
 ---
 
@@ -78,7 +80,10 @@ $$
 - [[denoising-diffusion]]：LDM は DDPM のノイズ予測拡散を、ピクセル空間ではなく潜在空間で行うことで高計算コスト問題を解いた。拡散の数学的な中身は同じ。
 - [[text-to-image-generation]] / [[image-inpainting]] / [[super-resolution]]：LDM はこれらのタスクすべてに cross-attention／concat 条件付けで適用でき、各タスクの代表手法になっている。
 - [[score-based-generative-models]]：LDM の学習目的も denoising score matching を反映した再重み付け下界に基づく。
+- [[controllable-generation]]：ControlNet は凍結した Stable Diffusion（LDM）に zero convolution で学習可能コピーを接続し、エッジ・深度・姿勢などの空間条件を後付けで効かせる。LDM のトポロジーを変えないためコミュニティ派生モデルへも転用できる。
+- [[subject-driven-generation]]：DreamBooth は Stable Diffusion（LDM）を少数画像で fine-tune し、特定被写体を一意識別子に紐づける personalization を行う（U-Net とテキストエンコーダを学習、デコーダは固定）。
 
 ## 参考文献（summaries）
 
 - [[summaries/2022-latent-diffusion]] — High-Resolution Image Synthesis with Latent Diffusion Models（Rombach ら, CVPR 2022）
+- [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（Stable Diffusion への空間条件制御）

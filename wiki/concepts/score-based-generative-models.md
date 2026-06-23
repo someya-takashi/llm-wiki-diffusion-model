@@ -4,8 +4,13 @@ aliases: [Score-Based Generative Models, スコアベース生成モデル, scor
 tags: [score-based-generative-models, denoising-diffusion, generative-models]
 related:
   - "[[denoising-diffusion]]"
+  - "[[probability-flow-ode]]"
+  - "[[diffusion-sampling]]"
+  - "[[flow-matching]]"
 summaries:
   - "[[summaries/2020-ddpm]]"
+  - "[[summaries/2021-score-sde]]"
+  - "[[summaries/2023-flow-matching]]"
 updated: 2026-06-23
 ---
 
@@ -13,7 +18,7 @@ updated: 2026-06-23
 
 **Score-Based Generative Models（スコアベース生成モデル）** とは、データ分布そのものではなく、その**スコア（score）**＝対数確率密度の勾配 $\nabla_{\mathbf{x}}\log p(\mathbf{x})$ を学習し、それを使ってサンプルを生成する生成モデルの一群である。スコアは「データ密度が高くなる方向」を各点で指すベクトル場であり、これが分かればノイズから出発して密度の高い領域へ「坂を登る」ように進めば本物らしいサンプルが得られる。
 
-このページは、[[denoising-diffusion]]（ノイズ除去拡散モデル）と理論的に等価な双子としてのスコアベース生成モデルを俯瞰する軽めの概念ページである。両者の橋渡しを明確にしたのが DDPM 論文（[[summaries/2020-ddpm]]）の主要貢献の一つである。
+このページは、[[denoising-diffusion]]（ノイズ除去拡散モデル）と理論的に等価な双子としてのスコアベース生成モデルを俯瞰し、さらに両者を連続時間の確率微分方程式（SDE）として統一した **Score-SDE 枠組み**（Song ら 2021, [[summaries/2021-score-sde]]）までを扱う。両者の橋渡しは DDPM 論文（[[summaries/2020-ddpm]]）でも示され、Score-SDE がそれを連続時間へ一般化して完成させた。
 
 ## 2 つの構成要素
 
@@ -40,13 +45,32 @@ $$
 - **拡散モデル（[[denoising-diffusion]]）** … 変分推論で逆過程（マルコフ連鎖）を学習する離散時間の視点
 - **スコアベース生成モデル** … スコアを学習し Langevin 動力学でサンプリングする視点
 
-の **2 つは同じ生成原理の異なる定式化**である。この統一的な見方は、後に連続時間の **SDE（Stochastic Differential Equation, 確率微分方程式）／ODE（常微分方程式）** による定式化（Song ら 2021 のスコア SDE）へと一般化され、拡散モデルの理論的基盤となった。各拡散 SDE には同じ周辺分布をたどる決定論的な **確率フロー ODE**（[[probability-flow-ode]]）が対応し、[[diffusion-sampling]] の DDIM はその VE-SDE 版の特殊例＝Euler 離散化として理解できる。
+の **2 つは同じ生成原理の異なる定式化**である。
+
+## 連続時間への一般化：Score-SDE 枠組み（VE / VP / sub-VP）
+
+Song ら（Score-SDE, ICLR 2021, [[summaries/2021-score-sde]]）は、ノイズスケールを有限個から**無限個（連続時間）** へ一般化し、スコアベースモデルと拡散モデルを単一の **確率微分方程式（SDE, Stochastic Differential Equation）** の枠組みに統一した。これが現在のスコアベース生成モデルの標準的な定式化である。
+
+- **順方向 SDE**：データにノイズを連続的に加える $\mathrm{d}\mathbf{x}=\mathbf{f}(\mathbf{x},t)\mathrm{d}t+g(t)\mathrm{d}\mathbf{w}$（$\mathbf{f}$=ドリフト、$g$=拡散係数、$\mathbf{w}$=ブラウン運動）。
+- **逆時間 SDE（Anderson）**：生成は $\mathrm{d}\mathbf{x}=[\mathbf{f}(\mathbf{x},t)-g(t)^2\nabla_\mathbf{x}\log p_t(\mathbf{x})]\mathrm{d}t+g(t)\mathrm{d}\bar{\mathbf{w}}$。**周辺分布のスコア $\nabla_\mathbf{x}\log p_t(\mathbf{x})$ だけで定まる**点が核心。スコアは時間依存ネット $\mathbf{s}_\theta(\mathbf{x},t)$ を連続スコアマッチングで学習して推定する。
+
+ノイズの加え方によって既存手法が SDE として分類される：
+
+- **VE-SDE（Variance Exploding, 分散爆発）= SMLD / NCSN**：分散が時間とともに発散する。
+- **VP-SDE（Variance Preserving, 分散保存）= DDPM**：分散が有界（初期が単位分散なら一定）。
+- **sub-VP-SDE**（Score-SDE の新提案）：分散が常に対応する VP より小さく、尤度に強い。
+
+この統一により、(1) [[diffusion-sampling]] の predictor-corrector サンプラー・逆拡散サンプラー、(2) SDE と同じ周辺分布をたどる決定論的な **確率フロー ODE**（[[probability-flow-ode]]、厳密尤度・可逆 encode を可能に）、(3) 条件付き逆時間 SDE による [[controllable-generation]]（可制御生成）が導かれた。[[diffusion-sampling]] の DDIM は、確率フロー ODE（VE-SDE 版）の Euler 離散化として理解できる。
 
 ## 既存知識との接続
 
 - [[denoising-diffusion]]：DDPM の ε 予測目的関数＝denoising score matching、逆過程サンプリング＝Langevin 動力学という対応で本概念と結ばれる。
 - DDPM 論文は NCSN との差分（U-Net＋自己注意、$\sqrt{1-\beta_t}$ によるスケーリング、信号を完全に破壊する順過程、$\beta_t$ から厳密に導いたサンプラー係数）も整理しており、サンプル品質改善の要因を明らかにしている（[[summaries/2020-ddpm]] 付録 C）。
+- [[flow-matching]]：denoising score matching（スコア回帰）はフローマッチングのベクトル場回帰の特別な場合とみなせる。拡散の VE/VP パスは FM のガウス条件付きパスとして内包され、FM はスコアマッチングのより安定な代替を与える。
+- [[classifier-guidance]]：「ノイズ予測 $\epsilon_\theta$ はスコアのリスケール $-\sqrt{1-\bar\alpha_t}\,\nabla_x\log p(x_t)$」というスコア視点が、ADM（[[summaries/2021-adm]]）の決定論的（DDIM）版分類器ガイダンスの導出根拠になっている。
 
 ## 参考文献（summaries）
 
 - [[summaries/2020-ddpm]] — Denoising Diffusion Probabilistic Models（拡散モデルとスコアマッチングの等価性を示した）
+- [[summaries/2021-score-sde]] — Score-Based Generative Modeling through SDEs（SMLD=VE / DDPM=VP として連続時間 SDE に統一）
+- [[summaries/2023-flow-matching]] — Flow Matching（スコア回帰をベクトル場回帰へ一般化、拡散パスを内包）

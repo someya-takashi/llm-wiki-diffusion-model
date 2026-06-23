@@ -7,8 +7,11 @@ related:
   - "[[text-to-image-generation]]"
   - "[[denoising-diffusion]]"
   - "[[diffusion-sampling]]"
+  - "[[controllable-generation]]"
 summaries:
   - "[[summaries/2022-classifier-free-guidance]]"
+  - "[[summaries/2023-controlnet]]"
+  - "[[summaries/2021-adm]]"
 updated: 2026-06-23
 ---
 
@@ -20,7 +23,7 @@ updated: 2026-06-23
 
 GAN（BigGAN の truncation）や Glow（低温サンプリング）には「サンプルの多様性を下げる代わりに 1 枚ごとの品質・もっともらしさを上げる」ノブがあった。拡散モデルでは、スコアを単純にスケールしたりノイズを減らしたりしても**ぼやけた低品質画像**になるだけで、このノブが素朴には作れない。**guidance** は拡散モデルにこのノブを与える技術の総称で、条件付き分布を「鋭く」して条件に強く従わせる。
 
-- **[[classifier-guidance]]（分類器ガイダンス）**：別途学習した分類器の勾配を足す先行手法。効くが分類器の追加学習が必要で、敵対的攻撃に似るという難点。
+- **[[classifier-guidance]]（分類器ガイダンス）**：別途学習した分類器の勾配を足す先行手法（ADM, Dhariwal & Nichol 2021・[[summaries/2021-adm]]）。拡散モデルが GAN を超える原動力になったが、分類器の追加学習が必要で、敵対的攻撃に似るという難点があった。CFG はこの分類器を排しつつ同じノブを実現し、ImageNet 128 では $w=0.3$ で ADM-G を上回ると報告した。
 - **classifier-free guidance（CFG）**：分類器を排し、生成モデル自身の無条件スコアを使う。本ページの主題。
 
 ## 代表手法：Classifier-Free Guidance（Ho & Salimans 2022）
@@ -58,7 +61,10 @@ CFG は**暗黙の分類器** $p^i(c|z)\propto p(z|c)/p(z)$ の勾配 $-\frac1{\
 - [[text-to-image-generation]]：CFG はテキスト条件付き生成の品質を劇的に高める事実上の標準。Stable Diffusion（[[latent-diffusion]]）も text2img で CFG を用いる。
 - [[denoising-diffusion]]：CFG はノイズ予測スコア $\epsilon_\theta$ の上で動く。
 - [[diffusion-sampling]]：CFG はガイドされたスコア $\tilde\epsilon$ を作るだけで、サンプリング手続き（DDIM 等）と直交して組み合わせられる。
+- [[controllable-generation]]：ControlNet は CFG と併用され、条件画像を $\epsilon_c/\epsilon_{uc}$ にどう加えるかでガイダンスが過不足になる問題を、ブロック解像度に応じた重み $w_i=64/h_i$ で調整する **CFG 解像度重み付け（CFG-RW）** を提案した。
 
 ## 参考文献（summaries）
 
 - [[summaries/2022-classifier-free-guidance]] — Classifier-Free Diffusion Guidance（Ho & Salimans, NeurIPS 2021 Workshop）
+- [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（CFG 解像度重み付け CFG-RW を提案）
+- [[summaries/2021-adm]] — Diffusion Models Beat GANs on Image Synthesis（先行手法 classifier guidance の主要原典）
