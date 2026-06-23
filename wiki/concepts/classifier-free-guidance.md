@@ -12,7 +12,9 @@ summaries:
   - "[[summaries/2022-classifier-free-guidance]]"
   - "[[summaries/2023-controlnet]]"
   - "[[summaries/2021-adm]]"
-updated: 2026-06-23
+  - "[[summaries/2023-dit]]"
+  - "[[summaries/2024-multi-lora-composition]]"
+updated: 2026-06-24
 ---
 
 # Classifier-Free Guidance（分類器なしガイダンス, CFG）
@@ -62,9 +64,13 @@ CFG は**暗黙の分類器** $p^i(c|z)\propto p(z|c)/p(z)$ の勾配 $-\frac1{\
 - [[denoising-diffusion]]：CFG はノイズ予測スコア $\epsilon_\theta$ の上で動く。
 - [[diffusion-sampling]]：CFG はガイドされたスコア $\tilde\epsilon$ を作るだけで、サンプリング手続き（DDIM 等）と直交して組み合わせられる。
 - [[controllable-generation]]：ControlNet は CFG と併用され、条件画像を $\epsilon_c/\epsilon_{uc}$ にどう加えるかでガイダンスが過不足になる問題を、ブロック解像度に応じた重み $w_i=64/h_i$ で調整する **CFG 解像度重み付け（CFG-RW）** を提案した。
+- [[diffusion-model-architecture]]：DiT も CFG で高品質化し（cfg=1.5 で ImageNet SOTA）、潜在の一部チャネルだけにガイダンスを当てる「部分チャネル CFG」も有効だと示した。CFG はバックボーン（U-Net でも Transformer でも）と直交して効く。
+- [[multi-concept-customization]]：Multi-LoRA Composition の **LoRA Composite** は、CFG のスコア（$e_\theta(\emptyset)+s(e_\theta(c)-e_\theta(\emptyset))$）を複数 LoRA について計算し平均する形で、CFG を多 LoRA 合成に拡張した例。
 
 ## 参考文献（summaries）
 
 - [[summaries/2022-classifier-free-guidance]] — Classifier-Free Diffusion Guidance（Ho & Salimans, NeurIPS 2021 Workshop）
 - [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（CFG 解像度重み付け CFG-RW を提案）
+- [[summaries/2023-dit]] — Scalable Diffusion Models with Transformers（DiT も CFG 使用、部分チャネル CFG）
+- [[summaries/2024-multi-lora-composition]] — Multi-LoRA Composition（LoRA Composite が CFG を多 LoRA に拡張）
 - [[summaries/2021-adm]] — Diffusion Models Beat GANs on Image Synthesis（先行手法 classifier guidance の主要原典）

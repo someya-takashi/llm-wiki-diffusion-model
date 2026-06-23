@@ -6,9 +6,11 @@ related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
   - "[[training-free-conditioning]]"
+  - "[[image-composition]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2022-repaint]]"
+  - "[[summaries/2023-anydoor]]"
 updated: 2026-06-24
 ---
 
@@ -60,8 +62,10 @@ inpainting では、入力として「マスクされた画像」と「マスク
 - [[training-free-conditioning]]：RePaint のように、凍結した無条件モデルを推論時だけ条件付ける学習不要パラダイム。LDM の学習型と好対照。
 - [[denoising-diffusion]]：inpainting 拡散モデルの生成エンジンとなる拡散の基礎。
 - [[super-resolution]]：同じく「空間的に整列した条件を連結する」タイプの密な条件付きタスクで、LDM では共通の枠組みで扱われる。
+- [[image-composition]]：ボックス領域を再生成する点で隣接するが、inpainting が「もっともらしい任意の内容」で埋めるのに対し、画像コンポジション（AnyDoor）は「特定の参照物体」で埋める。物体移動では元位置の消去に inpainting を使う。
 
 ## 参考文献（summaries）
 
 - [[summaries/2022-latent-diffusion]] — Latent Diffusion Models（Places で inpainting SOTA を達成、学習型 concat）
 - [[summaries/2022-repaint]] — RePaint（凍結無条件 DDPM＋推論時条件付け＋resampling、学習不要）
+- [[summaries/2023-anydoor]] — AnyDoor（ボックス領域を特定の参照物体で再生成する物体合成）

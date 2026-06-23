@@ -7,9 +7,12 @@ related:
   - "[[score-based-generative-models]]"
   - "[[denoising-diffusion]]"
   - "[[diffusion-sampling]]"
+  - "[[stochastic-interpolants]]"
 summaries:
   - "[[summaries/2023-flow-matching]]"
-updated: 2026-06-23
+  - "[[summaries/2024-sd3]]"
+  - "[[summaries/2024-stochastic-interpolants]]"
+updated: 2026-06-24
 ---
 
 # Flow Matching（フローマッチング）
@@ -68,6 +71,18 @@ $$
 
 詳細・実験・限界は [[summaries/2023-flow-matching]] を参照。
 
+## 代表手法：Rectified Flow と大規模化（Stable Diffusion 3, Esser ら 2024）
+
+**Rectified Flow（整流フロー, RF）** は、OT パスと本質的に同じ「直線・線形補間」を採る FM のインスタンスで、データ $x_0$ とノイズ $\epsilon$ を
+
+$$
+z_t=(1-t)x_0+t\epsilon
+$$
+
+で結び、速度場 $v_\Theta$ を CFM 目的で回帰する（$w_t^{\text{RF}}=\frac{t}{1-t}$）。直線ゆえ少ステップ・低曲率で、拡散の確率フロー ODE より速く解ける（[[probability-flow-ode]]）。
+
+これを大規模 text-to-image で初めて決定的に確立したのが **Stable Diffusion 3（SD3）**（[[summaries/2024-sd3]]）である。鍵は、一様時刻サンプリング $\mathcal{U}(t)$ を**中間時刻に重みを置く分布**に替える点：速度予測目標 $\epsilon-x_0$ は端点では単なる平均で簡単、中間ほど難しいので、**logit-normal**（logit 変換した時刻を正規分布でサンプル、$\pi_{\text{ln}}(t;m,s)$）や **mode** サンプラーで中間を厚くする。これは重み付き損失 $w_t^\pi=\frac{t}{1-t}\pi(t)$ と等価。61 定式化の大規模比較で **rf/lognorm(0.00, 1.00)** が一貫して最良で、EDM・LDM-Linear・一様 RF を上回り、特に少ステップで強い。SD3 はこれを **MM-DiT**（[[diffusion-model-architecture]]）と組み合わせ 8B までスケールした。SD3 により rectified flow / flow matching は SDXL までの拡散定式化に代わる実用標準になった。
+
 ## 既存知識との接続
 
 - [[probability-flow-ode]]：FM が学習する CNF は決定論的 ODE 生成。拡散の確率フロー ODE は FM の拡散パスの VF と一致し、FM はそれを「確率パスを直接指定する」視点へ一般化する。
@@ -75,10 +90,12 @@ $$
 - [[denoising-diffusion]]：VE/VP 拡散を FM のガウス条件付きパスとして内包。
 - [[diffusion-sampling]]：FM-OT は直線パスゆえ既製 ODE ソルバーで少 NFE 生成でき、サンプリング効率の新基準を与えた。
 
-## 今後の発展（未取り込み）
+## さらなる一般化：Stochastic Interpolants
 
-OT パスの「条件付き最適」を周辺レベルへ近づける mini-batch OT、rectified flow、stochastic interpolants など、FM を一般化・改良する後続研究が続く。これらは未取り込みで、原典取り込み時に本ページへ追記する。
+FM・rectified flow をさらに一般化し、**flows（決定論 ODE）と diffusions（確率 SDE）を 1 つの枠組みに統一**するのが [[stochastic-interpolants]]（Albergo–Boffi–Vanden-Eijnden）である。有限時間で 2 分布を結ぶ補間 $x_t=\alpha_t x_0+\beta_t x_1(+\gamma_t z)$ を定義し、速度場 $b$ とスコア $s$ を二乗損失で学習する。FM の条件付きパス・rectified flow はこの枠組みの特別な場合で、潜在変数 $\gamma_t z$ と拡散係数 $\epsilon$ を足すと SDE 生成（拡散）に、外すと ODE 生成（フロー）になる。OT パスの「条件付き最適」を周辺レベルへ近づける mini-batch OT も関連する一般化。
 
 ## 参考文献（summaries）
 
 - [[summaries/2023-flow-matching]] — Flow Matching for Generative Modeling（Lipman, Chen, Ben-Hamu, Nickel, Le, ICLR 2023）
+- [[summaries/2024-sd3]] — Scaling Rectified Flow Transformers（SD3。rectified flow＋改良サンプラーを大規模 text-to-image で確立）
+- [[summaries/2024-stochastic-interpolants]] — Stochastic Interpolants（flows と diffusions を統一する一般化枠組み）

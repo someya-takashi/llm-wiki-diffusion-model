@@ -3,6 +3,78 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-06-24] ingest | SDXL: 高解像度画像合成のための潜在拡散モデルの改良
+
+- 取り込み: `raw/papers/SDXL_ ...md`（ar5iv 由来 markdown, arXiv:2307.01952, 2023。Podell ら, Stability AI）。直前の ZipLoRA が base model として全面依存していた SDXL を取り込み、被参照ページを原典で裏付け。
+- 作成: [[translations/2023-sdxl]], [[summaries/2023-sdxl]]（schema 規約どおり**専用概念ページは作らず** [[latent-diffusion]] の代表的後継モデルとして収録。アーキ詳細は [[diffusion-model-architecture]]。DiT と同じ扱い）
+- 更新: [[concepts/latent-diffusion]]（「代表的後継モデル：SDXL」節を新設）, [[concepts/diffusion-model-architecture]]（ADM→SDXL→DiT の流れに UNet スケーリングを追記、SDXL は transformer 化を当時見送り）, [[concepts/controllable-generation]]（micro-conditioning＝学習時メタデータ条件付け）, [[concepts/text-to-image-generation]]（2 テキストエンコーダ＋pooled emb の高解像 T2I）, [[concepts/subject-driven-generation]]・[[concepts/low-rank-adaptation]]（既存 SDXL 言及を実リンク化）, [[overview]], [[index]]
+- 画像: ar5iv 画像 16 枚（teaser＋Fig1–15。直 PNG x1/x2/x3 ＋ JPEG/JPEG 多数）を `raw/assets/2023-sdxl/` に保存。サブパス（`img/...`・`comp_old_model/sd1-5/`・`refiner_magic/` 等）を安定名に平坦化（`comp_catpoleon_row` 等、別名なので衝突なし）。全画像妥当・全取得成功。`sd-xl-vs.jpg`(Fig1) は実体がユーザー選好棒グラフ（右側の 2 段パイプライン図は別アセットでなく原図注釈）であるためキャプションで補記。説明図（Fig1/6）を要約に再掲。
+- 翻訳: 本文 §1–3 ＋ **Appendix B–J 全訳**（A 謝辞・References 除外）。Tab.1/2/3 と App I の 40 行アスペクト比表は markdown 保持、**Alg.1（size/crop 条件付け擬似コード）と App J の Python コードはコードブロックで保持**（base64 data URI リンクは除外）。probability flow ODE/SDE・DSM・CFG（App C, EDM 流定式化）の数式は LaTeX 保持。図 16 枚を `<figure>`。
+- メモ: 4 本柱＝(1) 3× UNet（2.6B）＋transformer block 不均一配分 `[0,2,10]`＋2 テキストエンコーダ＋pooled emb、(2) micro-conditioning（size/crop/aspect-ratio を Fourier 埋め込みで timestep emb に加算）、(3) multi-aspect training（bucket）、(4) 改良 VAE＋base/refiner の 2 段（SDEdit）。知見：人間評価で SOTA 級だが COCO zero-shot FID は悪化（指標の限界、付録F）。限界：手・concept bleeding・長文テキスト。未取り込み注記: EDM（Karras 2022, 連続時間）, SDEdit, StyleDrop, simple diffusion, offset-noise。
+
+## [2026-06-24] ingest | ZipLoRA: 任意の被写体を任意のスタイルで（バッチ 2/2）
+
+- 取り込み: `raw/papers/ZipLoRA_ ...md`（ar5iv 由来 markdown, arXiv:2311.13600, ECCV 2024。Shah ら, Google Research・UIUC）。Mix-of-Show→ZipLoRA バッチの 2 件目（完了）。
+- 作成: [[translations/2024-ziplora]], [[summaries/2024-ziplora]]（概念は 1 件目で作った [[lora-merging]] に「(3) 学習係数マージ」として収録済み）
+- 更新: [[concepts/lora-merging]]（ZipLoRA を学習係数マージのランドマークとして記述済み）, [[concepts/subject-driven-generation]]（content+style 分離学習→再結合）, [[concepts/latent-diffusion]]（SDXL 上で動作）, [[concepts/low-rank-adaptation]]（LoRA の疎性、1 件目で追記済み）, [[overview]], [[index]]
+- 画像: ar5iv 画像 9 枚（PNG 5: x1–x5 ＋ JPEG 4: `figs/{fig3_final1,compare_main_new,recontext3,moe}.jpg`）を `raw/assets/2024-ziplora/` に保存。`figs/` を `figs_` 連結で平坦化。全 PNG/JPEG・全取得成功。説明図（x2 疎性・x4 手法概観）を Read で確認しキャプション作成。
+- 翻訳: 本文 §1–5 全訳（**appendix なし**）。References・Acknowledgements 除外。HTML 表 1 個（Table 1 ユーザー選好）を markdown 化（`<math><semantics>…%` 残骸除去）。Table 2 は既に markdown。merger 係数・$\mathcal L_{merge}$（3 項）の数式保持。$\Delta W_m=m_c\otimes\Delta W_c+m_s\otimes\Delta W_s$（原典の式は $m_s\otimes W_s$ と表記ゆれ → 文脈上 $\Delta W_s$ として訳出）。
+- メモ: 2 観察＝(1) LoRA の $\Delta W$ は疎（90% を 0 にしても品質維持）、(2) 列の cosine 類似度が高いと直和が破綻（signal interference）。解＝列ごとの学習係数 $m_c,m_s$ で個別 LoRA 挙動を保ちつつ列を直交化。被写体×画風の 2 LoRA 特化（複数前景は範囲外、LoRA-Composer と守備範囲が異なる）。lora-merging 概念で Mix-of-Show（gradient fusion）と対比整理。**バッチ 2 件完了**。未取り込み注記: StyleDrop, SDXL, DINO（評価特徴）, LoRAHub/MoLE（MoE 系 LoRA 合成）。
+
+## [2026-06-24] ingest | Mix-of-Show: 分散型多概念カスタマイズ（バッチ 1/2）
+
+- 取り込み: `raw/papers/Mix-of-Show_ ...md`（ar5iv 由来 markdown, arXiv:2305.18292, NeurIPS 2023。Gu ら, NUS Show Lab・Tencent ARC Lab）。Mix-of-Show→ZipLoRA の 2 件バッチの 1 件目。
+- 作成: [[translations/2023-mix-of-show]], [[summaries/2023-mix-of-show]], [[concepts/lora-merging]]（**新規概念ページ**。複数 LoRA の重みマージ／融合を専門に扱う。multi-concept-customization の (a) 系統を細粒度化。ランドマーク＝Mix-of-Show・ZipLoRA）
+- 更新: [[concepts/multi-concept-customization]]（(a) 重みマージを [[lora-merging]] へ委譲）, [[concepts/low-rank-adaptation]]（ED-LoRA・LoRA の疎性・[[lora-merging]] リンク）, [[concepts/controllable-generation]]（regionally controllable sampling を LoRA-Composer 領域注入の源流として）, [[overview]], [[index]]
+- 画像: ar5iv 画像 11 枚（x1–x10 ＋ `imgs/mturk.png`）を `raw/assets/2023-mix-of-show/` に保存（`imgs/` を `imgs_mturk.png` に平坦化）。全 PNG・全取得成功。説明図（x4 パイプライン）を要約に再掲。
+- 翻訳: 本文 §1–5 ＋ **Appendix §6 全訳**。References・Acknowledgements 除外。**HTML 表 8 個を markdown 化**（`<math><semantics>…` 残骸＝→ 等を除去、single→fused の矢印は「→」で表現、Table 3 は単一概念/融合 × 物体/キャラ/シーンの 6 サブ表に整理）。gradient fusion 目的・region-aware cross-attention の数式は LaTeX 保持。図 11 枚を `<figure>`。
+- メモ: 課題＝concept conflict（embedding と LoRA 重みの役割未分離）と identity loss（重み平均が $\frac1n$ に薄める）。解＝ED-LoRA（$V=V_{rand}^+V_{class}^+$ で embedding に in-domain essence を残す）＋gradient fusion（$\arg\min_W\sum_i\|(W_0+\Delta W_i)X_i-WX_i\|_F^2$）。実写は Chilloutmix・アニメは Anything-v4 ベース。次は ZipLoRA を取り込み lora-merging に (c) 学習係数マージとして追記。
+
+## [2026-06-24] ingest | Multi-LoRA Composition for Image Generation（バッチ 3/3）
+
+- 取り込み: `raw/papers/Multi-LoRA Composition for Image Generation.md`（ar5iv 由来 markdown, arXiv:2402.16843, ICML 2024。Zhong ら, Microsoft）。3 件バッチの 3 件目（完了）。
+- 作成: [[translations/2024-multi-lora-composition]], [[summaries/2024-multi-lora-composition]]（概念は 2 件目で作った [[multi-concept-customization]] に decoding-centric 系統として収録済み）
+- 更新: [[concepts/multi-concept-customization]]（LoRA Switch/Composite を (c) 系統として記述済み）, [[concepts/classifier-free-guidance]]（LoRA Composite が CFG の多 LoRA 拡張）, [[overview]], [[index]]
+- 画像: ar5iv 画像 9 枚（x1–x8 ＋ `Figure/merge_case.png`）を `raw/assets/2024-multi-lora-composition/` に保存。サブパス `Figure/` を平坦化。Table 1（画像 merge_case.png）は `<figure>` で引用。全 PNG・全取得成功。
+- 翻訳: 本文 §1–5 ＋ **Appendix A 全訳**。References・Impact Statements 末尾の定型は本文扱いで訳出、References 一覧は除外。HTML 表 2 個（Table 2 人手評価・Table 3 ComposLoRA LoRA 一覧）を markdown 化（civitai リンク列は省略）。Table 4/5 は画像（merge_case.png）で原典が同一ファイルを指すため 訳注 で説明。LoRA Switch/Composite 式保持。**broken cross-ref（`LABEL:fig:result`/`fig:switch_step`/`fig:switch_order`）は訳注「図（結果）」で明示**（該当画像は markdown に含まれず）。
+- メモ: バッチ 3 件完了。LoRA→LoRA-Composer→Multi-LoRA Composition の系譜を low-rank-adaptation／multi-concept-customization の 2 概念に整理。multi-concept は (a) 重みマージ、(b) 注意制御（LoRA-Composer）、(c) decoding-centric（本論文）の 3 系統。未取り込み注記: LoRAHub, ZipLoRA（重みベース合成）, DPM-Solver++（サンプラー）。
+
+## [2026-06-24] ingest | LoRA-Composer: 訓練不要の多概念カスタマイズ（バッチ 2/3）
+
+- 取り込み: `raw/papers/LoRA-Composer_ ...md`（ar5iv 由来 markdown, arXiv:2403.11627, 2024。Yang ら）。3 件バッチの 2 件目。
+- 作成: [[translations/2024-lora-composer]], [[summaries/2024-lora-composer]], [[concepts/multi-concept-customization]]（新規概念ページ。3 件目の Multi-LoRA Composition もここに収める）
+- 更新: [[concepts/low-rank-adaptation]]（multi-concept への発展、既に相互リンク済み）, [[concepts/image-composition]]（AnyDoor 系 ↔ LoRA 系の対比）, [[concepts/controllable-generation]]（訓練不要の推論時合成）, [[index]]
+- 画像: ar5iv 画像 11 枚（x1–x11）を `raw/assets/2024-lora-composer/` にローカル保存。全 PNG・全取得成功。
+- 翻訳: 本文 §1–5 ＋ **Appendix 0.A–0.D 全訳**。References・Acknowledgements 除外。Table 1/2/3 は markdown（元から HTML table なし）。数式 LaTeX 保持（Region-Aware Injection・$\mathcal{L}_{ce}$/$\mathcal{L}_{fill}$/$\mathcal{L}_{region}$）。ar5iv 残骸除去。
+- メモ: 新規 `multi-concept-customization` を作成し、(a) 重みマージ（LoRA Merge/Mix-of-Show）、(b) 訓練不要の注意制御（LoRA-Composer）、(c) decoding-centric（Multi-LoRA Composition）の 3 系統に整理。Mix-of-Show・Custom Diffusion・Cones は比較対象として言及（未取り込み）。
+
+## [2026-06-24] ingest | LoRA: Low-Rank Adaptation of Large Language Models（バッチ 1/3）
+
+- 取り込み: `raw/papers/LoRA_ Low-Rank Adaptation of Large Language Models.md`（ar5iv 由来 markdown, arXiv:2106.09685, ICLR 2022。Hu ら, Microsoft）。LoRA→LoRA-Composer→Multi-LoRA Composition の 3 件バッチの 1 件目。
+- 作成: [[translations/2022-lora]], [[summaries/2022-lora]], [[concepts/low-rank-adaptation]]（新規概念ページ）
+- 更新: [[concepts/subject-driven-generation]]（「LoRA 未取り込み」を解消、トレードオフ表に LoRA 追加）, [[concepts/latent-diffusion]]・[[concepts/diffusion-model-architecture]]（軽量 personalization としてクロスリンク）, [[index]]
+- 画像: ar5iv 画像 8 枚（x1–x8）を `raw/assets/2022-lora/` にローカル保存。全 PNG・全取得成功。x1（再パラメータ化図）は Read で確認。
+- 翻訳: 本文 §1–8 ＋ **Appendix A–H 全訳**（ユーザー確認）。References・Acknowledgements 除外。**HTML 表 14 個すべてを markdown 化**（ar5iv の `<math><semantics>…` 数式マークアップを除去し数値表に再構成。大型ハイパラ表 9/15 等は共通設定を見出しに畳んで整形）。数式 LaTeX 保持。
+- メモ: LLM 論文だが拡散の軽量 personalization の基礎として取り込み。新規 `low-rank-adaptation` を作成し、DreamBooth（全層）↔ Textual Inversion（埋め込み）の中間に位置づけ。[[multi-concept-customization]] は 2 件目で作成（本エントリ時点では forward link）。未取り込み注記: HyperDreamBooth, Custom Diffusion, compacter（PEFT 後続）。
+
+## [2026-06-24] ingest | DiT: Scalable Diffusion Models with Transformers
+
+- 取り込み: `raw/papers/Scalable Diffusion Models with Transformers.md`（ar5iv 由来 markdown, arXiv:2212.09748, ICCV 2023。Peebles & Xie, UC Berkeley）
+- 作成: [[translations/2023-dit]], [[summaries/2023-dit]]（新規概念ページは作らず）
+- 更新: [[concepts/diffusion-model-architecture]]（**大幅拡充**：DiT を第 2 のランドマークとして追加、「改良 U-Net（ADM）→ Transformer 化（DiT）」の二系譜に再構成。patchify・adaLN-Zero・Gflops スケーリング・SOTA を記述、Fig3 引用）, [[concepts/latent-diffusion]]（DiT は LDM 潜在空間で backbone のみ Transformer 化）, [[concepts/denoising-diffusion]]（数学はそのまま backbone 差し替え）, [[concepts/classifier-free-guidance]]（DiT も CFG 使用・部分チャネル CFG）, [[concepts/text-to-image-generation]]（DiT backbone の将来展望）, [[overview]], [[index]]
+- 画像: ar5iv 画像 33 枚（ユニーク）を `raw/assets/2023-dit/` にローカル保存。x1〜x13（説明・結果図 13 枚）＋ superimages 20 枚（無選別サンプル）。**`superimage-cfg-4.0-class-88.jpg` が 256/512 両ディレクトリに存在**するため、サブパスを `_` 連結で平坦化して衝突回避。全取得成功。説明図 x2/x3/x5/x8 は Read で内容確認のうえキャプション作成。
+- 翻訳: 本文 §1–6 ＋ **Appendix A–D 全訳**（ユーザー確認済み。B のギャラリー Fig14–33 は図キャプションのみ）。References・Acknowledgements 除外。HTML `<table>` 4 個（Table 2/3/5/6）を markdown 化、Table 1/4 は markdown 保持。数式 LaTeX 保持（CFG 式・$L_\text{simple}$）。ar5iv math 残骸除去。
+- メモ: **CLAUDE.md 明記「DiT は対応するアーキテクチャ概念ページの中で扱う」に従い、新規概念ページは作らず [[diffusion-model-architecture]] に追記**（ユーザー確認済み）。DiT は LDM 枠組み＋Stable Diffusion の VAE 潜在空間＋ADM の拡散ハイパラを流用し backbone だけ Transformer 化。dangling は `<slug>`（index テンプレ例）のみ想定。未取り込み注記: Stable Diffusion 3 / PixArt-α / Sora（DiT 後続）, ViT（基盤）, StyleGAN-XL（比較対象 GAN）。
+
+## [2026-06-24] ingest | AnyDoor: Zero-shot Object-level Image Customization
+
+- 取り込み: `raw/papers/AnyDoor_ Zero-shot Object-level Image Customization.md`（ar5iv 由来 markdown, arXiv:2307.09481, ICCV 2023。Chen ら, HKU / Alibaba / Ant）
+- 作成: [[translations/2023-anydoor]], [[summaries/2023-anydoor]], [[concepts/image-composition]]（新規概念ページ）
+- 更新: [[concepts/subject-driven-generation]]（zero-shot/参照ベースの対比軸として AnyDoor を追記）, [[concepts/controllable-generation]]（detail extractor の ControlNet スタイル・参照画像条件付け）, [[concepts/image-inpainting]]（ボックス領域を特定物体で再生成する対比）, [[concepts/latent-diffusion]]（SD を base にエンコーダ凍結・デコーダ学習）, [[overview]], [[index]]
+- 画像: ar5iv 画像 11 枚（ユニーク x1〜x11）を `raw/assets/2023-anydoor/` にローカル保存。全 PNG・全取得成功。説明図 x2/x3/x4（パイプライン・注目領域・動画データ準備）は Read で内容確認のうえキャプション作成。
+- 翻訳: 本文 §1–5（Abstract〜Conclusion）。**appendix なし**（§5 Conclusion 後は References）。References 除外。Table 1–5 は markdown 表を保持・整形（元から HTML table なし）。HF-map 式・injection 損失など数式 LaTeX 保持。ar5iv math 残骸なし（0）。
+- メモ: ユーザー確認どおり新規概念ページ `image-composition`（画像コンポジション / object teleportation）を作成し、AnyDoor をランドマーク、Paint-by-Example・ObjectStitch を参照ベース同系として整理。古典的 image harmonization・[[subject-driven-generation]]（DreamBooth, tuning 型）・[[image-inpainting]] との違いを明示。AnyDoor の base は Stable Diffusion（[[summaries/2022-latent-diffusion]]）、detail extractor は ControlNet スタイル（[[summaries/2023-controlnet]]）、評価指標 DINO/CLIP-Score は DreamBooth（[[summaries/2023-dreambooth]]）由来。dangling は `<slug>`（index テンプレ例）のみ想定。未取り込み注記: Paint-by-Example / ObjectStitch / Graphit（参照ベース）, IP-Adapter（image-prompt アダプタ）, DINO-V2・SAM（基盤モデル）。
+
 ## [2026-06-24] ingest | DreamBooth: Subject-Driven Generation
 
 - 取り込み: `raw/papers/DreamBooth_ Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation.md`（ar5iv 由来 markdown, arXiv:2208.12242, CVPR 2023。Ruiz ら, Google）

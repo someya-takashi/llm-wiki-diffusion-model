@@ -8,10 +8,15 @@ related:
   - "[[image-inpainting]]"
   - "[[super-resolution]]"
   - "[[controllable-generation]]"
+  - "[[diffusion-model-architecture]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
-updated: 2026-06-23
+  - "[[summaries/2023-dit]]"
+  - "[[summaries/2024-ziplora]]"
+  - "[[summaries/2023-sdxl]]"
+  - "[[summaries/2024-sd3]]"
+updated: 2026-06-24
 ---
 
 # Latent Diffusion（潜在拡散）
@@ -69,6 +74,17 @@ $$
 - text-to-image・[[image-inpainting]]（SOTA）・[[super-resolution]] を 1 つの枠組みで実現。
 - 計算コストを一桁削減し、全実験が単一 A100 で可能に。→ Stable Diffusion として一般公開され普及。
 
+## 代表的後継モデル：SDXL（Podell ら 2023）
+
+**SDXL（Stable Diffusion XL）** は、LDM/Stable Diffusion を実務的に大幅強化したオープンモデルで、現在の LoRA・personalization エコシステム（[[low-rank-adaptation]]・[[lora-merging]]）の事実上の標準 base である（[[summaries/2023-sdxl]]）。VAE 潜在空間で拡散するという LDM の枠組みは変えず、**規模・条件付け・前処理・サンプリング**を積み上げで改良した点が特徴。
+
+- **3× 大型 UNet（860M→2.6B）＋ 2 テキストエンコーダ**：CLIP ViT-L と OpenCLIP ViT-bigG の出力を連結（context dim 2048）し、OpenCLIP の **pooled text embedding** を追加条件に。UNet 内の transformer block を低レベルに集中させる配分（[[diffusion-model-architecture]] 参照）。
+- **micro-conditioning（size / crop / aspect-ratio）**：LDM の弱点だった「最小画像サイズ要件」（小画像を捨てると学習データを大量喪失）を、元解像度・crop 座標・アスペクト比を **Fourier 埋め込みで条件化**して回避。crop 条件で生成物の「頭切れ」を解消し object-centered に（[[controllable-generation]] の学習時メタデータ条件付け）。
+- **改良 VAE ＋ 2 段（base + refinement）**：VAE を大バッチ＋EMA で再学習。base が出した潜在に、別 LDM の refiner が **SDEdit 流 noising-denoising** をかけて局所品質（背景・顔）を底上げ。
+- 人間評価で旧 SD を圧倒し Midjourney に匹敵する一方、**COCO zero-shot FID はむしろ悪化**——基盤 T2I の評価指標としての FID の限界を示した（[[summaries/2023-sdxl]] 付録F）。
+
+なお SDXL は探索段階で DiT 的な全 transformer 化を試したが当時利得を得られず、**改良 U-Net に留まった**（[[diffusion-model-architecture]] の DiT と対照的）。その次世代 **Stable Diffusion 3（SD3）**（[[summaries/2024-sd3]]）では、ついにバックボーンを **MM-DiT**（Transformer, [[diffusion-model-architecture]]）に、学習定式化を **rectified flow**（[[flow-matching]]）に置き換え、VAE 潜在も 16 チャネルに拡張した。LDM→SDXL→SD3 と、潜在拡散の枠組みを保ちながらバックボーンと定式化が刷新されていく系譜である。
+
 ## 限界
 
 - 逐次サンプリングは依然 GAN より遅い（[[diffusion-sampling]]、DDIM 等で緩和）。
@@ -82,8 +98,16 @@ $$
 - [[score-based-generative-models]]：LDM の学習目的も denoising score matching を反映した再重み付け下界に基づく。
 - [[controllable-generation]]：ControlNet は凍結した Stable Diffusion（LDM）に zero convolution で学習可能コピーを接続し、エッジ・深度・姿勢などの空間条件を後付けで効かせる。LDM のトポロジーを変えないためコミュニティ派生モデルへも転用できる。
 - [[subject-driven-generation]]：DreamBooth は Stable Diffusion（LDM）を少数画像で fine-tune し、特定被写体を一意識別子に紐づける personalization を行う（U-Net とテキストエンコーダを学習、デコーダは固定）。
+- [[image-composition]]：AnyDoor は Stable Diffusion（LDM）を base に、U-Net エンコーダを凍結しデコーダのみ学習して、参照物体をシーンに合成する（ID トークンの cross-attention 注入＋detail map の concat）。
+- [[diffusion-model-architecture]]：DiT は LDM の枠組み（VAE 潜在空間での拡散）はそのままに、バックボーンを U-Net から Transformer に置き換えた。LDM は「どこで拡散するか（潜在空間）」、DiT は「何で拡散するか（Transformer）」の改善で直交する。
+- [[low-rank-adaptation]]：LoRA は Stable Diffusion（LDM）の U-Net／テキストエンコーダの重みに低ランク更新を後付けする軽量 personalization。数 MB のモジュールとして共有される。
+- [[lora-merging]]：ZipLoRA（[[summaries/2024-ziplora]]）は LDM の大型版 **SDXL（Stable Diffusion XL）** 上で動く。SDXL が単一画像でスタイルを学習できる性質が、被写体 LoRA × 画風 LoRA のマージを成立させる前提になっている。
 
 ## 参考文献（summaries）
 
 - [[summaries/2022-latent-diffusion]] — High-Resolution Image Synthesis with Latent Diffusion Models（Rombach ら, CVPR 2022）
 - [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（Stable Diffusion への空間条件制御）
+- [[summaries/2023-dit]] — Scalable Diffusion Models with Transformers（LDM 潜在空間で U-Net を Transformer 化）
+- [[summaries/2024-ziplora]] — ZipLoRA（SDXL 上で被写体 LoRA × 画風 LoRA をマージ）
+- [[summaries/2023-sdxl]] — SDXL（LDM の大型化後継：3× UNet・micro-conditioning・base+refiner の 2 段）
+- [[summaries/2024-sd3]] — Stable Diffusion 3（LDM の次世代：MM-DiT＋rectified flow・潜在 16 チャネル）
