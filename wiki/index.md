@@ -20,6 +20,8 @@
 - [[summaries/2023-flow-matching]] — Flow Matching for Generative Modeling（FM, Lipman ら 2023・ICLR）。CNF をシミュレーション不要で学習する新パラダイム。拡散を内包し OT パスで高速・安定
 - [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（ControlNet, Zhang ら 2023・ICCV Best Paper）。zero convolution で Stable Diffusion に空間条件制御を後付け
 - [[summaries/2023-dreambooth]] — DreamBooth（Ruiz ら 2023・CVPR）。少数画像で T2I 拡散モデルを fine-tune し被写体を一意識別子に紐づける personalization（rare-token id＋prior preservation loss）
+- [[summaries/2022-textual-inversion]] — Textual Inversion（Gal ら 2022・ICLR 2023）。凍結 LDM のテキスト埋め込み空間に擬似単語 S\* を 1 つだけ学習。personalization タスクを提唱した、DreamBooth と並ぶ原典
+- [[summaries/2023-custom-diffusion]] — Custom Diffusion（Kumari ら 2023・CVPR）。cross-attention の key/value 射影 W^k,W^v だけ（約 5%・75MB）を fine-tune＋modifier token V*。閉形式マージで複数概念を合成する多概念カスタマイズの源流
 - [[summaries/2023-anydoor]] — AnyDoor（Chen ら 2023・ICCV）。参照物体をシーンの指定位置に zero-shot で合成する object teleportation（DINO-V2 ID＋高周波マップ detail）
 - [[summaries/2023-dit]] — Scalable Diffusion Models with Transformers（DiT, Peebles & Xie 2023・ICCV）。U-Net を Transformer に置換し Gflops スケーリングで ImageNet SOTA（FID 2.27）
 - [[summaries/2024-lora-composer]] — LoRA-Composer（Yang ら 2024）。訓練不要で複数の単一概念 LoRA を 1 枚に合成（cross-attn 注入＋self-attn 分離＋潜在再初期化）
@@ -29,6 +31,10 @@
 - [[summaries/2023-sdxl]] — SDXL（Podell ら 2023・Stability AI）。Stable Diffusion を 3× UNet＋2 テキストエンコーダ＋micro-conditioning＋base+refiner で強化、オープンで SOTA 級
 - [[summaries/2024-sd3]] — Stable Diffusion 3（Esser ら 2024・ICML）。rectified flow＋改良ノイズサンプラー＋MM-DiT を 8B までスケール、SDXL・DALL-E 3 を上回る
 - [[summaries/2024-stochastic-interpolants]] — Stochastic Interpolants（Albergo ら 2023）。flows（ODE）と diffusions（SDE）を有限時間で統一する理論枠組み
+- [[summaries/2022-edm]] — EDM（Karras ら 2022・NeurIPS）。拡散の設計空間を分解し Heun サンプラー＋ρ スケジュール＋preconditioning＋ノイズ分布を体系化、35 NFE で SOTA
+
+### article / 講義ノート
+- [[summaries/2025-flow-matching-diffusion-intro]] — An Introduction to Flow Matching and Diffusion Models（Holderrieth & Erives, MIT 6.S184, 2025・arXiv:2506.02070）。flow matching と拡散を ODE/SDE 統一の枠組みで導く教科書的講義ノート。conditional→marginal・連続の方程式・Fokker-Planck・CFG・U-Net/DiT/MM-DiT を自己完結的にカバー
 
 ## Translations
 
@@ -42,6 +48,8 @@
 - [[translations/2022-classifier-free-guidance]] — CFG 全文翻訳（本文＋Appendix A）
 - [[translations/2022-repaint]] — RePaint 全文翻訳（本文§1–8＋Appendix A–I）
 - [[translations/2023-dreambooth]] — DreamBooth 全文翻訳（本文§1–6＋Supplementary Material）
+- [[translations/2022-textual-inversion]] — Textual Inversion 全文翻訳（本文§1–8＋Appendix A–D・学習プロンプトテンプレ 27 個）
+- [[translations/2023-custom-diffusion]] — Custom Diffusion 全文翻訳（本文§1–5＋Appendix A–F・表 1–8・図 24 枚）
 - [[translations/2023-anydoor]] — AnyDoor 全文翻訳（本文§1–5、appendix なし）
 - [[translations/2023-dit]] — DiT 全文翻訳（本文§1–6＋Appendix A–D）
 - [[translations/2021-score-sde]] — Score-SDE 全文翻訳（本文＋Appendix A–I）
@@ -52,6 +60,8 @@
 - [[translations/2023-sdxl]] — SDXL 全文翻訳（本文§1–3＋Appendix B–J、Alg.1/App J コードはコードブロック保持）
 - [[translations/2024-sd3]] — SD3 全文翻訳（本文§1–6＋Appendix A–E、HTML 表 markdown 化、MM-DiT 図は SVG）
 - [[translations/2024-stochastic-interpolants]] — Stochastic Interpolants 全文翻訳（本文§1–8＋Appendix A–C、全証明逐次）
+- [[translations/2022-edm]] — EDM 全文翻訳（本文§1–6＋Appendix A–F、表 markdown 化・Alg コードブロック、PDF のため画像なし）
+- [[translations/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門 全文翻訳（本文§1–5＋Appendix A,B、図 16 枚・アルゴリズム 5 個、§6 謝辞/References 除外）
 
 ## Concepts
 
@@ -64,6 +74,7 @@
 - [[controllable-generation]] — 可制御生成（スコア操作の逆問題＋ControlNet のアダプタ型空間条件制御）
 - [[flow-matching]] — フローマッチング（CNF をシミュレーション不要で学習、CFM・ガウス条件付きパス・OT パス・rectified flow）
 - [[stochastic-interpolants]] — 確率的補間（flows と diffusions を有限時間で統一する枠組み、ODE/SDE を同じ密度の異なる実現に）
+- [[noise-schedule]] — ノイズスケジュール（学習時のノイズ分布＋推論時の時間離散化。EDM の σ(t)=t・ρ=7・対数正規分布がランドマーク）
 - [[classifier-guidance]] — 分類器ガイダンス（ADM が導入、分類器勾配でサンプリングを誘導し忠実度↔多様性を制御。CFG の先行手法）
 - [[classifier-free-guidance]] — 分類器なしガイダンス（条件付き／無条件スコアの線形結合で条件忠実度↔多様性を制御）
 - [[text-to-image-generation]] — テキストからの画像生成（cross-attention 条件付け、classifier-free guidance、LAION/MS-COCO）
@@ -85,6 +96,7 @@
 - LoRA / 低ランク適応 / PEFT / ΔW=BA → [[low-rank-adaptation]]
 - LoRA Switch / LoRA Composite / ComposLoRA / multi-concept / 複数概念合成 → [[multi-concept-customization]]
 - LoRA-Composer / concept vanishing / concept confusion → [[multi-concept-customization]]
+- Custom Diffusion / modifier token / V* / compositional fine-tuning / 多概念カスタマイズ → [[multi-concept-customization]]
 - Mix-of-Show / gradient fusion / weight fusion / LoRA Merge / regionally controllable sampling / region-aware cross-attention → [[lora-merging]]
 - ZipLoRA / merger coefficient / content LoRA / style LoRA / signal interference / LoRA fusion → [[lora-merging]]
 - ED-LoRA / embedding-decomposed LoRA → [[lora-merging]] ・ [[low-rank-adaptation]]
@@ -102,15 +114,20 @@
 - PC sampler / predictor-corrector → [[diffusion-sampling]]
 - FM / CFM / CNF / Optimal Transport path → [[flow-matching]]
 - rectified flow / RF / reflow → [[flow-matching]]
+- MIT 6.S184 / Holderrieth-Erives / flow matching 入門 / 連続の方程式 / continuity equation / Fokker-Planck / marginalization trick → [[summaries/2025-flow-matching-diffusion-intro]]
 - SD3 / Stable Diffusion 3 / MM-DiT / Multimodal DiT / QK-normalization → [[diffusion-model-architecture]] ・ [[latent-diffusion]]
 - logit-normal sampler / mode sampler / CosMap → [[flow-matching]]
+- EDM / Karras 2022 / Heun sampler / churn / S_churn / ρ schedule → [[diffusion-sampling]]
+- preconditioning / c_skip / c_out / c_in / c_noise / σ_data → [[diffusion-model-architecture]]
+- noise schedule / ノイズスケジュール / σ schedule / σ(t)=t / P_mean / P_std / 対数正規ノイズ分布 → [[noise-schedule]]
+- denoiser D(x;σ) / VP / VE → [[score-based-generative-models]] ・ [[noise-schedule]]
 - stochastic interpolant / 確率的補間 / one-sided interpolant / mirror interpolant / denoiser η_z → [[stochastic-interpolants]]
 - Schrödinger bridge / シュレディンガー橋 / stochastic localization → [[stochastic-interpolants]]
 - ControlNet / zero convolution / 空間条件制御 → [[controllable-generation]]
 - RePaint → [[image-inpainting]] ・ [[training-free-conditioning]]
 - resampling / jump back-and-forth → [[diffusion-sampling]]
 - training-free / 推論時条件付け / 置き換えベース → [[training-free-conditioning]]
-- DreamBooth / Textual Inversion / personalization / 個人化 → [[subject-driven-generation]]
+- DreamBooth / Textual Inversion / personalization / 個人化 / pseudo-word / 擬似単語 / S* → [[subject-driven-generation]]
 - PPL / prior preservation loss / language drift → [[subject-driven-generation]]
 - Imagen → [[text-to-image-generation]]（cascaded SR は [[super-resolution]]）
 - AnyDoor / object teleportation / 物体合成 → [[image-composition]]
@@ -120,3 +137,4 @@
 ## Questions
 
 <!-- query で得た比較表・分析等 -->
+- [[questions/diffusion-theory-ddpm-to-flow-matching]] — 拡散モデル理論の直感ガイド（DDPM → Flow Matching を数式なし・例え話で。コア理論＋応用編 guidance/latent diffusion）

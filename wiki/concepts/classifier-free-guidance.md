@@ -14,7 +14,8 @@ summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2023-dit]]"
   - "[[summaries/2024-multi-lora-composition]]"
-updated: 2026-06-24
+  - "[[summaries/2025-flow-matching-diffusion-intro]]"
+updated: 2026-06-25
 ---
 
 # Classifier-Free Guidance（分類器なしガイダンス, CFG）
@@ -74,3 +75,4 @@ CFG は**暗黙の分類器** $p^i(c|z)\propto p(z|c)/p(z)$ の勾配 $-\frac1{\
 - [[summaries/2023-dit]] — Scalable Diffusion Models with Transformers（DiT も CFG 使用、部分チャネル CFG）
 - [[summaries/2024-multi-lora-composition]] — Multi-LoRA Composition（LoRA Composite が CFG を多 LoRA に拡張）
 - [[summaries/2021-adm]] — Diffusion Models Beat GANs on Image Synthesis（先行手法 classifier guidance の主要原典）
+- [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。CFG を ũ=(1-w)u(·|∅)+w·u(·|y) として Bayes 則から導き、flow/拡散の両方に適用）

@@ -8,10 +8,12 @@ related:
   - "[[denoising-diffusion]]"
   - "[[diffusion-sampling]]"
   - "[[stochastic-interpolants]]"
+  - "[[noise-schedule]]"
 summaries:
   - "[[summaries/2023-flow-matching]]"
   - "[[summaries/2024-sd3]]"
   - "[[summaries/2024-stochastic-interpolants]]"
+  - "[[summaries/2025-flow-matching-diffusion-intro]]"
 updated: 2026-06-24
 ---
 
@@ -49,7 +51,7 @@ $$
 \mathcal{L}_{CFM}(\theta)=\mathbb{E}_{t,q(x_1),p_t(x|x_1)}\|v_t(x)-u_t(x|x_1)\|^2
 $$
 
-は、**扱いにくい FM 目的と勾配が完全に一致する**（**定理2**）。つまり周辺量に一切触れず、サンプルごとの単純な二乗誤差回帰で CNF を学習できる。これは [[score-based-generative-models]] の denoising score matching が「スコア」を条件付きで回帰したのを、「ベクトル場」へ一般化したものにあたる。
+は、**扱いにくい FM 目的と勾配が完全に一致する**（**定理2**）。つまり周辺量に一切触れず、サンプルごとの単純な二乗誤差回帰で CNF を学習できる。これは [[score-based-generative-models]] の denoising score matching が「スコア」を条件付きで回帰したのを、「ベクトル場」へ一般化したものにあたる。この「条件付きベクトル場 $u_t(x|z)$ を確率パスで周辺化すると周辺ベクトル場になり（周辺化トリック）、よって条件付き回帰が周辺ターゲット回帰と同じ勾配を与える」という導出は、MIT 6.S184 講義ノート（[[summaries/2025-flow-matching-diffusion-intro]]）が連続の方程式・Fokker-Planck 方程式から自己完結的に展開しており、flow と拡散を 1 つの枠組みで学ぶ入門として詳しい。
 
 ### ガウス条件付きパスと拡散の内包
 
@@ -89,6 +91,7 @@ $$
 - [[score-based-generative-models]]：CFM は denoising score matching（スコア回帰）のベクトル場版。拡散パスは FM ガウス族の特別な場合で、FM はスコアマッチングの安定な代替になる。
 - [[denoising-diffusion]]：VE/VP 拡散を FM のガウス条件付きパスとして内包。
 - [[diffusion-sampling]]：FM-OT は直線パスゆえ既製 ODE ソルバーで少 NFE 生成でき、サンプリング効率の新基準を与えた。
+- [[noise-schedule]]：SD3 の logit-normal/mode サンプラー（rectified flow の時刻 $t$ の分布を中間に偏らせる）は、EDM の対数正規ノイズ分布（[[summaries/2022-edm]]）と同じ「どの σ／t を重点的に学ぶか」という設計問題で、ノイズスケジュールの flow 版にあたる。
 
 ## さらなる一般化：Stochastic Interpolants
 
@@ -99,3 +102,4 @@ FM・rectified flow をさらに一般化し、**flows（決定論 ODE）と dif
 - [[summaries/2023-flow-matching]] — Flow Matching for Generative Modeling（Lipman, Chen, Ben-Hamu, Nickel, Le, ICLR 2023）
 - [[summaries/2024-sd3]] — Scaling Rectified Flow Transformers（SD3。rectified flow＋改良サンプラーを大規模 text-to-image で確立）
 - [[summaries/2024-stochastic-interpolants]] — Stochastic Interpolants（flows と diffusions を統一する一般化枠組み）
+- [[summaries/2025-flow-matching-diffusion-intro]] — An Introduction to Flow Matching and Diffusion Models（MIT 6.S184 講義ノート。conditional→marginal の構成と CFM を ODE/SDE 統一の枠組みから教科書的に導く入門）

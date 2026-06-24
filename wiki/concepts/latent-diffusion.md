@@ -97,7 +97,7 @@ $$
 - [[text-to-image-generation]] / [[image-inpainting]] / [[super-resolution]]：LDM はこれらのタスクすべてに cross-attention／concat 条件付けで適用でき、各タスクの代表手法になっている。
 - [[score-based-generative-models]]：LDM の学習目的も denoising score matching を反映した再重み付け下界に基づく。
 - [[controllable-generation]]：ControlNet は凍結した Stable Diffusion（LDM）に zero convolution で学習可能コピーを接続し、エッジ・深度・姿勢などの空間条件を後付けで効かせる。LDM のトポロジーを変えないためコミュニティ派生モデルへも転用できる。
-- [[subject-driven-generation]]：DreamBooth は Stable Diffusion（LDM）を少数画像で fine-tune し、特定被写体を一意識別子に紐づける personalization を行う（U-Net とテキストエンコーダを学習、デコーダは固定）。
+- [[subject-driven-generation]]：DreamBooth は Stable Diffusion（LDM）を少数画像で fine-tune し、特定被写体を一意識別子に紐づける personalization を行う（U-Net とテキストエンコーダを学習、デコーダは固定）。**Textual Inversion**（[[summaries/2022-textual-inversion]]）は逆に LDM を**完全凍結**し、その BERT テキストエンコーダの埋め込み空間に概念を表す擬似単語だけを最適化する——同じ LDM 上で「モデルを学習する／語彙を 1 単語足す」の対照的な personalization。
 - [[image-composition]]：AnyDoor は Stable Diffusion（LDM）を base に、U-Net エンコーダを凍結しデコーダのみ学習して、参照物体をシーンに合成する（ID トークンの cross-attention 注入＋detail map の concat）。
 - [[diffusion-model-architecture]]：DiT は LDM の枠組み（VAE 潜在空間での拡散）はそのままに、バックボーンを U-Net から Transformer に置き換えた。LDM は「どこで拡散するか（潜在空間）」、DiT は「何で拡散するか（Transformer）」の改善で直交する。
 - [[low-rank-adaptation]]：LoRA は Stable Diffusion（LDM）の U-Net／テキストエンコーダの重みに低ランク更新を後付けする軽量 personalization。数 MB のモジュールとして共有される。

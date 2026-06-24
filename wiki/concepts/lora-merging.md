@@ -9,9 +9,10 @@ related:
   - "[[controllable-generation]]"
   - "[[latent-diffusion]]"
 summaries:
+  - "[[summaries/2023-custom-diffusion]]"
   - "[[summaries/2023-mix-of-show]]"
   - "[[summaries/2024-ziplora]]"
-updated: 2026-06-24
+updated: 2026-06-25
 ---
 
 # LoRA Merging / Fusion（複数 LoRA の重みマージ／融合）
@@ -34,6 +35,16 @@ $$
 さらに LoRA 数が増えるほど不安定になり細部が崩れる（[[multi-concept-customization]] で言う concept vanishing / confusion）。マージ系統の研究は「**どう混ぜれば各 LoRA の挙動を保てるか**」を競う。
 
 ## 系統と代表手法
+
+### (0) 源流：Custom Diffusion の閉形式マージ
+
+LoRA を対象にする以前に、「**別々に学習した概念の重みを最小二乗で整合させて混ぜる**」発想を最初に示したのが **Custom Diffusion**（[[summaries/2023-custom-diffusion]]）である。各概念で別々に fine-tune した cross-attention の $W^k,W^v$ を、次の制約付き最小二乗で結合する：
+
+$$
+\hat W=\operatorname*{arg\,min}_{W}\|WC_{\text{reg}}^{\top}-W_0C_{\text{reg}}^{\top}\|_F\quad\text{s.t. }WC^{\top}=V
+$$
+
+「正則化キャプション $C_{\text{reg}}$ では元モデル $W_0$ の出力を保ち、対象概念の単語 $C$ は各概念の fine-tune 済み value $V$ に一致させる」という目的で、Lagrange 乗数法により**閉形式**で解ける（$\hat W=W_0+\mathbf v^\top\mathbf d$、約 2 秒）。LoRA の $BA$ ではなく cross-attention 重みそのものを対象にする点が後続と異なるが、「単独挙動を保ちつつ重みを 1 つに畳む」という目的関数は (2) Mix-of-Show の gradient fusion と本質的に同型で、重みマージ系統の出発点にあたる。
 
 ### (1) 素朴な線形和（LoRA Merge / weighted sum）
 
@@ -90,6 +101,7 @@ LoRA を 1 枚に合成する手法は、重みマージ（本ページ）以外
 
 ## 参考文献（summaries）
 
+- [[summaries/2023-custom-diffusion]] — Custom Diffusion（cross-attention K/V の閉形式制約付き最小二乗マージ。重みマージ系の源流）
 - [[summaries/2023-mix-of-show]] — Mix-of-Show（ED-LoRA＋gradient fusion、分散型多概念カスタマイズ）
 - [[summaries/2024-ziplora]] — ZipLoRA（content+style LoRA の学習係数マージ）
 - [[summaries/2024-multi-lora-composition]] — Multi-LoRA Composition（重みマージのベースライン批判・decoding-centric）

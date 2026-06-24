@@ -3,6 +3,72 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-06-25] query | 拡散モデル理論の直感ガイド（DDPM → Flow Matching）
+
+- 質問: 拡散モデルの理論（DDPM〜flow matching）を数式なし・例え話で初心者向けに解説する記事を作成（まず理論項目を整理）。
+- 作成: [[questions/diffusion-theory-ddpm-to-flow-matching]]（長文解説記事。スコープ＝コア理論＋応用編、形式＝長文 markdown、いずれもユーザー回答）。
+- 構成: 導入＋第0章 生成とは＋第1章 DDPM＋第2章 スコア＋第3章 SDE/ODE＋第4章 サンプラー＋第5章 ノイズスケジュール＋第6章 Flow Matching＋第7章 Stochastic Interpolants＋全体地図（流れ図＋比較表）＋応用編（A. guidance / B. latent diffusion）＋用語ミニ辞典。
+- 参照: [[denoising-diffusion]]・[[score-based-generative-models]]・[[probability-flow-ode]]・[[diffusion-sampling]]・[[noise-schedule]]・[[flow-matching]]・[[stochastic-interpolants]]・[[classifier-free-guidance]]・[[latent-diffusion]]・[[overview]]、summaries（2020-ddpm/2021-score-sde/2021-ddim/2022-edm/2023-flow-matching/2024-stochastic-interpolants/2025-flow-matching-diffusion-intro/2022-classifier-free-guidance/2022-latent-diffusion/2024-sd3）。
+- 更新: [[index]]（Questions セクション新規追記）。
+- メモ: 全章を「ノイズ↔データを結ぶ道の描き方・たどり方の違い」という 1 本のメタファーで統一。数式不使用（ユーザー指示）、各章末に既存ページへの深掘りリンク。
+
+## [2026-06-25] ingest | An Introduction to Flow Matching and Diffusion Models（MIT 6.S184 講義ノート）
+
+- 取り込み: `raw/papers/An Introduction to Flow Matching and Diffusion Models.md`（ar5iv 由来 markdown・ケース A, arXiv:2506.02070, MIT 6.S184 2025。Peter Holderrieth & Ezra Erives）。特定手法でなく flow matching と拡散を ODE/SDE 統一の枠組みで導く**教科書的入門**。2800 行・約 18,000 語。
+- 作成: [[translations/2025-flow-matching-diffusion-intro]], [[summaries/2025-flow-matching-diffusion-intro]]
+- 更新（**新規概念ページなし**・reference として既存を強化）: [[concepts/flow-matching]]（主軸。周辺化トリック・CFM の導出を本講義ノートの定式化として補強、frontmatter summaries＋本文＋参考文献）, [[concepts/score-based-generative-models]]・[[concepts/probability-flow-ode]]・[[concepts/classifier-free-guidance]]（frontmatter summaries＋参考文献追加）, [[concepts/stochastic-interpolants]]・[[concepts/denoising-diffusion]]・[[concepts/diffusion-model-architecture]]（参考文献クロスリンク）, [[overview]]（理論系を束ねる入門リファレンスとして追記）, [[index]]（新設「article / 講義ノート」節）
+- 概念ページ: **新規作成なし**（ユーザー回答「既存を強化」。schema どおり手法でなく統一的入門は reference summary 扱い）。
+- 画像: **全 16 枚取得**（ケース A・すべて解説的）。`raw/assets/2025-flow-matching-diffusion-intro/`。flow 軌道・Brownian motion・OU 過程・noised MNIST・conditional vs marginal・conditional ODE/SDE・Langevin・conditional-marginal path・score field・Salimans CFG・guidance・U-Net・DiT・MM-DiT・joints。`?as=webp` なしの素 PNG、`file` で全件妥当確認。
+- 翻訳: **全訳（§1–5 ＋ Appendix A 確率論・B Fokker-Planck 証明）**（ユーザー回答）。§6 謝辞・References 除外。ar5iv が分割した数式ブロックは 1 つにまとめて表記、ODE/SDE・連続の方程式・Fokker-Planck・CFM/SM 目的・CFG の数式は LaTeX 保持。Key Idea/Theorem/Summary 等の囲み見出しは見出し階層を保って訳出。アルゴリズム 1–5 はコードブロック。wiki 最大級の翻訳ファイル。
+- メモ: 核心＝(1) flow＝ODE・diffusion＝SDE のシミュレーション（Euler / Euler-Maruyama）、(2) conditional probability path を周辺化して marginal path を作る周辺化トリック（連続の方程式で証明）＋SDE 拡張（Fokker-Planck）、(3) 扱えない marginal target への回帰は手で書ける conditional target への回帰と同勾配（定理 18・20）→ CFM/denoising score matching、(4) ガウスパスで flow↔score 変換可能（確率フロー ODE）、(5) §4.3 文献ガイド（離散/連続時間・順過程・時間反転 vs FPE・FM/SI と拡散の関係）、(6) §5 CFG・U-Net/DiT/MM-DiT・latent diffusion・SD3/Movie Gen。拡散はガウス初期/ガウスパス限定だが FM/SI は任意 p_init→p_data を許す点を強調。
+
+## [2026-06-25] ingest | Custom Diffusion: Multi-Concept Customization of Text-to-Image Diffusion
+
+- 取り込み: `raw/papers/Multi-Concept Customization of Text-to-Image Diffusion.md`（ar5iv 由来 markdown・ケース A, arXiv:2212.04488, CVPR 2023。Kumari・Zhang・Zhang・Shechtman・Zhu, CMU & Tsinghua & Adobe Research。通称 **Custom Diffusion**）。既存 [[multi-concept-customization]] 概念ページの founding paper（従来は line 60 に一行言及のみ）。personalization 三大原典（DreamBooth・Textual Inversion・Custom Diffusion）が揃う。
+- 作成: [[translations/2023-custom-diffusion]], [[summaries/2023-custom-diffusion]]
+- 更新: [[concepts/multi-concept-customization]]（**源流ランドマークとして本格記述**：冒頭に「タスクと 2 解法の源流」を追加、(a) 重みマージ節に閉形式マージを起点として接続、関連手法の一行言及を実リンク節へ昇格、frontmatter summaries 先頭＋参考文献）, [[concepts/subject-driven-generation]]（一行言及を W^k,W^v 限定 fine-tune＋V*＋実画像正則化の personalization 手法へ加筆、トレードオフ表に Custom Diffusion 行追加、summaries／参考文献／実リンク化）, [[concepts/lora-merging]]（「(0) 源流：Custom Diffusion の閉形式マージ」節を新設、summaries／参考文献）, [[concepts/low-rank-adaptation]]（差分行列 SVD 低ランク圧縮 75MB→15MB と「fine-tune 中の低ランク制約は suboptimal」をクロスリンク）, [[overview]], [[index]]
+- 概念ページ: **新規作成なし**（schema どおり landmark 手法は既存 [[multi-concept-customization]] の源流ランドマーク＋関連 personalization 概念のクロスリンクとして記述）。
+- 画像: **全 24 枚取得**（x1–x25、x15 欠番。ケース A・ユーザー回答）。`raw/assets/2023-custom-diffusion/`。大半は生成ギャラリーで、解説的なのは Fig2 手法図(x2)・Fig3 重み変化(x3)・Fig4 cross-attn(x4)・Fig5 正則化(x5)・Fig8 alignment散布(x8)。`?as=webp` なしの素 PNG、`file` で全件妥当確認。
+- 翻訳: 本文 §1–5 ＋ **Appendix A–F 全訳**（A=CustomConcept101、B=最適化マージ全導出 Lagrange 乗数法、C=実験/モデル圧縮、D=評価、E=実装詳細、F=社会的影響）。Appendix G（changelog）・References・Acknowledgement 除外。Table 1–8 を markdown 化（`<math>±</math>` 等は ± へ正規化）。cross-attn・閉形式マージ・拡散損失の数式は LaTeX 保持。
+- メモ: 核心＝(1) fine-tune 時の層別重み変化率 Δ_l を測ると cross-attention（全体の 5%）が突出 → テキスト→画像写像が入る W^k,W^v だけ更新（75MB・約 6 分、DreamBooth の 1 時間より 2–4× 速）。(2) modifier token V*（稀少トークン初期化）。(3) language drift・過学習を LAION-400M の CLIP 類似 >0.85 実画像 200 枚の正則化で抑制。(4) 多概念は joint training か closed-form constrained-optimization merge（W^k,W^v を制約付き最小二乗→Lagrange 乗数法で閉形式、約 2 秒）。限界＝似カテゴリ（cat+dog）・3 概念以上は困難（attention map 重複）。未取り込み注記: Cones/Cones2, Prompt-to-Prompt（編集に利用）。
+
+## [2026-06-24] ingest | Textual Inversion: An Image is Worth One Word
+
+- 取り込み: `raw/papers/An Image is Worth One Word_ Personalizing Text-to-Image Generation using Textual Inversion.md`（ar5iv 由来 markdown・ケース A, arXiv:2208.01618, ICLR 2023。Gal・Alaluf・Atzmon・Patashnik・Bermano・Chechik・Cohen-Or, Tel-Aviv University & NVIDIA。通称 **Textual Inversion**）。lint/「次に読むべき論文」で [[subject-driven-generation]] が「未取り込み」プレースホルダを抱える personalization の基盤ギャップとして特定。DreamBooth（[[summaries/2023-dreambooth]]）と並ぶ二大原典の片方。
+- 作成: [[translations/2022-textual-inversion]], [[summaries/2022-textual-inversion]]
+- 更新: [[concepts/subject-driven-generation]]（「代表手法 2: Textual Inversion」節を**原典で本格記述**し「まだ原典を取り込んでいない」注記を削除、summary を実リンク化、frontmatter summaries／参考文献に追加）, [[concepts/text-to-image-generation]]（personalization 段落に「凍結＋擬似単語のみ」の対極として追記、summaries／参考文献に追加）, [[concepts/latent-diffusion]]（凍結 LDM 上の personalization としてクロスリンク）, [[concepts/low-rank-adaptation]]（DreamBooth↔TI の中間＝LoRA の記述を実リンク化）, [[overview]], [[index]]
+- 概念ページ: **新規作成なし**（schema どおり landmark 手法は既存 [[subject-driven-generation]] の代表手法として記述）。
+- 画像: **全ユニーク 13 枚取得**（ケース A・ユーザー回答）。`raw/assets/2022-textual-inversion/`。ar5iv は各図 1 アセットのみ抽出（大半は学習画像 1 枚＝多パネル図の代用）。解説的なのは Fig2 手法図 `x1.png`・Fig10 評価プロット `quant_eval.jpg`・Fig12 `num_images.jpg`。重複（headless_statue 3×・qinni 2×）は 1 ファイル保存し複数箇所から参照。`?as=webp` なしの素 PNG/JPEG、`file` で全件妥当確認。
+- 翻訳: 本文 §1–8 ＋ **Appendix A–D 全訳**（A=Bipartite DDIM-inversion・Pivotal Tuning、B=学習集合サイズ、C=追加結果、D=学習プロンプトテンプレ 27 個を箇条書き保持）。References・Acknowledgements 除外。LDM 損失・v\* 最適化の数式は LaTeX 保持。
+- メモ: 核心＝凍結 text-to-image（LDM 1.4B・LAION-400M・BERT）の埋め込み空間に擬似単語 S\* の埋め込み v\* を 1 つだけ再構成損失で最適化（3〜5 枚・約 2 時間・粗い記述語で初期化）。GAN inversion 由来の多語化／正則化／画像ごとトークンより**単一語が最良**、distortion-editability トレードオフを学習率で移動。応用＝画風擬似単語化・概念合成・バイアス低減・Blended Latent Diffusion。限界＝精密形状が苦手・最適化が遅い・凍結ゆえ忠実度は DreamBooth に劣る。
+
+## [2026-06-24] ingest | EDM: 拡散ベース生成モデルの設計空間の解明
+
+- 取り込み: `raw/papers/Elucidating the Design Space of Diffusion-Based Generative Models.pdf`（PDF, arXiv:2206.00364, NeurIPS 2022。Karras・Aittala・Aila・Laine, NVIDIA。通称 **EDM**）。lint/「次に読むべき論文」で SD3・SDXL・Stochastic Interpolants の 3 本が揃って参照する最大ギャップとして特定された基盤論文。
+- 作成: [[translations/2022-edm]], [[summaries/2022-edm]], [[concepts/noise-schedule]]（**新規概念ページ**。学習時ノイズ分布＋推論時の時間離散化を扱い、DDPM β／cosine／VP・VE／SD3 サンプラー／SDXL shift／EDM σ(t)=t・ρ=7・対数正規を横断接続。ランドマーク＝EDM）
+- 更新: [[concepts/diffusion-sampling]]（**EDM を Heun・ρ・churn の代表サンプラーとして本格記述**、「今後の ingest で拡充」節を更新）, [[concepts/score-based-generative-models]]（VP/VE を σ(t)/s(t)/preconditioning で統一）, [[concepts/diffusion-model-architecture]]（preconditioning＝ネット入出力設計軸）, [[concepts/probability-flow-ode]]（σ(t)=t で軌道直線化）, [[concepts/denoising-diffusion]]（損失重み・ノイズ分布）, [[concepts/flow-matching]]（SD3 サンプラーとの同型をクロスリンク）, [[overview]], [[index]]
+- 画像: **取り込まない**（PDF・ユーザー指示でケース B）。図はキャプションのテキスト訳のみ、`<figure>`/`![]()` 画像記法なし。
+- 翻訳: 本文 §1–6 ＋ **Appendix A–F 全訳**（B 式導出 incl. preconditioning 導出 B.6、C VP/VE/iDDPM 再構成、D ステップサイズ解析＋2 次 RK 一般族、E 確率サンプリング、F 学習/ネット/データセット詳細）。References・Acknowledgements 除外。Table 1–8 を markdown 化、Algorithm 1/2/3 をコードブロック保持。ODE・preconditioning・σ スケジュール・λ(σ) の数式は LaTeX 保持。
+- メモ: 4 本柱＝(1) 共通枠組み Table 1（VP/VE/iDDPM/EDM 統一、σ(t)=t,s(t)=1 推奨）、(2) Heun 2 次サンプラー＋ρ=7、(3) churn 確率サンプラー（S_churn 等）、(4) preconditioning（c_skip/c_out/c_in/c_noise を第一原理導出）＋対数正規ノイズ分布（P_mean=−1.2,P_std=1.2）＋損失重み λ=1/c_out²＋non-leaky augmentation。CIFAR-10 1.79/1.97・ImageNet-64 1.36・35 NFE。未取り込み注記: DPM-Solver（高次ソルバ）, consistency models, EDM2。
+
+## [2026-06-24] ingest | Stochastic Interpolants: flows と diffusions の統一枠組み（バッチ 2/2）
+
+- 取り込み: `raw/papers/Stochastic Interpolants_ ...md`（ar5iv 由来 markdown, arXiv:2303.08797, 2023。Albergo・Boffi・Vanden-Eijnden, NYU）。SD3→SI の 2 件バッチの 2 件目。
+- 作成: [[translations/2024-stochastic-interpolants]]（**本文§1–8＋Appendix A–C 全訳、全証明逐次**。3081 行の高密度理論論文）, [[summaries/2024-stochastic-interpolants]], [[concepts/stochastic-interpolants]]（**新規概念ページ**。flows と diffusions を統一する枠組み。flow-matching・score-based-generative-models・probability-flow-ode の上位概念）
+- 更新: [[concepts/flow-matching]]（rectified flow / SI を一般化として）, [[concepts/score-based-generative-models]]（SBDM を片側補間として内包）, [[concepts/probability-flow-ode]]（ODE/SDE の統一）, [[overview]], [[index]]
+- 画像: ar5iv 画像 15 枚（x1–x15）を `raw/assets/2024-stochastic-interpolants/` に保存。全 PNG・全取得成功。図1（パラダイム）・図2（設計柔軟性）・図3（アルゴリズム）を翻訳に配置。
+- 翻訳メモ: ユーザー指定で **Appendix B の全証明（~1000 行）も逐次全訳**。確率的補間 $x_t=I(t,x_0,x_1)+\gamma(t)z$、輸送方程式→ODE、Fokker-Planck→SDE、速度 $b$・スコア $s$・ノイズ除去器 $\eta_z$ の二乗回帰。数式は LaTeX 保持。Theorem/Lemma の主張＋証明を一文ずつ。アルゴリズム 1–5 はコードブロック保持。References（脚注 [^N]）・Acknowledgements 除外。**翻訳完了：本文§1–8 ＋ Appendix A（ガウス混合）・B（証明 B.1–B.8 全訳）・C（実験仕様・表18）。画像 15 枚（x1–x15）全参照。`<figure>` 15/15・ar5iv 残骸 0。**（2026-06-24 の lint 指摘 🔴 を解消）
+- メモ: 未取り込み注記: Schrödinger bridge / 最適輸送の専論、stochastic localization、EDM（連続時間拡散）。SD3 の rectified flow は本枠組みの線形インスタンス。
+
+## [2026-06-24] ingest | Stable Diffusion 3: Rectified Flow Transformer のスケーリング（バッチ 1/2）
+
+- 取り込み: `raw/papers/Scaling Rectified Flow Transformers ...md`（ar5iv 由来 markdown, arXiv:2403.03206, ICML 2024。Esser ら, Stability AI。通称 **Stable Diffusion 3 / SD3**）。
+- 作成: [[translations/2024-sd3]]（本文§1–6＋Appendix A–E 全訳）, [[summaries/2024-sd3]]（概念は既存ページに分散収録）
+- 更新: [[concepts/flow-matching]]（rectified flow＋改良サンプラーを「代表手法：Rectified Flow と大規模化」節に）, [[concepts/diffusion-model-architecture]]（MM-DiT＝DiT のマルチモーダル拡張・QK-normalization）, [[concepts/latent-diffusion]]（LDM→SDXL→SD3 の系譜）, [[concepts/text-to-image-generation]]（MM-DiT＋3 テキストエンコーダ）, [[overview]], [[index]]
+- 画像: ar5iv 画像 19 枚（teaser・x1/x2/x3・サンプル/プロット類、サブパスは安定名に平坦化）＋ **Figure 2（MM-DiT アーキ）はインライン SVG 2 枚を抽出保存**（fig2a/fig2b）。raster は全 PNG/JPEG 妥当・全取得成功。SVG は foreignObject によるラベルを含むため `<figcaption>` でアーキを文章化。
+- 翻訳メモ: HTML 表（Table 1/2/5/6）を markdown 化（`<math><semantics>` 残骸・512² の上付き等を除去）。Table 3/4/7 は元から markdown。Alg.1/2（重複除去・記憶検出の擬似コード）はコードブロックで保持。rectified flow $z_t=(1-t)x_0+t\epsilon$、logit-normal/mode/CosMap サンプラー、解像度依存時刻シフト、QK-norm の数式は LaTeX 保持。References・Acknowledgements 除外。
+- メモ: 4 本柱＝(1) RF＋中間時刻に重みを置くサンプラー（rf/lognorm(0,1) 最良）、(2) MM-DiT（テキスト/画像別重み＋attention 結合）、(3) 8B スケーリング（検証損失が人間評価と相関・飽和なし）、(4) 改良 VAE 16ch・合成キャプション・DPO。GenEval で DALL-E 3 超え。未取り込み注記: EDM, DPO, SDEdit, T2I-CompBench/GenEval。
+
 ## [2026-06-24] ingest | SDXL: 高解像度画像合成のための潜在拡散モデルの改良
 
 - 取り込み: `raw/papers/SDXL_ ...md`（ar5iv 由来 markdown, arXiv:2307.01952, 2023。Podell ら, Stability AI）。直前の ZipLoRA が base model として全面依存していた SDXL を取り込み、被参照ページを原典で裏付け。
