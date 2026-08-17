@@ -9,10 +9,12 @@ related:
   - "[[controllable-generation]]"
   - "[[subject-driven-generation]]"
   - "[[visual-text-rendering]]"
+  - "[[character-consistency]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
-updated: 2026-06-25
+  - "[[summaries/2025-flux-kontext]]"
+updated: 2026-08-17
 ---
 
 # Instruction-Based Image Editing（指示ベース画像編集）
@@ -65,6 +67,18 @@ Qwen-Image（[[summaries/2025-qwen-image]]）の答えは、**入力画像を 2 
 
 定性評価では、複数画像からの合成（猫＋別画像の帽子）、連鎖編集、古典中国詩の縦書き組版などで同一性と指示追従を同時に保てると報告される。ただし**本レポートは GEdit/ImgEdit のような定量ベンチマークを提示せず、LMArena の ELO と定性比較にとどまる**点は割り引いて読む必要がある。
 
+## 別解：FLUX.1 Kontext の「連結するだけ」（2025）
+
+Qwen 系が「二重符号化」や「学習比率の制御」で統一を図ったのに対し、**FLUX.1 Kontext**（[[summaries/2025-flux-kontext]]）はずっと素朴な答えを出した——**参照画像のトークンを対象画像のトークンの後ろに連結するだけ**（sequence concatenation）。
+
+定式化は $p(x\mid y,c)$ で、$y$ は**コンテキスト画像または $\varnothing$**。この $\varnothing$ が効いていて、**コンテキストがあれば編集、なければ純粋な T2I** を同じネットワークが担う。統一のために特別な機構を足すのでなく、**「入力が空でもよい」ことにするだけで統一される**という設計である。
+
+連結方式の利点は実務的である：入出力の解像度・アスペクト比が違ってよく（長さが変わっても連結は困らない）、複数参照画像へそのまま伸びる。なお**チャネル方向の連結も試したが性能が劣った**と明記されており、再現を試みる側に有用な報告になっている。
+
+肝は**位置符号化**にある。FLUX.1 は各トークンを時空座標 $(t,h,w)$ で添字づける 3D RoPE を使うが、Kontext はコンテキストトークンに定数オフセットを与える——対象は $(0,h,w)$、$i$ 番目のコンテキストは $(i,h,w)$。著者らはこれを「**仮想タイムステップ**」と呼ぶ。つまり *2 枚の画像を時間方向に 1 コマずらして並べる*。空間構造 $(h,w)$ には触らないので画像内部の位置関係は保たれ、文脈と対象だけが分離される。Qwen-Image が MSRoPE の **frame 次元**で同じ問題を解いたのと、発想が一致している点が興味深い。
+
+Kontext の主眼は速度と一貫性で、1024² を **3〜5 秒**（競合の最大 1 桁速い）、反復編集での同一性保持は [[character-consistency]] に詳しい。評価には実利用から集めた **KontextBench**（1,026 ペア・5 タスク）を提案し、既存ベンチマークが合成データや当時のモデル性能に縛られている点を批判している。
+
 ## 「編集」として解ける意外なタスク
 
 指示編集の枠組みは、一見別ジャンルに見えるタスクも飲み込む。Qwen-Image は次を**すべて TI2I として**扱う：
@@ -103,3 +117,4 @@ Qwen-Image（[[summaries/2025-qwen-image]]）の答えは、**入力画像を 2 
 
 - [[summaries/2025-qwen-image]] — Qwen-Image（意味特徴＋再構成特徴の二重符号化、MSRoPE の frame 次元、GEdit/ImgEdit で首位。新視点合成・深度推定まで TI2I として統一）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（生成と編集を単一モデルに統一。画像側を VAE 潜在へ一本化、T2I:TI2I 比率のカリキュラム、編集専用の 2 報酬で RLHF）
+- [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（コンテキスト画像トークンを連結するだけで T2I と編集を統一。3D RoPE の仮想タイムステップ、KontextBench、1024² を 3〜5 秒）

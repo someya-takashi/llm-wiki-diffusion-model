@@ -13,7 +13,8 @@ summaries:
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2022-latent-diffusion]]"
-updated: 2026-06-25
+  - "[[summaries/2025-flux-kontext]]"
+updated: 2026-08-17
 ---
 
 # Image Tokenizer（画像トークナイザ / 潜在空間を作るオートエンコーダ）
@@ -88,6 +89,12 @@ $f$ を上げる動機は計算量である。拡散 Transformer（DiT, [[diffus
 - **f32c192 が 4 倍高い圧縮率で f8 の Wan2.1 に匹敵**。
 - 拡散可能性：ImageNet で SiT を学習した gFID/IS で高圧縮ベースラインを一貫して上回る。
 
+## 比較対象としての Flux-VAE
+
+高圧縮路線とは別に、**$f8$ のまま素直に作り込む**系統も強い。**FLUX.1**（[[summaries/2025-flux-kontext]]）の VAE は、敵対的目的でゼロから学習し**潜在 16 チャネル**を採ることで、SD3-VAE・SDXL-VAE・SD-VAE を再構成品質で上回る（PDist 0.332 / SSIM 0.896 / PSNR 31.1）。ここで使われる **PDist（Perceptual Distance）** は VGG 特徴空間での知覚的距離で、PSNR/SSIM を補う指標として併記される。
+
+つまり 2026 年時点の選択肢は「$f8$ で作り込む（FLUX）」と「$f16/f32$ へ上げてチャネルと整合で補償する（Qwen-Image-VAE-2.0）」の 2 路線があり、**前者は再構成の素直さ、後者は DiT の計算量削減**を優先している。なお Qwen-Image-VAE-2.0 の比較表では FLUX.2-dev の f16c128 も強く、高圧縮路線に他社も入ってきていることが分かる。
+
 ## 評価：ピクセル指標では足りない
 
 トークナイザの評価は伝統的に **PSNR / SSIM / LPIPS / FID** で行われてきたが、これらは**文字の判読性に鈍感**である。「orange」が「orango」になっても PSNR の低下は 0.5 dB 未満だが、意味は壊れている。
@@ -110,3 +117,4 @@ $f$ を上げる動機は計算量である。拡散 Transformer（DiT, [[diffus
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（f16c64 を採用しネイティブ 2K 生成を実現した基盤モデル）
 - [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE のデコーダのみをテキスト特化微調整し、文字再現の上限を引き上げた先行例）
 - [[summaries/2022-latent-diffusion]] — Latent Diffusion Models（知覚的圧縮と意味的圧縮の分業、$f$ の選択という枠組みを確立した原典）
+- [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（f8・16 チャネル・敵対的目的の Flux-VAE。PDist を含む再構成比較で SD 系を上回る）

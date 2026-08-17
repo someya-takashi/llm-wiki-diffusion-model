@@ -18,7 +18,8 @@ summaries:
   - "[[summaries/2024-stochastic-interpolants]]"
   - "[[summaries/2025-flow-matching-diffusion-intro]]"
   - "[[summaries/2025-qwen-image]]"
-updated: 2026-06-25
+  - "[[summaries/2025-flux-kontext]]"
+updated: 2026-08-17
 ---
 
 # Flow Matching（フローマッチング）
@@ -91,6 +92,8 @@ $$
 
 この路線は後続にそのまま引き継がれている。**Qwen-Image**（[[summaries/2025-qwen-image]]）も rectified flow（$x_t=tx_0+(1-t)x_1$、目標速度 $v_t=x_0-x_1$）＋ logit-normal 時刻サンプリングで 20B の MMDiT を事前学習する。さらに Qwen-Image は、この flow matching の定式化の**上に強化学習を積む**点が新しい（[[reinforcement-learning-for-diffusion]]）：DPO は勝ち画像・負け画像それぞれの**速度予測誤差の差**を選好スコアとして使い、Flow-GRPO は決定論的な ODE サンプリングでは探索できないため**サンプリングを SDE に再定式化**してランダム性を注入する。flow matching が「学習目的」だけでなく「事後学習の土台」としても機能し始めた例である。
 
+**FLUX.1 Kontext**（[[summaries/2025-flux-kontext]]）も同じ rectified flow の速度回帰で学習されるが、条件に**コンテキスト画像**を加えた $v_\theta(z_t,t,y,c)$ を回帰する点が異なる（$y=\varnothing$ なら通常の T2I）。すなわち flow matching の枠組みを変えずに、条件の側だけを拡張して画像編集を取り込んでいる（[[instruction-based-image-editing]]）。同論文の Appendix A.2 は、**タイムステップの α シフトが logit-normal の $\mu=\log\alpha$ と等価である**ことを導出しており、[[noise-schedule]] の 2 つの語彙を橋渡しする。
+
 ## 既存知識との接続
 
 - [[probability-flow-ode]]：FM が学習する CNF は決定論的 ODE 生成。拡散の確率フロー ODE は FM の拡散パスの VF と一致し、FM はそれを「確率パスを直接指定する」視点へ一般化する。
@@ -110,3 +113,4 @@ FM・rectified flow をさらに一般化し、**flows（決定論 ODE）と dif
 - [[summaries/2024-stochastic-interpolants]] — Stochastic Interpolants（flows と diffusions を統一する一般化枠組み）
 - [[summaries/2025-flow-matching-diffusion-intro]] — An Introduction to Flow Matching and Diffusion Models（MIT 6.S184 講義ノート。conditional→marginal の構成と CFM を ODE/SDE 統一の枠組みから教科書的に導く入門）
 - [[summaries/2025-qwen-image]] — Qwen-Image（rectified flow＋logit-normal で 20B MMDiT を学習し、その上に DPO / Flow-GRPO の事後学習を重ねる）
+- [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（条件にコンテキスト画像を加えた rectified flow。α シフト⇔logit-normal の等価性を導出）

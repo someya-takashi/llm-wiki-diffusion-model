@@ -11,6 +11,7 @@ related:
   - "[[instruction-based-image-editing]]"
   - "[[reinforcement-learning-for-diffusion]]"
   - "[[diffusion-distillation]]"
+  - "[[character-consistency]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -20,7 +21,8 @@ summaries:
   - "[[summaries/2024-sd3]]"
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
-updated: 2026-06-25
+  - "[[summaries/2025-flux-kontext]]"
+updated: 2026-08-17
 ---
 
 # Text-to-Image Generation（テキストからの画像生成）
@@ -69,6 +71,12 @@ Qwen-Image がとくに押し進めたのが **[[visual-text-rendering]]（画�
 
 **プロンプトの前処理も設計対象になった**点も新しい。複雑なレイアウト（インフォグラフィック・ポスター）では生成品質がプロンプトの具体性に強く依存するため、Qwen-Image-2.0 は **Prompt Enhancer（PE）**——曖昧なユーザー指示を構造化された詳細プロンプトへ書き換える 9B のモジュール——を前段に挟む。学習データの作り方が巧妙で、**詳細なアノテーションをわざと「劣化」させて口語的な短い指示を作り、その逆操作を思考連鎖（CoT）として記録する**逆工学パイプラインを使う。さらに書き換え結果を凍結生成器に通し、視覚的一貫性・美的品質で GRPO 報酬を与えることで、**下流の画像品質そのものでプロンプト書き換えを最適化**する。
 
+### 評価が「AI っぽさ」に報いる問題 — bakeyness
+
+FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の論点も記しておく価値がある。T2I ベンチマークが「**どちらの画像を好むか**」という単一の問いに頼ると、**過飽和の色・中心被写体への過度な集中・強いボケ・均質なスタイル**という特徴的な「AI 的美学」が有利になってしまう。著者らはこれを **bakeyness** と名づけ、単一軸の選好評価が**モデルをその方向へ最適化させてしまう**危険を指摘する。
+
+対策として評価を **プロンプト追従・美的品質・写実性・タイポグラフィ・推論速度**の 5 次元に分解した。すると「Recraft は美的品質が高いがプロンプト遵守が弱い」「GPT-Image-1 はその逆」といった**カテゴリ間のトレードオフ**が見えるようになる。SDXL が「COCO zero-shot FID は悪化したが人間評価では勝った」と報告した問題（[[summaries/2023-sdxl]]）と同じ、**指標が実際の良さと乖離する**論点の続きであり、本ページ冒頭で触れた FID/IS の限界を補強する。
+
 ## 下流応用：personalization（被写体駆動生成）
 
 汎用 text-to-image は「テキストで言えるもの」しか作れず、**特定個体（ユーザーの犬・バッグなど）の同一性を保ったまま**新文脈で再生成することは苦手である。これを補うのが **[[subject-driven-generation]]（被写体駆動生成 / personalization）** で、少数画像で T2I モデルを特定の被写体に適応させる。代表手法 **DreamBooth**（[[summaries/2023-dreambooth]]）は、Imagen / Stable Diffusion を 3〜5 枚の画像で fine-tune し、被写体を一意識別子「[V] [class noun]」に紐づけて再文脈化・視点変更・スタイル変換を可能にする。対極にあるのが **Textual Inversion**（[[summaries/2022-textual-inversion]]）で、こちらはモデルを**一切変更せず凍結**し、テキスト埋め込み空間に概念を表す擬似単語の埋め込みだけを学ぶ——同じ「personalization」を、モデルを fine-tune するか語彙を 1 単語拡張するかの対照的な両極として確立した二大原典である。テキスト条件付け（本ページ）が「何を描くか」を制御するのに対し、personalization は「誰／どの個体を描くか」を制御する補完的な軸である。
@@ -83,6 +91,8 @@ Qwen-Image がとくに押し進めたのが **[[visual-text-rendering]]（画�
 - [[visual-text-rendering]]：画像の中に「読める文字」を描く部分問題。汎用の生成品質とは別軸で、VAE の再現限界・データのロングテール・位置符号化が効く。
 - [[instruction-based-image-editing]]：生成した／与えられた画像を自然言語の指示で編集する下流タスク。Qwen-Image のようにマルチモーダル LLM を条件エンコーダにすると、T2I と編集が同じモデルで扱える。
 - [[reinforcement-learning-for-diffusion]]：事前学習後に人間の選好や報酬モデルで仕上げる事後学習。プロンプト忠実度（位置・属性・個数）の底上げに効く。
+- [[character-consistency]]：生成した被写体を複数画像・複数ターンにわたって「同じもの」として保つ軸。T2I 単体では見えないが、実運用（ブランド・ストーリーテリング）では決定的になる。
+- [[diffusion-distillation]]：蒸留で NFE を 1〜4 まで落とし、対話的な創作ワークフローを可能にする。
 
 ## 参考文献（summaries）
 
@@ -94,3 +104,4 @@ Qwen-Image がとくに押し進めたのが **[[visual-text-rendering]]（画�
 - [[summaries/2024-sd3]] — Stable Diffusion 3（MM-DiT＋3 テキストエンコーダ＋rectified flow、タイポグラフィ強化）
 - [[summaries/2025-qwen-image]] — Qwen-Image（凍結 Qwen2.5-VL を条件エンコーダに据えた 20B MMDiT。中国語テキスト描画で大差の SOTA、DPO/GRPO 事後学習、編集まで統一）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen3-VL＋f16 トークナイザで生成と編集を単一モデルに統一。Prompt Enhancer・5 報酬 RLHF・DMD 蒸留、LMArena ELO 1168）
+- [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（T2I と編集を単一の rectified flow に統一。bakeyness 批判と 5 次元評価、1024² を 3〜5 秒）

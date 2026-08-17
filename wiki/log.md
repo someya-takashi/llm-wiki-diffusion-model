@@ -3,6 +3,19 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-08-17] ingest | FLUX.1 Kontext: Flow Matching for In-Context Image Generation and Editing in Latent Space
+
+- 取り込み: `raw/papers/FLUX.1 Kontext_ Flow Matching for In-Context Image Generation and Editing in Latent Space.md`（ar5iv 由来 markdown・ケース A, arXiv:2506.15742, 2025年6月。Black Forest Labs）。SD3 と同系譜（BFL）から出た、**生成と編集を単一 rectified flow に統一**する基盤モデル。
+- 作成: [[translations/2025-flux-kontext]], [[summaries/2025-flux-kontext]], [[concepts/character-consistency]]
+- **新規概念ページ 1 件**（ユーザー回答「＋多ターン一貫性を新設」）:
+  - [[concepts/character-consistency]] — キャラクタ／被写体の一貫性。多ターン編集で被写体が少しずつ別人になる **visual drift** を主題に、**学習型（DreamBooth/LoRA）vs 文脈型（FLUX.1 Kontext）** の対比表、AuraFace 埋め込み類似度による定量化（Kontext は 6 ターン後も高い類似度を保つが競合は急落）、限界（多段の劣化蓄積・指示無視・世界知識違反）。
+- 更新（本文）: [[concepts/diffusion-distillation]]（**「(3) 敵対的蒸留（ADD/LADD）」節を新設**——ページ自身が「未取り込み」と明記していた穴を埋める。蒸留が品質を「落とす」のでなく「上げる」ことがある、CFG 由来のアーティファクト低減も動機、ガイダンス蒸留。あわせて「2 系統」→「3 系統」等の整合修正）, [[concepts/instruction-based-image-editing]]（「別解：FLUX.1 Kontext の『連結するだけ』」節を新設。Qwen 系の二重符号化との対比）, [[concepts/noise-schedule]]（「タイムステップのシフトと logit-normal の等価性」節を新設。付録 A.2 の μ=log α 導出）, [[concepts/diffusion-model-architecture]]（FLUX.1 の double stream → 38 single stream・fused feed-forward・因子分解 3D RoPE と**仮想タイムステップ**。MSRoPE の frame 次元と同型の解に独立到達した点）, [[concepts/text-to-image-generation]]（**bakeyness** ——単一の選好比較が過飽和・中心構図・強いボケという「AI 的美学」に報いてしまう問題と 5 次元評価。SDXL の FID 乖離論点の続き）, [[concepts/flow-matching]], [[concepts/image-tokenizer]]（「比較対象としての Flux-VAE」節）, [[concepts/subject-driven-generation]]（学習型 vs 文脈型の対比）, [[concepts/image-composition]], [[concepts/multi-concept-customization]]
+- 更新（frontmatter のみ）: 上記に加え計 10 概念ページに `[[character-consistency]]` の相互リンクと `[[summaries/2025-flux-kontext]]` を追加
+- 更新: [[overview]]（「文脈内での生成と編集の統一（2025）」の項を追加）, [[index]]（Summaries / Translations / Concepts＋略称リダイレクト 5 行）
+- 画像: ar5iv 画像 15 枚を `raw/assets/2025-flux-kontext/` に取得。うち **3 枚（x1.png・x3.png・x9.png）は ar5iv の変換失敗によるプレースホルダ**（3 枚とも同一 MD5・325x400 のグレースケール「NO IMAGE AVAILABLE」）だったため削除し、**有効 12 枚**を採用。翻訳側の該当箇所には `> 図N: ...（訳注: ar5iv 側の変換失敗により画像が取得できなかった）` の訳注を残した。
+- 翻訳: 本文 §1–5 ＋ Appendix A（rectified flow の導入・A.2 の解像度シフト α と logit-normal 平均 μ=log α の等価性導出）・Appendix B を全訳。References・謝辞は除外。
+- メモ: 本論文の技術的な要点は「**アーキテクチャに何も足さない**」こと——コンテキスト画像を VAE 符号化して対象トークン列にただ連結し、3D RoPE の時間軸に定数オフセット（仮想タイムステップ）を与えて区別する。ControlNet 的なアダプタ枝も参照専用エンコーダも不要。既存の [[concepts/controllable-generation]]（アダプタ型）・[[concepts/instruction-based-image-editing]]（二重符号化型）と並ぶ第三の解として位置づけた。評価面では **KontextBench**（1026 対・5 タスク）と bakeyness 批判が、本 wiki の「指標が実際の良さと乖離する」論点（SDXL の zero-shot FID）を延長する。
+
 ## [2026-06-25] ingest | Qwen-Image Technical Report
 
 - 取り込み: `raw/papers/Qwen-Image Technical Report.pdf`（PDF・ケース B, arXiv:2508.02324, 2025年8月。Qwen Team / Alibaba。46 ページ、本文 §1–7＋References）。SD3 以降の最新世代 T2I 基盤モデルで、本 wiki に**未収録だった 3 領域**（画像内テキスト描画・指示ベース編集・拡散の強化学習）を一挙に持ち込む原典。

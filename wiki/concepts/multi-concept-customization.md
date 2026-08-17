@@ -9,13 +9,14 @@ related:
   - "[[image-composition]]"
   - "[[controllable-generation]]"
   - "[[classifier-free-guidance]]"
+  - "[[character-consistency]]"
 summaries:
   - "[[summaries/2023-custom-diffusion]]"
   - "[[summaries/2023-mix-of-show]]"
   - "[[summaries/2024-ziplora]]"
   - "[[summaries/2024-lora-composer]]"
   - "[[summaries/2024-multi-lora-composition]]"
-updated: 2026-06-24
+updated: 2026-08-17
 ---
 
 # Multi-Concept Customization / Multi-LoRA Composition（多概念カスタマイズ / 複数 LoRA 合成）
@@ -73,6 +74,7 @@ LoRA 重みを一切いじらず、**ノイズ除去（復号）の各ステッ�
 - [[classifier-free-guidance]]：LoRA Composite は CFG のスコア平均を多 LoRA に拡張したもの。
 - [[controllable-generation]]：LoRA-Composer のレイアウト＋注意制御、Multi-LoRA の復号制御は、いずれも推論時の制御。
 - [[image-composition]]：AnyDoor 系の画像ベース多概念合成は、LoRA ベースとは別系統の解。
+- [[character-consistency]]：合成した各概念が**ターンをまたいで**同一に保たれるかという軸。本ページが「1 枚に複数概念を同時に載せる」空間方向の合成なら、あちらは「同じ概念を何枚にもわたって保つ」時間方向の一貫性で、FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が扱う。
 
 ## 参考文献（summaries）
 

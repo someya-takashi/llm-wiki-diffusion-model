@@ -12,6 +12,7 @@ related:
   - "[[multi-concept-customization]]"
   - "[[lora-merging]]"
   - "[[instruction-based-image-editing]]"
+  - "[[character-consistency]]"
 summaries:
   - "[[summaries/2023-dreambooth]]"
   - "[[summaries/2022-textual-inversion]]"
@@ -19,7 +20,7 @@ summaries:
   - "[[summaries/2023-anydoor]]"
   - "[[summaries/2022-lora]]"
   - "[[summaries/2024-ziplora]]"
-updated: 2026-06-25
+updated: 2026-08-17
 ---
 
 # Subject-Driven Generation / Personalization（被写体駆動生成 / 個人化）
@@ -72,6 +73,8 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 
 被写体だけでなく**画風（style）も別個に personalize し、両者を合成する**方向もある。**ZipLoRA**（[[summaries/2024-ziplora]]）は、DreamBooth で学んだ被写体（content）LoRA と、SDXL（[[summaries/2023-sdxl]]）の単一画像スタイル学習で得た style LoRA を、列ごとの学習係数で干渉なくマージし「任意の被写体を任意のスタイルで」描く。被写体 personalization と画風 personalization を分離して学習・再結合する点で、本ページの単一概念 fine-tune を [[lora-merging]] へつなぐ。
 
+さらに極端な方向として、**そもそも被写体を学習しない**系統がある。FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）は、参照画像を**文脈トークンとして系列に連結するだけ**で同一性を保ったまま編集・再生成する。学習も埋め込みも要らず推論 1 回で済むが、代わりに「複数ターンにわたって同一性がどれだけ保たれるか」という新しい問題が前面に出る——これを扱うのが [[character-consistency]] である。DreamBooth 系が「被写体をモデルに焼き付ける」のに対し、こちらは「被写体を毎回入力として渡す」——**学習型 vs 文脈型**の対比になる。
+
 別の方向として、**物体ごとの学習を一切せず zero-shot で被写体を扱う**手法もある。**AnyDoor**（[[summaries/2023-anydoor]]）は参照物体画像をシーンの指定位置に合成する（[[image-composition]]）。DreamBooth の「テキストで新文脈に生成（tuning 型）」に対し、AnyDoor は「与えられたシーン・位置に合成（zero-shot・参照ベース）」で、対象の同一性保持という目標を共有しつつ入出力と学習方式が対照的である。
 
 ## 既存知識との接続
@@ -86,6 +89,7 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 - [[low-rank-adaptation]]：personalization を低ランク更新で軽量に行う代表手法（LoRA）。DreamBooth と Textual Inversion の中間。
 - [[multi-concept-customization]]：複数の単一概念 LoRA／被写体を 1 枚に合成する発展タスク。
 - [[lora-merging]]：被写体 LoRA と画風 LoRA を重みレベルで合成する系統（ZipLoRA）。単一概念 personalization の再結合先。
+- [[character-consistency]]：同一性保持という目標を共有する姉妹軸。本ページが「1 枚の生成でどれだけ似せるか」を問うのに対し、あちらは「**何ターン重ねても崩れないか**」を問う。学習を要さない文脈型（FLUX.1 Kontext）が主戦場。
 
 ## 参考文献（summaries）
 
@@ -95,3 +99,4 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 - [[summaries/2023-anydoor]] — AnyDoor（zero-shot・参照ベースの物体合成、tuning 型との対比）
 - [[summaries/2022-lora]] — LoRA（低ランク適応による軽量 personalization の基礎）
 - [[summaries/2024-ziplora]] — ZipLoRA（被写体 content LoRA × 画風 style LoRA の学習係数マージ）
+- [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（学習なしの文脈型 personalization。多ターンでの同一性ドリフトを AuraFace で定量化）

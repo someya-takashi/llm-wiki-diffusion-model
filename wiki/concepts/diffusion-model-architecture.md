@@ -18,7 +18,8 @@ summaries:
   - "[[summaries/2022-edm]]"
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
-updated: 2026-06-25
+  - "[[summaries/2025-flux-kontext]]"
+updated: 2026-08-17
 ---
 
 # Diffusion Model Architecture（拡散モデルのアーキテクチャ）
@@ -116,6 +117,16 @@ MM-DiT は DiT を text-to-image のマルチモーダル性に合わせて拡�
 
 加えてアーキテクチャ全体では、**画像トークナイザを 16 倍圧縮（f16c64）に切り替えた**ことが効いている（[[image-tokenizer]]）。DiT の計算量は潜在トークン数に対して二次的なので、$f8\to f16$ で系列長 1/4・計算量約 1/16 となり、**ネイティブ 2K 生成が現実的になる**。バックボーン側の工夫だけでなく、トークナイザ側の圧縮率がアーキテクチャの到達点を規定する好例である。
 
+### FLUX.1 / FLUX.1 Kontext（Black Forest Labs 2024–2025）——二重ストリームの後に単一ストリームを積む
+
+SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/2025-flux-kontext]]）は、MM-DiT の「2 ストリーム」を**途中で 1 本に畳む**構成を採る。
+
+- **double stream → single stream**：前半は MM-DiT と同じく画像とテキストに別重みを与え attention でのみ混ぜる。その後**両系列を連結して 38 個の single stream ブロック**で処理し、最後にテキストトークンを捨てて画像を復号する。序盤はモダリティごとの専用処理、終盤は統合処理、という役割分担である。
+- **fused feed-forward ブロック**：single stream の GPU 利用率を上げるため、(i) 変調パラメータ数を半減し、(ii) **attention の入出力線形層を MLP のそれと融合**して行列積を大きくする。演算の「数」ではなく「粒度」を上げて実効効率を稼ぐ工夫。
+- **因子分解 3D RoPE**：各潜在トークンを時空座標 $(t,h,w)$ で添字づける（単一画像なら $t\equiv0$）。
+
+この 3D RoPE が、後継の **FLUX.1 Kontext** で効いてくる。コンテキスト画像のトークンに**時間軸方向の定数オフセット**（対象は $t=0$、$i$ 番目のコンテキストは $t=i$）を与えるだけで、空間構造を保ったまま文脈と対象を分離できる——著者らのいう「**仮想タイムステップ**」である。Qwen-Image が MSRoPE に **frame 次元**を足して同じ問題（複数画像を 1 本の系列でどう区別するか）を解いたのと、独立に到達した同型の答えになっている。位置符号化が**マルチモーダル化・多画像化の主戦場**であることを、2 系統がそろって示している。
+
 ## 既存知識との接続
 
 - [[denoising-diffusion]]：アーキテクチャはノイズ予測 $\epsilon_\theta$ の中身。DDPM の U-Net がこの系譜の起点。
@@ -134,5 +145,7 @@ MM-DiT は DiT を text-to-image のマルチモーダル性に合わせて拡�
 - [[summaries/2023-sdxl]] — SDXL（改良 U-Net を 3× スケール・transformer block の不均一配分・transformer 化は当時見送り）
 - [[summaries/2024-sd3]] — Stable Diffusion 3（MM-DiT＝DiT のマルチモーダル拡張・QK-normalization・rectified flow）
 - [[summaries/2025-qwen-image]] — Qwen-Image（20B MMDiT。条件エンコーダを凍結 MLLM 1 本に置換、MSRoPE でテキストを画像対角線上に配置）
+- [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen3-VL へ更新、バイアスなし変調＋SwiGLU で同時学習を安定化、f16 トークナイザ）
+- [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（double stream → single stream の二段構成、fused feed-forward、3D RoPE の仮想タイムステップで文脈画像を分離）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

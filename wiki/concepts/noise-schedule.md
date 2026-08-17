@@ -10,7 +10,8 @@ related:
   - "[[flow-matching]]"
 summaries:
   - "[[summaries/2022-edm]]"
-updated: 2026-06-24
+  - "[[summaries/2025-flux-kontext]]"
+updated: 2026-08-17
 ---
 
 # Noise Schedule（ノイズスケジュール）
@@ -56,6 +57,26 @@ EDM は noise schedule を含む拡散の設計空間を分解し（[[summaries/
 
 これらにより、サンプラー（[[diffusion-sampling]]）と組み合わせて少 NFE・高品質を実現した。
 
+## タイムステップの「シフト」と logit-normal の等価性
+
+高解像度で学習するとき、SD3 系では時刻サンプリングを係数 $\alpha$ で**シフト**させる操作が使われる（解像度を $256^2$ から $1024^2$ へ上げる際は $\alpha=3.0$ が良いと報告された）。一方で本ページで見たとおり、SD3 は時刻を **logit-normal** からサンプルする。この 2 つは別々の道具に見えるが、**同じものである**ことを FLUX.1 Kontext（[[summaries/2025-flux-kontext]] Appendix A.2）が示した。
+
+導出は短い。rectified flow の順過程の log-SNR（対数信号対雑音比）は $\lambda_t^{0,1}=-2\,\mathrm{logit}(t)$ と書け、任意の $\mu,\sigma$ では $\lambda_t^{\mu,\sigma}=\sigma\lambda_t^{0,1}-2\mu$ になる。他方 $\alpha$ シフトは $\lambda_t^{\alpha}=\lambda_t^{0,1}-2\log\alpha$ である。両者を見比べれば、$\sigma=1.0$ のとき
+
+$$
+\mu=\log\alpha
+$$
+
+と同定できる。つまり **$\alpha=3.0$ のシフトは、$\mu=\log 3.0=1.0986$・$\sigma=1.0$ の logit-normal 分布と同じ**である。さらに一般化したシフト後の時刻は
+
+$$
+t'=\frac{e^{\mu}}{e^{\mu}+(1/t-1)^{\sigma}}
+$$
+
+で表せ、$\sigma=1.0,\ \mu=\log\alpha$ とすれば SD3 の再配分関数 $t'=\frac{\alpha t}{1+(\alpha-1)t}$ を復元する。
+
+実務的な含意は 2 つある。第一に、**「解像度に応じてシフト量を変える」という操作は「logit-normal のモードをずらす」ことに他ならない**——ノイズスケジュール設計の 2 つの語彙が 1 つに統合される。第二に、$\sigma$ も動かせる一般形が得られるため、学習時だけでなく**推論時の時刻の刻み方**にも同じ式を使える。実際 FLUX.1 Kontext は学習データの解像度に応じてモード $\mu$ を変えている。
+
 ## 既存知識との接続
 
 - [[diffusion-sampling]]：推論時の時間離散化（$\{\sigma_i\}$）はサンプラーの一部。EDM の ρ スケジュールは Heun サンプラーと一体で少ステップ化を実現する。
@@ -65,6 +86,8 @@ EDM は noise schedule を含む拡散の設計空間を分解し（[[summaries/
 - [[flow-matching]]：SD3 の logit-normal/mode サンプラーは「時刻分布をどう選ぶか」という同じ問題で、EDM のノイズ分布思想を rectified flow へ移したもの。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（タイムステップの α シフトが logit-normal の μ=log α と等価であることを導出。Appendix A.2）
 
 - [[summaries/2022-edm]] — EDM（σ(t)=t・ρ=7 時刻離散化・対数正規ノイズ分布・損失重み、ノイズスケジュールのランドマーク）
 - [[summaries/2021-score-sde]] — Score-SDE（VE/VP の連続時間スケジュール）
