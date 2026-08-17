@@ -27,3 +27,4 @@ tools: Read, Glob, Grep, Bash, WebFetch, WebSearch
 1. `wiki/` 配下（summaries / translations / concepts / questions / overview / index）を Glob / Grep で走査し、frontmatter・`[[wikilink]]`・見出しを収集する。
 2. 上記観点ごとに検出結果を一覧化してユーザーに提示し、優先度を相談する。
 3. 修正そのものは行わず、別途 ingest / query フロー（対応する skill）で行う。lint は検出と提示に専念する。
+4. **git add & commit**：lint は本来ファイルを変更しないためコミットは不要である。ただし、**2 の提示を受けてユーザーが「この指摘を直して」と指示し、その場で修正まで行った場合は、修正したファイルを `git add` して `git commit` する**。コミットメッセージは 1 行目を `lint: <修正内容の要点>` とし、本文に「どの指摘を・どのファイルで直したか」を箇条書きする。

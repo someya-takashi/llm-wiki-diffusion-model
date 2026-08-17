@@ -16,6 +16,16 @@
 - 翻訳: **本文 §1–6 全訳**（ユーザー回答）。§7 著者一覧・References は除外。表 1–14 を markdown 化（Table 7 の TIIF は多層表のため Overall/Text を抜粋）。rectified flow・DPO・GRPO・SDE 再定式化の数式は LaTeX 保持。
 - メモ: 核心＝(1) 凍結 Qwen2.5-VL（7B）＋Wan-2.1-VAE（単一エンコーダ・二重デコーダ、**画像デコーダのみ微調整**）＋20B MMDiT、(2) MSRoPE でテキストを画像対角線上に配置、(3) rectified flow＋logit-normal で事前学習、(4) SFT→DPO→Flow-GRPO の事後学習（GenEval 0.87→0.91）、(5) 編集は MLLM 意味特徴＋VAE 再構成特徴の二重符号化＋MSRoPE の frame 次元。成績＝ChineseWord 58.30（GPT Image 1 は 36.14）、GEdit/ImgEdit 首位、AI Arena でオープンソース唯一のトップ3。限界＝Level-3 漢字 6.48%、英語テキストは GPT Image 1 に及ばず、ablation が限定的、GEdit/ImgEdit は GPT-4.1 審判依存。未取り込み注記: TextDiffuser-2, AnyText, TextCrafter（テキスト描画の先行研究）, InstructPix2Pix, FLUX.1 Kontext（指示編集）, Diffusion-DPO 原典。
 
+## [2026-06-25] schema-update | ingest / query / lint の各 skill に git add & commit 手順を追加
+
+- 変更: `.claude/skills/ingest/SKILL.md`（標準フローに **手順 10「git add & commit」** を追加）, `.claude/skills/query/SKILL.md`（**手順 5** を追加）, `.claude/skills/lint/SKILL.md`（**手順 4** を追加）。
+- 要点: **ファイルを作成・更新したら、その作業の最後に必ず `git add` して `git commit` する**というルールを 3 skill に明文化した。従来はコミットしないまま作業が積み上がっていたため、1 オペレーション＝1 コミットで履歴を追えるようにする。
+- 各 skill の差分:
+  - **ingest**: 最終検証の後にコミットする。`wiki/` 配下だけでなく **`raw/papers/`・`raw/articles/` の原典と `raw/assets/<source-slug>/` の画像も必ず add**（未追跡で残さない）。メッセージは `ingest: <原典タイトル>`。複数件の同時 ingest は**原典 1 件 1 コミット**が基本。
+  - **query**: `questions/` ページを作った場合のみコミット（`index.md`・`log.md` と一緒に）。メッセージは `query: <質問の要点>`。**回答しただけでファイルを作らなかった場合はコミット不要**。
+  - **lint**: 本来は検出と提示のみなのでコミット不要。ただし**ユーザーの指示で修正まで行った場合はコミットする**。メッセージは `lint: <修正内容の要点>`。
+- メモ: CLAUDE.md 本体は変更していない（3 skill 共通の運用ルールだが、手順の所在は各 SKILL.md に置く方針を維持）。
+
 ## [2026-06-25] ingest | Qwen-Image-2.0 / Qwen-Image-VAE-2.0 Technical Report（2 件同時）
 
 - 取り込み: `raw/papers/Qwen-Image-2.0 Technical Report.md`（ar5iv 由来 markdown・ケース A, arXiv:2605.10730, 2026年4月22日）と `raw/papers/Qwen-Image-VAE-2.0 Technical Report.md`（同, arXiv:2605.13565）。いずれも Qwen Team（Alibaba）。**前ステップで取り込んだ [[summaries/2025-qwen-image]] の直接の後継 2 本**で、VAE-2.0 は Qwen-Image-2.0 の中で実際に使われているトークナイザの技術報告という関係にある。
