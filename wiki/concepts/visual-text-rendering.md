@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Visual Text Rendering, Text Rendering, 画像内テキスト生成, 文字レンダリング, グリフ生成, Glyph Generation, Scene Text Generation]
-tags: [visual-text-rendering, text-to-image-generation, latent-diffusion, generative-models]
+tags: [visual-text-rendering, text-to-image-generation, latent-diffusion, generative-models, pixel-space-diffusion]
 related:
   - "[[text-to-image-generation]]"
   - "[[latent-diffusion]]"
@@ -9,12 +9,14 @@ related:
   - "[[instruction-based-image-editing]]"
   - "[[controllable-generation]]"
   - "[[image-tokenizer]]"
+  - "[[pixel-space-diffusion]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2024-sd3]]"
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-qwen-image-2]]"
-updated: 2026-06-25
+  - "[[summaries/2026-hidream-o1-image]]"
+updated: 2026-08-17
 ---
 
 # Visual Text Rendering（画像内テキストレンダリング）
@@ -67,6 +69,22 @@ MMDiT（[[diffusion-model-architecture]]）でテキストと画像の位置符�
 
 なお生成側では **Qwen-Image-2.0**（[[summaries/2026-qwen-image-2]]）が、最大 1K トークンの指示による**超長文レンダリング**（スライド・ポスター・インフォグラフィックの直接生成）と多言語対応を主張するが、こちらは定量評価がなく定性比較にとどまる点に注意。
 
+## もう 1 つの答え：VAE を外す（2026）
+
+Qwen 系の 2 手——デコーダを微調整する、圧縮率を上げつつ補償する——はどちらも「**VAE が上限を作る**」という診断を受け入れた上での対処だった。**HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）は、その診断に対する最も直接的な処方を出す：**VAE を使わない**。生ピクセルをパッチ化して Transformer に直接入れれば、非可逆圧縮による高周波成分の損失は原理的に生じない（[[pixel-space-diffusion]]）。
+
+数字は劇的である。同じチームの前作 HiDream-I1（VAE あり・[[summaries/2025-hidream-i1]]）と後作を LongText-Bench で比べると：
+
+| モデル | VAE | LongText-Bench-EN | LongText-Bench-ZH |
+| --- | --- | --- | --- |
+| HiDream-I1-Full（13.5B + 17B） | あり | 0.543 | **0.024** |
+| Qwen-Image（7B + 20B） | あり | 0.943 | 0.946 |
+| HiDream-O1-Image（8B） | **なし** | **0.979** | **0.978** |
+
+中国語 0.024 → 0.978 という跳躍は、本ページ冒頭で述べた「表語文字のロングテール」の困難がいかに深刻で、かつ**その一部が VAE 由来だった**かを示している。CVTG-2K の平均単語正解率でも 8B が 0.9128 と、27B の Qwen-Image（0.8288）を上回る。
+
+ただし因果の帰属には留保が要る。前作との差は VAE の有無だけではなく、Qwen3-VL からの初期化・共有トークン空間・OCR 報酬による GRPO（[[reinforcement-learning-for-diffusion]]）も同時に導入されている。**アブレーションが存在しない**ため、「VAE を外したから描けた」という主張の切り分けはできていない。とはいえ Qwen-Image-VAE-2.0 が「f16 で f8 を超えるテキスト忠実度」に苦心して到達した水準を、圧縮なしなら素直に超えられることは、本ページの中心命題を別角度から裏書きしている。
+
 ## 評価をどうするか
 
 文字の正しさは FID（[[text-to-image-generation]] で使う画質指標）では測れないため、専用ベンチマークが使われる。
@@ -98,3 +116,5 @@ MMDiT（[[diffusion-model-architecture]]）でテキストと画像の位置符�
 - [[summaries/2024-sd3]] — Stable Diffusion 3（MM-DiT＋3 テキストエンコーダでタイポグラフィを強化した先行世代）
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16c128 が文書テキスト再構成で全 f8 VAE を上回る。OmniDoc-TokenBench と OCR ベース NED を提案）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（最大 1K トークンの超長文レンダリングと多言語対応を主張。ただし定性評価中心）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（VAE を外す。LongText-Bench-ZH で前作の 0.024 から 0.978 へ）
+- [[summaries/2025-hidream-i1]] — HiDream-I1（テキスト描画の評価を行わなかった世代。後年 LongText-Bench-ZH 0.024 と報告される）

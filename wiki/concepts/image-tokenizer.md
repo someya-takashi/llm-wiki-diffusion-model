@@ -1,19 +1,21 @@
 ---
 type: concept
 aliases: [Image Tokenizer, 画像トークナイザ, VAE, Visual Tokenizer, Autoencoder, diffusability, 拡散可能性, 高圧縮VAE, High-Compression VAE]
-tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models]
+tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models, pixel-space-diffusion]
 related:
   - "[[latent-diffusion]]"
   - "[[diffusion-model-architecture]]"
   - "[[visual-text-rendering]]"
   - "[[denoising-diffusion]]"
   - "[[flow-matching]]"
+  - "[[pixel-space-diffusion]]"
 summaries:
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2025-flux-kontext]]"
+  - "[[summaries/2026-hidream-o1-image]]"
 updated: 2026-08-17
 ---
 
@@ -103,6 +105,14 @@ $f$ を上げる動機は計算量である。拡散 Transformer（DiT, [[diffus
 
 実際、ピクセル指標と NED は一致しない：Stepvideo-T2V は HunyuanImage-3.0 と SSIM 差はわずかなのに NED は大きく上回る（0.8838 対 0.7753）。**NED は独立に必要な指標である**。
 
+## 反対側の答え：トークナイザを作らない
+
+本ページはここまで「潜在空間の形をどう設計するか」を追ってきた。だが同じ 2026 年、**HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）は**そもそもトークナイザを作らない**という答えを出している。生ピクセルをパッチ化してそのまま Transformer に入れれば、圧縮率 $f$・再構成忠実度・拡散可能性の三者間トレードオフは**存在しなくなる**——少なくとも、その形では現れなくなる。
+
+面白いのは、両者が**同じ道具に行き着いている**ことである。Qwen-Image-VAE-2.0 は高圧縮で複雑化した潜在を拡散しやすく保つために **DINOv2 中間層への意味的整合**を潜在に課した。HiDream-O1-Image はピクセル空間の弱点（長距離の意味的一貫性が弱い）を補うために **知覚的 DINO 損失と LPIPS 損失**を生成モデル本体に課す。「意味的な足場を外から与える」という処方箋は共通で、**それを潜在空間に埋め込むか、損失として課すか**だけが分かれている。
+
+ただし pixel-space 側は本ページの中心命題——**DiT の計算量は潜在トークン数に二次的**——への回答を持っていない。トークン数は最大 $f^2$ 倍（$f=16$ なら 256 倍）になりうるが、原典はパッチサイズも系列長も推論コストも報告しない。「トークナイザを作らなくてよい」ことと「作らない方が安い」ことは別で、後者は未証明である。詳細は [[pixel-space-diffusion]] を参照。
+
 ## 既存知識との接続
 
 - [[latent-diffusion]]：トークナイザは LDM の第一段階そのもの。本ページはその「第一段階」を独立した設計問題として扱う。LDM 原典（[[summaries/2022-latent-diffusion]]）が $f4$〜$f8$ を最適点としたのに対し、高解像度時代は $f16$・$f32$ へ移りつつある。
@@ -113,6 +123,7 @@ $f$ を上げる動機は計算量である。拡散 Transformer（DiT, [[diffus
 
 ## 参考文献（summaries）
 
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（トークナイザを作らない立場。同じ問題への正反対の答え）
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16/f32 高圧縮 VAE。GSC・attention-free・非対称構成、KL/GAN 除去、DINOv2 中間層への意味的整合、OmniDoc-TokenBench）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（f16c64 を採用しネイティブ 2K 生成を実現した基盤モデル）
 - [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE のデコーダのみをテキスト特化微調整し、文字再現の上限を引き上げた先行例）

@@ -9,9 +9,12 @@ related:
   - "[[score-based-generative-models]]"
   - "[[text-to-image-generation]]"
   - "[[reinforcement-learning-for-diffusion]]"
+  - "[[mixture-of-experts-diffusion]]"
 summaries:
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-flux-kontext]]"
+  - "[[summaries/2025-hidream-i1]]"
+  - "[[summaries/2026-hidream-o1-image]]"
 updated: 2026-08-17
 ---
 
@@ -73,6 +76,20 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が LADD を採る動機は 2
 
 **ガイダンス蒸留（guidance distillation）** も併記しておく価値がある。CFG は条件付きと無条件の 2 回評価を要するが、これを 1 回に畳み込む蒸留で、FLUX.1 Kontext [dev]（12B）がこれで作られている。ステップ数ではなく**1 ステップあたりのコスト**を半減させる別軸の高速化である。
 
+### 組み合わせる — DMD ＋ 敵対的損失
+
+上の 3 系統は排他ではない。**HiDream-I1**（[[summaries/2025-hidream-i1]]）は (2) と (3) を足し合わせる：
+
+$$\mathcal{L}_{\text{total}}=\mathcal{L}_{\text{DMD}}+\lambda_{\text{adv}}\mathcal{L}_{\text{adv}}$$
+
+動機はそのまま両者の性格の裏返しで、「DMD だけでは細部の鮮鋭さが失われるので、敵対的損失で押し戻す」。識別器は独立したネットワークではなく、**凍結した教師バックボーンの多段階特徴**を使って判定する——教師をもう一度、今度は「目利き」として使い回す設計である。これで 50 ステップの教師から 28 ステップ（Dev）と 14〜16 ステップ（Fast）の生徒を作る。
+
+後継の **HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）はここに標準の拡散損失を第 3 項として足す：
+
+$$\mathcal{L}_{\text{total}}=\mathcal{L}_{\text{DMD}}+\lambda_{\text{diff}}\mathcal{L}_{\text{diff}}+\lambda_{\text{adv}}\mathcal{L}_{\text{adv}}$$
+
+理由は「学習の安定化と最適化の振動の緩和」。教師の分布に合わせる項（DMD）と本物らしさを押し上げる項（敵対的）はどちらも間接的な信号なので、**元の学習目的そのもの**を錨として残す、という発想である。これが [[pixel-space-diffusion]]（ピクセル空間で拡散する設計）で導入されている点は示唆的で、潜在空間より高次元で不安定になりやすい環境では錨が要る、と読める。
+
 ## 代表事例：Qwen-Image-2.0 の 4-NFE 蒸留
 
 [[summaries/2026-qwen-image-2]] は 20B 級のマルチモーダル基盤モデルに DMD を適用した。著者らが強調する困難は、**既存の蒸留研究がほぼ ImageNet のクラス条件付き設定に限られていた**ことである。T2I 生成や画像編集のような開いた条件空間、しかも肖像・風景・**テキストレンダリング**（[[visual-text-rendering]]）まで含む多様なシナリオで、極端に少ない NFE のまま全能力を保てるかは未探求だった。
@@ -93,6 +110,7 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が LADD を採る動機は 2
 - [[probability-flow-ode]]：軌道ベースの蒸留は、確率フロー ODE の軌道を「近道」で結び直す操作として理解できる。
 - [[score-based-generative-models]]：DMD は教師スコアと生徒スコアの**差**で学習する。スコアという言語がそのまま蒸留の道具になる。
 - [[flow-matching]]：DMD の偽スコアモデルは flow matching 目的で学習される。また rectified flow のように**もともと直線的な道**を学ぶ手法は、蒸留前から少ステップに強い（[[summaries/2023-flow-matching]]）。
+- [[mixture-of-experts-diffusion]]：どちらも「拡散モデルは重い」への答えだが向きが直交する。蒸留は**呼ぶ回数（NFE）を減らし**、MoE は**1 回あたりのコストを据え置いたまま容量を増やす**。HiDream-I1 は両方を同時に使う。
 - [[reinforcement-learning-for-diffusion]]：どちらも事前学習後の「仕上げ」工程。Qwen-Image-2.0 では **SFT → RLHF → 蒸留**の順で、RL 済みモデルを教師にして蒸留する。
 - [[text-to-image-generation]]：蒸留の実用的な動機は、対話的な創作ワークフローでの応答速度にある。
 
@@ -100,5 +118,8 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が LADD を採る動機は 2
 
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（20B の T2I・編集統合モデルに DMD を適用し、4 NFE の生徒が 40 ステップの教師に匹敵）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（LADD で 1024² を 3〜5 秒に。速度だけでなく CFG 由来のアーティファクト低減も動機。[dev] はガイダンス蒸留で作られる）
+
+- [[summaries/2025-hidream-i1]] — HiDream-I1（DMD ＋ 敵対的損失。識別器は凍結教師バックボーンの多段階特徴で判定）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（さらに標準の拡散損失を安定化項として追加。50 → 28 ステップ）
 
 > 未取り込みの主要原典：Progressive Distillation（Salimans & Ho 2022）、Consistency Models（Song ら 2023）、DMD 原典（Yin ら 2024）、ADD / LADD 原典（Sauer ら 2023・2024）。今後の ingest で本ページへ追記する。（ADD/LADD の実適用例は [[summaries/2025-flux-kontext]] で取り込み済み。）

@@ -12,6 +12,7 @@ summaries:
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2023-dreambooth]]"
+  - "[[summaries/2026-hidream-o1-image]]"
 updated: 2026-08-17
 ---
 
@@ -62,7 +63,7 @@ updated: 2026-08-17
 - **CREF タスク**：KontextBench（[[summaries/2025-flux-kontext]]）は 1,026 ペアのうち **193 例をキャラクタ参照**に割いている。
 - **顔類似度の推移**：単一ターンのスコアではなく、**ターン数に対する曲線**で見るのが本質的。1 回目が良くても崩れ方が速ければ実用にならない。
 - **編集専用の報酬**：Qwen-Image-2.0（[[summaries/2026-qwen-image-2]]）は事後学習で **視覚的一貫性報酬**（未修正領域の幾何・位相・意味を保っているか）を独立した報酬モデルとして立てている（[[reinforcement-learning-for-diffusion]]）。一貫性が「測って最適化する対象」になった例である。
-- **顔以外**：物体・製品・スタイルの一貫性は顔ほど良い既製埋め込みがなく、評価が難しい領域として残る。
+- **顔以外**：物体・製品・スタイルの一貫性は顔ほど良い既製埋め込みがなく、評価が難しい領域として残る。ここを VLM 採点で埋めようとしたのが HiDream-O1-Image の **UniSubject**（[[summaries/2026-hidream-o1-image]]）で、Qwen-VL2.5-72B に「各参照画像と生成画像がペアごとにどれだけ同一被写体か」（Q-SC）を採点させる。顔埋め込みのような専用モデルに頼らず**任意の物体に適用できる**代わりに、採点者である VLM 自体の偏りを引き受けることになる。なお同ベンチマークは**参照数が増えたときの崩れ方**を測る点で、本ページの「ターン数に対する曲線」と同じ発想を空間方向に取ったものと言える（[[multi-concept-customization]]）。
 
 ## 限界と未解決問題
 
@@ -85,3 +86,4 @@ updated: 2026-08-17
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（キャラクタ一貫性を看板機能に据え、AuraFace 埋め込みのコサイン類似度で反復編集のドリフトを定量化。CREF タスクを KontextBench に組み込む）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（視覚的一貫性を独立した報酬モデルとして立て、RLHF で最適化する）
 - [[summaries/2023-dreambooth]] — DreamBooth（被写体ごとの fine-tune で同一性を埋め込む学習型の代表。文脈型との対照）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（UniSubject。VLM 採点で顔以外の被写体一貫性を測り、参照数に対する劣化曲線を見る）

@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Model Architecture, 拡散モデルのアーキテクチャ, ADM, AdaGN, U-Net for diffusion, DiT, Diffusion Transformer, adaLN, adaLN-Zero, patchify]
-tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit]
+tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion]
 related:
   - "[[denoising-diffusion]]"
   - "[[latent-diffusion]]"
@@ -9,6 +9,8 @@ related:
   - "[[diffusion-sampling]]"
   - "[[visual-text-rendering]]"
   - "[[image-tokenizer]]"
+  - "[[mixture-of-experts-diffusion]]"
+  - "[[pixel-space-diffusion]]"
 summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2020-ddpm]]"
@@ -19,6 +21,8 @@ summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-flux-kontext]]"
+  - "[[summaries/2025-hidream-i1]]"
+  - "[[summaries/2026-hidream-o1-image]]"
 updated: 2026-08-17
 ---
 
@@ -127,6 +131,20 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 
 この 3D RoPE が、後継の **FLUX.1 Kontext** で効いてくる。コンテキスト画像のトークンに**時間軸方向の定数オフセット**（対象は $t=0$、$i$ 番目のコンテキストは $t=i$）を与えるだけで、空間構造を保ったまま文脈と対象を分離できる——著者らのいう「**仮想タイムステップ**」である。Qwen-Image が MSRoPE に **frame 次元**を足して同じ問題（複数画像を 1 本の系列でどう区別するか）を解いたのと、独立に到達した同型の答えになっている。位置符号化が**マルチモーダル化・多画像化の主戦場**であることを、2 系統がそろって示している。
 
+### HiDream-I1（HiDream.ai 2025）——FFN 自体を疎にする
+
+ここまでの改良は「ブロックをどう並べるか」「条件をどう注入するか」が中心だったが、**HiDream-I1**（[[summaries/2025-hidream-i1]]）は **FFN の内部構造**に手を入れた。FLUX.1 と同じ dual-stream → single-stream の骨格を保ったまま、FFN を疎な **MoE（Mixture-of-Experts, 混合エキスパート）** に置き換える——複数の並列 FFN を並べ、ルーターがトークンごとに一部だけを通すことで、**総容量は増やすが 1 トークンあたりの計算量は据え置く**。詳細と留保は [[mixture-of-experts-diffusion]] にまとめた。
+
+テキスト符号化の設計判断も対照的で記録に値する。Qwen-Image が「条件エンコーダを凍結 MLLM 1 本に集約する」という**引き算**を選んだのに対し、HiDream-I1 は **Long-CLIP L/14・Long-CLIP G/14・T5-XXL・Llama 3.1 8B の複数中間層**の 4 系統を混ぜる**足し算**を選ぶ。LLM の最終層ではなく**中間層を複数タップする**（最終層では薄まる細粒度の意味を残す狙い）点が特徴的である。同じ年に正反対の答えが出ており、決着はついていない。
+
+### HiDream-O1-Image（2026）——LLM をそのまま拡散バックボーンにする
+
+**HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）は、この系譜からさらに逸れる。バックボーンは DiT ではなく **LLM そのもの**——decoder-only Transformer（8B 版は Qwen3-VL-8B-Instruct から初期化）で、RMSNorm・SwiGLU・RoPE という言語モデルの標準構成をそのまま使う。
+
+本ページの文脈で決定的なのは、**adaLN による変調を使わない**ことである。DiT が adaLN-Zero で確立し、MM-DiT・Qwen-Image・FLUX.1 が受け継いできた「タイムステップと大域条件から scale/shift を作って正規化に流す」という条件付けの定番を捨て、**拡散のタイムステップを「特別なトークン 1 個」として系列に混ぜる**。これにより Transformer の中核構造を一切改変せずに済み、200B+ へのスケールが素直になる、というのが著者らの論拠である。
+
+注意機構も作り変えられている。言語モデリングの因果マスクと拡散の完全注意は本来相容れないが、**条件・テキストトークンには因果マスク、生成トークンには完全注意**という**ハイブリッド注意**で 1 つの注意行列の中に同居させる。あわせて VAE も捨てているため、この設計全体は [[pixel-space-diffusion]] で扱う。
+
 ## 既存知識との接続
 
 - [[denoising-diffusion]]：アーキテクチャはノイズ予測 $\epsilon_\theta$ の中身。DDPM の U-Net がこの系譜の起点。
@@ -147,5 +165,7 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2025-qwen-image]] — Qwen-Image（20B MMDiT。条件エンコーダを凍結 MLLM 1 本に置換、MSRoPE でテキストを画像対角線上に配置）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen3-VL へ更新、バイアスなし変調＋SwiGLU で同時学習を安定化、f16 トークナイザ）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（double stream → single stream の二段構成、fused feed-forward、3D RoPE の仮想タイムステップで文脈画像を分離）
+- [[summaries/2025-hidream-i1]] — HiDream-I1（dual/single stream の FFN を疎な MoE に置換。テキスト符号化は 4 系統のハイブリッド）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（decoder-only LLM をバックボーンに転用。adaLN を捨ててタイムステップをトークン化、ハイブリッド注意）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

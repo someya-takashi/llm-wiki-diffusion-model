@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [LDM, Latent Diffusion, Latent Diffusion Models, Stable Diffusion, 潜在拡散]
-tags: [latent-diffusion, generative-models, image-generation, text-to-image-generation]
+tags: [latent-diffusion, generative-models, image-generation, text-to-image-generation, pixel-space-diffusion]
 related:
   - "[[denoising-diffusion]]"
   - "[[text-to-image-generation]]"
@@ -11,6 +11,7 @@ related:
   - "[[diffusion-model-architecture]]"
   - "[[visual-text-rendering]]"
   - "[[image-tokenizer]]"
+  - "[[pixel-space-diffusion]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -20,7 +21,8 @@ summaries:
   - "[[summaries/2024-sd3]]"
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-vae-2]]"
-updated: 2026-06-25
+  - "[[summaries/2026-hidream-o1-image]]"
+updated: 2026-08-17
 ---
 
 # Latent Diffusion（潜在拡散）
@@ -89,6 +91,14 @@ $$
 
 なお SDXL は探索段階で DiT 的な全 transformer 化を試したが当時利得を得られず、**改良 U-Net に留まった**（[[diffusion-model-architecture]] の DiT と対照的）。その次世代 **Stable Diffusion 3（SD3）**（[[summaries/2024-sd3]]）では、ついにバックボーンを **MM-DiT**（Transformer, [[diffusion-model-architecture]]）に、学習定式化を **rectified flow**（[[flow-matching]]）に置き換え、VAE 潜在も 16 チャネルに拡張した。LDM→SDXL→SD3 と、潜在拡散の枠組みを保ちながらバックボーンと定式化が刷新されていく系譜である。
 
+## 前提そのものへの異議：pixel-space diffusion（2026）
+
+本ページの出発点である「圧縮してから拡散する」は、2022 年以降ほぼ疑われない前提になった。だが 2026 年、**HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）がその前提を正面から撃つ。主張は「VAE の圧縮は非可逆であり、**高周波の細部——細い線、小さな文字、細かいテクスチャ——が最初に失われる**。ゆえに再構成品質が生成品質の**上限を決めてしまう**」というものである。実際、同チームの前作 HiDream-I1（VAE あり）が LongText-Bench の中国語で 0.024 しか取れなかったのに対し、VAE を外した HiDream-O1-Image は 0.978 を記録した。
+
+この立場からは、本ページの「圧縮率 $f=4$〜$8$ が最良のバランス」という結論も、[[image-tokenizer]] の「$f16/f32$ まで圧縮してチャネルで補償する」という発展も、**同じトレードオフ曲線の上を動いているだけ**に見える。ならば曲線から降りればよい、というのが pixel-space の賭けである。詳細と、その代償（系列長が最大 $f^2$ 倍になりうる問題が原典で定量化されていないこと）は [[pixel-space-diffusion]] にまとめた。
+
+現時点で決着はついていない。LDM の圧縮は依然として実用上圧倒的に安く、pixel-space 側は計算コストの報告を欠いている。**本 wiki は両方を並べて記録する立場を取る**。
+
 ## 限界
 
 - 逐次サンプリングは依然 GAN より遅い（[[diffusion-sampling]]、DDIM 等で緩和）。
@@ -113,6 +123,7 @@ $$
 - [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（Stable Diffusion への空間条件制御）
 - [[summaries/2023-dit]] — Scalable Diffusion Models with Transformers（LDM 潜在空間で U-Net を Transformer 化）
 - [[summaries/2024-ziplora]] — ZipLoRA（SDXL 上で被写体 LoRA × 画風 LoRA をマージ）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（VAE を捨てる立場。本ページの前提への異議申し立て）
 - [[summaries/2023-sdxl]] — SDXL（LDM の大型化後継：3× UNet・micro-conditioning・base+refiner の 2 段）
 - [[summaries/2024-sd3]] — Stable Diffusion 3（LDM の次世代：MM-DiT＋rectified flow・潜在 16 チャネル）
 - [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE の単一エンコーダ・二重デコーダ構成。デコーダのみのテキスト特化微調整で文字再現の上限を引き上げ）

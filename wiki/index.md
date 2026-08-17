@@ -35,6 +35,8 @@
 - [[summaries/2025-qwen-image]] — Qwen-Image（Qwen Team 2025・Alibaba）。凍結 Qwen2.5-VL を条件エンコーダに据えた 20B MMDiT＋MSRoPE。中国語テキスト描画で大差の SOTA、二重符号化の編集、DPO/Flow-GRPO の事後学習
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen Team 2026）。生成と編集を単一モデルに統一する「全能型」。Qwen3-VL＋f16 トークナイザ＋MMDiT、Prompt Enhancer・5 報酬 RLHF・DMD 蒸留（4 NFE）。LMArena ELO 1168
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（Qwen Team 2026）。f16/f32 高圧縮トークナイザ。圧縮率・再構成・拡散可能性の三者間トレードオフ、GSC・DINOv2 中間層整合・KL/GAN 除去、OmniDoc-TokenBench
+- [[summaries/2025-hidream-i1]] — HiDream-I1（HiDream.ai 2025・arXiv:2505.22705）。17B オープンソース T2I。dual/single stream の FFN を疎な MoE に置換、Long-CLIP×2＋T5-XXL＋Llama 3.1 中間層の 4 系統ハイブリッド符号化、DMD＋敵対的損失の蒸留、HiDream-E1（潜在マップ横並び連結の編集）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（HiDream.ai 2026・arXiv:2605.11061）。VAE も外部テキストエンコーダも捨て、生ピクセル・テキスト・条件を共有トークン空間へ。decoder-only LLM バックボーン＋ハイブリッド注意、8B で GenEval 0.90・LongText-Bench 0.979/0.978、200B+ へスケール
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（Black Forest Labs 2025・arXiv:2506.15742）。コンテキスト画像をトークン列に連結するだけで T2I と編集を単一 rectified flow に統一。仮想タイムステップ・LADD で 1024² 3〜5 秒・KontextBench・bakeyness 批判
 
 ### article / 講義ノート
@@ -69,6 +71,8 @@
 - [[translations/2025-qwen-image]] — Qwen-Image テクニカルレポート 全文翻訳（本文§1–6、表 1–14 markdown 化、§7 著者一覧/References 除外、PDF のため画像なし）
 - [[translations/2026-qwen-image-2]] — Qwen-Image-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–2 markdown 化、図 16 枚、Authors 章除外）
 - [[translations/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–3 markdown 化、図 4 枚、Authors 章除外）
+- [[translations/2025-hidream-i1]] — HiDream-I1 全文翻訳（本文§1–9、表 1–4 markdown 化、図 5 枚、References/Appendix A 貢献者一覧を除外）
+- [[translations/2026-hidream-o1-image]] — HiDream-O1-Image 全文翻訳（本文§1–9、表 1–8 markdown 化、図 10 枚、References/Appendix A 貢献者一覧を除外）
 - [[translations/2025-flux-kontext]] — FLUX.1 Kontext 全文翻訳（本文§1–5＋Appendix A,B、図 12 枚、ar5iv 変換失敗の 3 図は訳注で明示、References/謝辞除外）
 
 ## Concepts
@@ -99,6 +103,8 @@
 - [[reinforcement-learning-for-diffusion]] — 拡散モデルの強化学習・事後学習（SFT→DPO→Flow-GRPO、タスク別報酬。flow の SDE 化で探索性を得る）
 - [[image-tokenizer]] — 画像トークナイザ／潜在空間を作るオートエンコーダ（圧縮率 f・チャネル C・拡散可能性の三者間トレードオフ、GSC、意味的整合、OmniDoc-TokenBench）
 - [[diffusion-distillation]] — 蒸留による少ステップ生成（DMD・consistency・progressive・ADD/LADD。ソルバー改良と違い「モデル自体」を作り替える）
+- [[pixel-space-diffusion]] — ピクセル空間拡散（VAE を経由せず生画素で拡散。latent-diffusion の前提への異議、Unified Transformer、LLM バックボーン、ハイブリッド注意）
+- [[mixture-of-experts-diffusion]] — 拡散モデルの混合エキスパート（FFN を疎な MoE に。ルーター・共有エキスパート・活性化パラメータ、容量↑で計算量据え置き）
 - [[character-consistency]] — キャラクタ／被写体の一貫性（複数枚・多ターンで同一性を保つ。visual drift・学習型 vs 文脈型・AuraFace 定量化）
 
 略称リダイレクト：
@@ -158,6 +164,11 @@
 - FLUX.1 / FLUX.1 Kontext / double stream / single stream / 3D RoPE / 仮想タイムステップ / virtual time step / sequence concatenation → [[diffusion-model-architecture]] ・ [[instruction-based-image-editing]]
 - KontextBench / bakeyness / AI っぽさ / 5 次元評価 → [[text-to-image-generation]]
 - visual drift / character reference / CREF / SREF / AuraFace / 多ターン編集 → [[character-consistency]]
+- MoE / Mixture-of-Experts / 混合エキスパート / sparse DiT / 疎な DiT / router / ルーター / shared expert / 活性化パラメータ → [[mixture-of-experts-diffusion]]
+- HiDream-I1 / HiDream-E1 / HiDream-A1 / ハイブリッドテキスト符号化 / Long-CLIP / Llama 3.1 中間層 → [[mixture-of-experts-diffusion]] ・ [[diffusion-model-architecture]]
+- pixel-space diffusion / ピクセル空間拡散 / VAE-free / UiT / Unified Transformer / 共有トークン空間 / ハイブリッド注意 → [[pixel-space-diffusion]]
+- HiDream-O1-Image / Reasoning-Driven Prompt Agent / SigLIP-2 / LPIPS / 知覚的 DINO 損失 → [[pixel-space-diffusion]] ・ [[text-to-image-generation]]
+- UniSubject / HPSv2.1 / HPSv3 / EmuEdit / ReasonEdit / 多参照個人化 → [[multi-concept-customization]] ・ [[text-to-image-generation]]
 
 ## Questions
 

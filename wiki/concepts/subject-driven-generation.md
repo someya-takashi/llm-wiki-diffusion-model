@@ -20,6 +20,7 @@ summaries:
   - "[[summaries/2023-anydoor]]"
   - "[[summaries/2022-lora]]"
   - "[[summaries/2024-ziplora]]"
+  - "[[summaries/2026-hidream-o1-image]]"
 updated: 2026-08-17
 ---
 
@@ -75,6 +76,8 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 
 さらに極端な方向として、**そもそも被写体を学習しない**系統がある。FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）は、参照画像を**文脈トークンとして系列に連結するだけ**で同一性を保ったまま編集・再生成する。学習も埋め込みも要らず推論 1 回で済むが、代わりに「複数ターンにわたって同一性がどれだけ保たれるか」という新しい問題が前面に出る——これを扱うのが [[character-consistency]] である。DreamBooth 系が「被写体をモデルに焼き付ける」のに対し、こちらは「被写体を毎回入力として渡す」——**学習型 vs 文脈型**の対比になる。
 
+文脈型の到達点として **HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）も挙げておく。参照被写体を SigLIP-2 で符号化した**条件トークン**として、テキスト・生成トークンと同じ 1 本の系列に並べるだけで個人化を行う——専用の経路も学習も持たない。注目すべきは**参照数へのスケーラビリティ**で、著者らが用意した UniSubject（1 人の人物＋1〜10 個の参照物体、300 ケース・1,800 被写体）では、参照が 9〜11 個になると Qwen-Image-Edit の総合スコアが 7.50 → 2.71 まで崩壊するのに対し、8B の HiDream-O1-Image は 7.95 → 7.65 を保つ。分断されたエンコーダ設計では**指示と複数の参照画像が互いに干渉する**が、共有トークン空間ではそれが緩和される、という主張である（[[multi-concept-customization]] の論点でもある）。ただしこのベンチマークは著者らの自作で、採点も VLM 依存である点は割り引いて読む必要がある。
+
 別の方向として、**物体ごとの学習を一切せず zero-shot で被写体を扱う**手法もある。**AnyDoor**（[[summaries/2023-anydoor]]）は参照物体画像をシーンの指定位置に合成する（[[image-composition]]）。DreamBooth の「テキストで新文脈に生成（tuning 型）」に対し、AnyDoor は「与えられたシーン・位置に合成（zero-shot・参照ベース）」で、対象の同一性保持という目標を共有しつつ入出力と学習方式が対照的である。
 
 ## 既存知識との接続
@@ -100,3 +103,4 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 - [[summaries/2022-lora]] — LoRA（低ランク適応による軽量 personalization の基礎）
 - [[summaries/2024-ziplora]] — ZipLoRA（被写体 content LoRA × 画風 style LoRA の学習係数マージ）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（学習なしの文脈型 personalization。多ターンでの同一性ドリフトを AuraFace で定量化）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（参照被写体を条件トークンとして同一系列に置く。UniSubject で 9〜11 参照でも劣化しにくい）

@@ -12,7 +12,8 @@ related:
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
-updated: 2026-06-25
+  - "[[summaries/2026-hidream-o1-image]]"
+updated: 2026-08-17
 ---
 
 # Reinforcement Learning for Diffusion（拡散モデルの強化学習・事後学習）
@@ -76,6 +77,14 @@ Qwen-Image は 2 手法を役割分担させる——**DPO で大規模に、GRP
 
 もう 1 つの実務的な工夫が **CFG のハイブリッド戦略**である。拡散 RL では「ロールアウトと方策最適化で [[classifier-free-guidance]] を使うべきか」で先行研究が割れていた（両方で使う／完全に使わない）。Qwen-Image-2.0 は中間を採る——**ロールアウトのサンプリングでは CFG を使って高品質な候補を作り報酬評価を信頼できるものにしつつ、無条件分岐は方策最適化の目的から除外する**。これにより報酬信号の質を保ちながら、無条件モデルを最適化する計算を省ける。
 
+## 報酬を「推論そのもの」にも向ける（2026）
+
+**HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）の RLHF は GRPO を使い、報酬を **OCR 正確性・美的評価・指示追従忠実度・推論品質**の 4 系統集約する。前 3 つは Qwen-Image-2.0 の 5 報酬と重なるが、4 つ目の「**推論品質（reasoning quality）**」が新しい。
+
+このモデルはユーザーの生の指示をそのまま使わず、**Reasoning-Driven Prompt Agent**（Gemma ベース）が空間配置・被写体の属性・物理的な論理・文脈的関係について思考の連鎖（chain of thought）を明示的に生成してから、最終的なプロンプトを書き出す。RL の最適化対象には**このエージェント自身**も含まれる。Qwen-Image-2.0 の Prompt Enhancer が「書き換え結果を下流の画像品質で評価される」だけだったのに対し、こちらは**中間の推論過程の質そのものを報酬化する**。
+
+前処理（プロンプト）・生成本体・事後学習が別々の部品ではなく、**1 つの最適化ループに入る**という方向であり、本ページ冒頭の「事前学習の定式化競争から、パイプライン全体の設計へ」という流れをさらに一歩進めたものと位置づけられる。
+
 ## 効果と限界
 
 **効果**（Qwen-Image, GenEval）：SFT 版 0.87 → RL 版 **0.91**。とくに **Position 0.76→0.87**、**Attribute Binding 0.77→0.83**、Counting 0.89→0.93 と、**「指示どおりに配置・属性を割り当てる」という構成的な正確さ**が大きく伸びた。リーダーボードで唯一 0.9 を超える基盤モデルになった。
@@ -96,6 +105,8 @@ Qwen-Image は 2 手法を役割分担させる——**DPO で大規模に、GRP
 - [[diffusion-sampling]]：GRPO のサンプリング（Euler-Maruyama）はサンプラー設計と直結する。
 
 ## 参考文献（summaries）
+
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（OCR・美的・指示追従・推論品質の 4 報酬を集約した GRPO。推論エージェント自体も RL の対象）
 
 - [[summaries/2025-qwen-image]] — Qwen-Image（SFT → 大規模 DPO → 小規模 Flow-GRPO の 3 段事後学習。GenEval 0.87→0.91）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（5 種のタスク特化型報酬モデルと重みの動的調整、CFG のハイブリッド戦略。RL 後にさらに蒸留する）

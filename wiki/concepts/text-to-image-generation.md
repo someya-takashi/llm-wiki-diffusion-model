@@ -12,6 +12,8 @@ related:
   - "[[reinforcement-learning-for-diffusion]]"
   - "[[diffusion-distillation]]"
   - "[[character-consistency]]"
+  - "[[pixel-space-diffusion]]"
+  - "[[mixture-of-experts-diffusion]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -22,6 +24,8 @@ summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-flux-kontext]]"
+  - "[[summaries/2025-hidream-i1]]"
+  - "[[summaries/2026-hidream-o1-image]]"
 updated: 2026-08-17
 ---
 
@@ -71,6 +75,15 @@ Qwen-Image がとくに押し進めたのが **[[visual-text-rendering]]（画�
 
 **プロンプトの前処理も設計対象になった**点も新しい。複雑なレイアウト（インフォグラフィック・ポスター）では生成品質がプロンプトの具体性に強く依存するため、Qwen-Image-2.0 は **Prompt Enhancer（PE）**——曖昧なユーザー指示を構造化された詳細プロンプトへ書き換える 9B のモジュール——を前段に挟む。学習データの作り方が巧妙で、**詳細なアノテーションをわざと「劣化」させて口語的な短い指示を作り、その逆操作を思考連鎖（CoT）として記録する**逆工学パイプラインを使う。さらに書き換え結果を凍結生成器に通し、視覚的一貫性・美的品質で GRPO 報酬を与えることで、**下流の画像品質そのものでプロンプト書き換えを最適化**する。
 
+### HiDream-I1 / HiDream-O1-Image（HiDream.ai 2025–2026）— 効率をアーキテクチャで買う
+
+同じ「基盤モデル」の枠内でも、HiDream.ai の 2 本は**効率の稼ぎ方**で本 wiki に新しい軸を持ち込んだ。
+
+- **HiDream-I1**（17B・[[summaries/2025-hidream-i1]]）は、FFN を疎な MoE（混合エキスパート）に置き換えて「容量は増やすが 1 トークンあたりの計算量は据え置く」を狙う（[[mixture-of-experts-diffusion]]）。テキスト条件は Long-CLIP 2 種＋T5-XXL＋Llama 3.1 の中間層という 4 系統の**足し算**で、Qwen-Image の**引き算**（凍結 MLLM 1 本）と正反対の答えを出している。HPSv2.1 平均 33.82 で全カテゴリ 1 位。ただし GenEval の Position は 0.60、DPG-Bench の Global は 76.44 と、**空間関係と大域的なトーン指定に明確な穴**が残った。
+- **HiDream-O1-Image**（8B / 200B+・[[summaries/2026-hidream-o1-image]]）は、その穴を別の方向から埋める。VAE も外部テキストエンコーダも捨て、生ピクセル・テキスト・条件を単一の共有トークン空間に置く（[[pixel-space-diffusion]]）。**8B で GenEval 総合 0.90、Position 0.93**——Qwen-Image の 0.76、FLUX.2 [Dev] の 0.73 を大きく上回り、前作の DPG Global も 76.44 → 95.15 へ改善した。著者らはこれを「言語と視覚が同じトークン空間にあるので、意味的概念が空間領域へ精密に接地される」ためだと説明する。
+
+この 2 本が並ぶと、2025→2026 の T2I 基盤モデルが「**パラメータを増やす**」から「**表現空間の断片化を減らす**」へ重心を移したことが見える。
+
 ### 評価が「AI っぽさ」に報いる問題 — bakeyness
 
 FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の論点も記しておく価値がある。T2I ベンチマークが「**どちらの画像を好むか**」という単一の問いに頼ると、**過飽和の色・中心被写体への過度な集中・強いボケ・均質なスタイル**という特徴的な「AI 的美学」が有利になってしまう。著者らはこれを **bakeyness** と名づけ、単一軸の選好評価が**モデルをその方向へ最適化させてしまう**危険を指摘する。
@@ -105,3 +118,5 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の�
 - [[summaries/2025-qwen-image]] — Qwen-Image（凍結 Qwen2.5-VL を条件エンコーダに据えた 20B MMDiT。中国語テキスト描画で大差の SOTA、DPO/GRPO 事後学習、編集まで統一）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen3-VL＋f16 トークナイザで生成と編集を単一モデルに統一。Prompt Enhancer・5 報酬 RLHF・DMD 蒸留、LMArena ELO 1168）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（T2I と編集を単一の rectified flow に統一。bakeyness 批判と 5 次元評価、1024² を 3〜5 秒）
+- [[summaries/2025-hidream-i1]] — HiDream-I1（17B・疎な MoE と 4 系統のハイブリッドテキスト符号化。HPSv2.1 全カテゴリ 1 位、Position と Global に穴）
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（8B で GenEval 0.90・Position 0.93。VAE も外部テキストエンコーダも持たない統一トークン空間）

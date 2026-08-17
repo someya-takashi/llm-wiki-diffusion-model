@@ -16,6 +16,7 @@ summaries:
   - "[[summaries/2024-ziplora]]"
   - "[[summaries/2024-lora-composer]]"
   - "[[summaries/2024-multi-lora-composition]]"
+  - "[[summaries/2026-hidream-o1-image]]"
 updated: 2026-08-17
 ---
 
@@ -66,6 +67,20 @@ LoRA 重みを一切いじらず、**ノイズ除去（復号）の各ステッ�
 - **AnyDoor・Paint-by-Example**（[[image-composition]]）：画像ベースの inpainting で複数物体を合成する別系統（LoRA を使わず参照画像で挿入）。
 - 評価は CLIP 画像／テキスト類似度、ユーザー調査、GPT-4V など。標準指標が未確立な新しい領域。
 
+## 参照数のスケーラビリティ（2026）
+
+本ページの (a)(b)(c) はいずれも「2〜3 概念を破綻なく 1 枚に載せる」ことを主戦場にしてきた。**HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）は、その先——**参照が 10 個近くになったとき何が起きるか**——を測る UniSubject を提示した。1 人の人物被写体に 1〜10 個の参照物体（衣服・車・家具など）を組み合わせた 300 ケース・計 1,800 被写体で、Qwen-VL2.5-72B に Prompt Following（Q-PF）と Subject Consistency（Q-SC）を採点させる。
+
+| 参照数 | Qwen-Image-Edit (27B) | HiDream-O1-Image (8B) |
+| --- | --- | --- |
+| 2–3 | 7.50 | 7.95 |
+| 4–8 | 5.34 | 7.47 |
+| 9–11 | **2.71** | **7.65** |
+
+Qwen-Image-Edit の崩壊の仕方が示唆的である。本ページ冒頭で挙げた **concept vanishing（概念の消失）と concept confusion（概念の混同）** が、参照数の増加に対して**線形ではなく崖のように**現れることを意味する。著者らの説明は「分断されたエンコーダ設計では指示と複数の参照画像が互いに干渉するが、共有トークン空間では意味的概念が対応する視覚トークンへ精密に錨づけられる」——つまり (a)(b)(c) のように**合成の段階で干渉を捌く**のではなく、**そもそも同じ表現空間に置いて干渉を起こさない**という第 4 の立場になる。
+
+ただし UniSubject は著者らの自作ベンチマークで、公開の有無も明記されていない。採点も VLM 依存であり、この崖が本当に一般的な現象かは独立検証を待つ必要がある。
+
 ## 既存知識との接続
 
 - [[low-rank-adaptation]]：合成対象の単一概念が LoRA で表される。LoRA がプラグ&プレイで共有可能だからこそ「複数を合成する」課題が成立する。
@@ -77,6 +92,8 @@ LoRA 重みを一切いじらず、**ノイズ除去（復号）の各ステッ�
 - [[character-consistency]]：合成した各概念が**ターンをまたいで**同一に保たれるかという軸。本ページが「1 枚に複数概念を同時に載せる」空間方向の合成なら、あちらは「同じ概念を何枚にもわたって保つ」時間方向の一貫性で、FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が扱う。
 
 ## 参考文献（summaries）
+
+- [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（UniSubject で 1〜10 参照物体の合成を評価。共有トークン空間で干渉を抑えるという第 4 の立場）
 
 - [[summaries/2023-custom-diffusion]] — Custom Diffusion（cross-attention K/V 限定 fine-tune＋閉形式マージ。多概念カスタマイズの源流）
 - [[summaries/2023-mix-of-show]] — Mix-of-Show（ED-LoRA＋gradient fusion、重みマージ系の代表）

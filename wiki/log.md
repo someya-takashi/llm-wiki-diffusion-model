@@ -3,6 +3,19 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-08-17] ingest | HiDream-I1 / HiDream-O1-Image（姉妹論文 2 件）
+
+- 取り込み: `raw/papers/HiDream-I1_ ....md`（ar5iv 由来 markdown・ケース A, arXiv:2505.22705, 2025年5月）と `raw/papers/HiDream-O1-Image_ ....md`（同, arXiv:2605.11061, 2026年）。いずれも HiDream.ai（責任著者 Ting Yao / Tao Mei）で、著者も大きく重複する**同チームの前作・後作**。
+- 作成: [[translations/2025-hidream-i1]], [[summaries/2025-hidream-i1]], [[translations/2026-hidream-o1-image]], [[summaries/2026-hidream-o1-image]], [[concepts/pixel-space-diffusion]], [[concepts/mixture-of-experts-diffusion]]
+- **新規概念ページ 2 件**（ユーザー回答「pixel-space + MoE の 2 枚」。既存 27 concept に記述ゼロだった領域）:
+  - [[concepts/pixel-space-diffusion]] — VAE を経由せず生画素で拡散する系統。**「初期の DDPM への回帰ではない」**という歴史的整理（LDM が主流化した理由＝スケーリングの破綻、いま再挑戦できる理由＝Transformer 化・モデル規模・LLM 資産の再利用）、図5 に基づく (a) latent DiT / (b) pixel-space DiT / (c) natively unified の 3 分類、UiT・ハイブリッド注意（テキストは因果マスク、生成トークンは完全注意）、ピクセル空間ゆえの LPIPS/DINO 損失、未解決（計算コストが一切報告されない・因果の交絡・記憶リスク）。
+  - [[concepts/mixture-of-experts-diffusion]] — 拡散 Transformer の FFN を疎な MoE に置き換える系統。ルーター・共有エキスパート・活性化パラメータ・負荷分散損失といった基礎、HiDream-I1 の配置（図3 実測）、**「MoE のおかげで SOTA が出た」とは言えない**という強い留保（アブレーション皆無・ハイパラ非公開・FLOPs 対比なし・後継が MoE を継承していない）。
+- 更新（本文）: [[concepts/diffusion-model-architecture]]（HiDream-I1 節＝FFN 内部への介入とテキスト符号化の足し算 vs 引き算、HiDream-O1 節＝**adaLN を捨ててタイムステップをトークン化**する LLM バックボーン）, [[concepts/latent-diffusion]]（**「前提そのものへの異議」節を新設**）, [[concepts/image-tokenizer]]（「反対側の答え：トークナイザを作らない」節。両者が DINO 特徴という同じ道具に行き着く指摘）, [[concepts/visual-text-rendering]]（「VAE を外す」という第 3 の答え。LongText-Bench-ZH 0.024 → 0.978 の比較表）, [[concepts/instruction-based-image-editing]]（HiDream-E1 の**空間連結**を加えて二重符号化／系列連結／空間連結の 3 実装比較表を新設）, [[concepts/diffusion-distillation]]（DMD＋敵対の組み合わせ、O1 の第 3 項 $\mathcal{L}_\text{diff}$）, [[concepts/noise-schedule]]（**事前学習 logit-normal → SFT 一様サンプリング**の切り替え）, [[concepts/reinforcement-learning-for-diffusion]]（「推論品質」報酬とエージェント自体の RL）, [[concepts/text-to-image-generation]]（HiDream 2 本の節）, [[concepts/subject-driven-generation]], [[concepts/multi-concept-customization]]（UniSubject の参照数スケーラビリティ表）, [[concepts/character-consistency]]（VLM 採点による顔以外の一貫性評価）, [[concepts/flow-matching]]
+- 更新: [[overview]]（「効率をアーキテクチャで買う／統一の 2 つの向き」の項）, [[index]]（Summaries / Translations / Concepts＋略称リダイレクト 6 行）
+- 画像: 計 15 枚を取得（I1 5 枚 / O1 10 枚）。**ar5iv の画像取得が両論文とも部分的に失敗**——O1 は clip 内の URL（`assets/x1.png` 等）が ar5iv 上に存在せず、全 9 枚が例の 325x400「NO IMAGE AVAILABLE」プレースホルダ（MD5 `ded85833...`、FLUX.1 Kontext の時と同一）だった。`arxiv.org/html/2605.11061v1/` から取得し直して解決。さらに **ar5iv/arxiv HTML のファイル名が図番号とズレていた**（`fig2.png` が Figure 3、`fig3.png` が Figure 2 等）ため、取り違え防止に**実際の図番号で `figN.png` に連番化**した。Figure 6（データキュレーション概観）は両 HTML レンダリングとも `<figure>` が壊れており、x 系列にのみ存在した画像を採用。I1 は ar5iv の元名を保持（図番号と一致していたため）。取得失敗なし。
+- 翻訳: 両論文とも本文 §1–9 を全訳（ユーザー確認済み）。References と Appendix A（貢献者一覧・謝辞）は除外。表は I1 が 1–4、O1 が 1–8。原典で HTML `<table>` だった複雑な表（I1 表4、O1 表4・表8）は markdown テーブルに再構成した（O1 表8 は 3 群 × 4 指標の入れ子ヘッダを平坦化）。
+- メモ: **同チームが 1 年で正反対の設計に振れている**のが本 ingest の主眼。I1＝潜在空間＋外部エンコーダ 4 系統＋MoE で「断片化を受け入れて効率を稼ぐ」、O1＝VAE も外部エンコーダも捨てて「断片化そのものを消す」。この対立は [[concepts/latent-diffusion]] と [[concepts/image-tokenizer]] の前提に直接触るため、両ページに異議として明記した。**批判的視点として記録した主要な点**: (1) I1 の §3.2 本文「両ストリームとも MoE」と図3(b)（テキスト側 dense SwiGLU / 画像側 MoE）の食い違い、(2) 両論文ともアブレーションが皆無で、O1 の「VAE を外したからテキストが描ける」という中心的主張が Qwen3-VL 初期化と交絡していること、(3) O1 がピクセル空間の代償（系列長・レイテンシ・FLOPs）を一切報告しないこと、(4) UniSubject が自作ベンチマークであること、(5) I1 の Fast 版ステップ数が本文内で 14 と 16 に食い違うこと。
+
 ## [2026-08-17] ingest | FLUX.1 Kontext: Flow Matching for In-Context Image Generation and Editing in Latent Space
 
 - 取り込み: `raw/papers/FLUX.1 Kontext_ Flow Matching for In-Context Image Generation and Editing in Latent Space.md`（ar5iv 由来 markdown・ケース A, arXiv:2506.15742, 2025年6月。Black Forest Labs）。SD3 と同系譜（BFL）から出た、**生成と編集を単一 rectified flow に統一**する基盤モデル。
