@@ -7,9 +7,10 @@ related:
   - "[[image-inpainting]]"
   - "[[controllable-generation]]"
   - "[[latent-diffusion]]"
+  - "[[instruction-based-image-editing]]"
 summaries:
   - "[[summaries/2023-anydoor]]"
-updated: 2026-06-24
+updated: 2026-06-25
 ---
 
 # Image Composition / Object Teleportation（画像コンポジション / 物体テレポーテーション）
@@ -55,6 +56,7 @@ updated: 2026-06-24
 - [[controllable-generation]]：AnyDoor の detail extractor は ControlNet スタイルの条件枝。参照画像で領域を制御するアダプタ的手法。
 - [[latent-diffusion]]：Stable Diffusion を base に使い、その U-Net への特徴注入で実現する。
 - [[multi-concept-customization]]：複数の被写体を 1 枚に入れる点で隣接。AnyDoor は参照画像を inpainting で挿入する系統、LoRA-Composer/Multi-LoRA Composition は LoRA を注意制御・復号で合成する系統。
+- [[instruction-based-image-editing]]：「街に犬と猫を追加して」のように**参照画像も位置指定もなく文章だけ**で物体を足す系統。AnyDoor が参照物体の同一性を保って指定位置へ置くのに対し、指示編集は何をどこに置くかをテキストから推論する。
 
 ## 参考文献（summaries）
 

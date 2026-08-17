@@ -9,6 +9,8 @@ related:
   - "[[flow-matching]]"
   - "[[stochastic-interpolants]]"
   - "[[noise-schedule]]"
+  - "[[reinforcement-learning-for-diffusion]]"
+  - "[[diffusion-distillation]]"
 summaries:
   - "[[summaries/2021-ddim]]"
   - "[[summaries/2021-score-sde]]"
@@ -16,7 +18,8 @@ summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2022-repaint]]"
   - "[[summaries/2022-edm]]"
-updated: 2026-06-24
+  - "[[summaries/2026-qwen-image-2]]"
+updated: 2026-06-25
 ---
 
 # Diffusion Sampling（拡散モデルのサンプリング）
@@ -89,6 +92,19 @@ DDIM の「サンプリング＝ODE 数値積分」という視点を体系化�
 - **成果**：事前学習 VP/VE/DDIM にサンプラーを差し替えるだけで NFE を **7.3×/300×/3.2×** 削減。CIFAR-10 を 35 NFE で SOTA、ImageNet-64 をサンプラーのみで FID 2.07→1.55。
 
 EDM の Heun サンプラーは後続の標準になり、**SD3**（[[summaries/2024-sd3]]）や **Stochastic Interpolants**（[[summaries/2024-stochastic-interpolants]]）が採用する。なお、より少ステップ・高精度なソルバー（DPM-Solver 等の高次法）や、サンプリング過程を蒸留する consistency models へと発展する流れもある（これらは未取り込み）。
+
+## 別系統の高速化：蒸留（[[diffusion-distillation]]）
+
+本ページの手法はすべて「**学習済みモデルはそのままに、たどり方（数値解法）を賢くする**」ものである。歩幅を大きくし、カーブを先読みし、刻み方を最適化する——しかし同じ道を歩く以上、歩幅を伸ばしすぎればいずれ道を外れ、10 ステップ前後が実用上の限界になりやすい。
+
+これに対し、**モデルそのものを作り替えて一足飛びにゴールへ着けるようにする**のが [[diffusion-distillation]]（蒸留）である。多ステップの教師から少ステップの生徒を学習し、NFE を 4、ときに 1 まで落とす。DMD（分布マッチング蒸留）を採用した Qwen-Image-2.0（[[summaries/2026-qwen-image-2]]）では **4 NFE の生徒が 40 ステップの教師に匹敵**した。代償は生徒の学習コストと、多様性や細部（小さな文字など）の劣化リスクである。
+
+| | 変えるもの | 再学習 | 到達域 |
+| --- | --- | --- | --- |
+| サンプラー／ソルバー（本ページ） | たどり方 | 不要 | 10〜35 NFE |
+| 蒸留（[[diffusion-distillation]]） | モデルの重み | 必要 | 1〜4 NFE |
+
+両者は排他ではなく、蒸留した生徒を良いソルバーで回すこともできる。
 
 ## 既存知識との接続
 

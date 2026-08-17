@@ -9,6 +9,7 @@ related:
   - "[[flow-matching]]"
   - "[[stochastic-interpolants]]"
   - "[[noise-schedule]]"
+  - "[[diffusion-distillation]]"
 summaries:
   - "[[summaries/2020-ddpm]]"
   - "[[summaries/2021-score-sde]]"

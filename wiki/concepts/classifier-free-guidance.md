@@ -8,6 +8,7 @@ related:
   - "[[denoising-diffusion]]"
   - "[[diffusion-sampling]]"
   - "[[controllable-generation]]"
+  - "[[reinforcement-learning-for-diffusion]]"
 summaries:
   - "[[summaries/2022-classifier-free-guidance]]"
   - "[[summaries/2023-controlnet]]"

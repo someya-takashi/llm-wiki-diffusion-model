@@ -7,6 +7,8 @@ related:
   - "[[latent-diffusion]]"
   - "[[classifier-guidance]]"
   - "[[diffusion-sampling]]"
+  - "[[visual-text-rendering]]"
+  - "[[image-tokenizer]]"
 summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2020-ddpm]]"
@@ -14,7 +16,9 @@ summaries:
   - "[[summaries/2023-sdxl]]"
   - "[[summaries/2024-sd3]]"
   - "[[summaries/2022-edm]]"
-updated: 2026-06-24
+  - "[[summaries/2025-qwen-image]]"
+  - "[[summaries/2026-qwen-image-2]]"
+updated: 2026-06-25
 ---
 
 # Diffusion Model Architecture（拡散モデルのアーキテクチャ）
@@ -92,7 +96,25 @@ DiT はクラス条件付き生成のために設計され、テキストのよ�
 - **QK-normalization**：高解像度で mixed-precision 学習が発散する問題（attention logit の増大不安定性）を、attention 前に Q・K を RMSNorm することで防ぐ。識別的 ViT 文献（Dehghani ら）の知見の移植。
 - **スケーリング**：深さ $d$ で hidden=$64d$・ヘッド数=$d$ とパラメータ化し 8B までスケール。検証損失が人間評価・ベンチマークと強く相関し飽和しない。
 
-MM-DiT は DiT を text-to-image のマルチモーダル性に合わせて拡張したもので、本 wiki のアーキテクチャ系譜「改良 U-Net（ADM）→ SDXL（U-Net スケール）→ DiT（Transformer 化）→ MM-DiT（マルチモーダル化）」の最新地点にあたる。詳細は [[summaries/2024-sd3]]。
+MM-DiT は DiT を text-to-image のマルチモーダル性に合わせて拡張したもので、本 wiki のアーキテクチャ系譜「改良 U-Net（ADM）→ SDXL（U-Net スケール）→ DiT（Transformer 化）→ MM-DiT（マルチモーダル化）」の主要な地点にあたる。詳細は [[summaries/2024-sd3]]。
+
+### Qwen-Image（Qwen Team 2025）——条件エンコーダの置換と MSRoPE
+
+**Qwen-Image**（[[summaries/2025-qwen-image]]）は MM-DiT（20B・60 層）を踏襲しつつ、周辺の 2 点を作り替えた。
+
+- **条件エンコーダ = 凍結マルチモーダル LLM**：CLIP や T5 を並べる代わりに **Qwen2.5-VL（7B）を凍結して 1 本だけ**使い、最終層の隠れ状態を条件表現にする。視覚-言語が整合済みで、かつ画像入力を受けられるため、同じ骨格のまま画像編集（[[instruction-based-image-editing]]）へ拡張できる。編集時は入力画像を **MLLM 側（意味）と VAE 側（画素）の二重符号化**で両ストリームに流す。
+- **MSRoPE（Multimodal Scalable RoPE）**：MM-DiT でテキストと画像の位置符号化をどう共存させるかという問題への回答。従来は平坦化した画像位置の後ろにテキストを連結し、Seedream 3.0 の Scaling RoPE は画像位置を中心にずらしてテキストを [1, L] の 2D トークンとして扱ったが、後者では**テキストと画像 0 行目の位置符号化が同型になり区別できない**。MSRoPE はテキストを「縦横で同じ位置 ID を持つ 2D テンソル」＝**画像の対角線上に並ぶもの**として扱い、画像側の解像度スケーリングの利点を保ちつつテキスト側を 1D-RoPE と機能的に等価に保つ。編集タスクでは **frame 次元**を足して編集前後の画像を区別する。
+
+正規化は QK-Norm に RMSNorm、その他は LayerNorm を使う（SD3 の QK-normalization を踏襲）。位置符号化がアーキテクチャ設計の主戦場になった点で、[[visual-text-rendering]]（文字と画像の対応づけ）とも直結する。
+
+### Qwen-Image-2.0（2026）——同時学習を安定させる細部
+
+**Qwen-Image-2.0**（[[summaries/2026-qwen-image-2]]）は MSRoPE を継承しつつ、条件エンコーダを Qwen3-VL に更新し、**テキスト・画像の同時学習を安定させるための 2 つの細部**を導入した。いずれも「大規模な joint training で何が壊れるか」への対処であり、MM-DiT 系の実装知見として重要である。
+
+- **バイアスなし変調（bias-free modulation）**：DiT 以来の条件付けは adaLN 系のアフィン変調 $h'=\alpha h+\beta$ が定番だったが、**バイアス項 $\beta$ を落として純粋な乗法 $h'=\alpha h$** にする。
+- **SwiGLU**：テキストと画像を同時に学習すると**活性値の大きさが過大になり、ニューロンが早期に飽和する**問題を観察したため、MLP 層の活性化を $h=\Phi_1(x)\otimes\sigma(\Phi_2(x))$（$\sigma$ は SiLU）のゲート付き形式に置き換える。
+
+加えてアーキテクチャ全体では、**画像トークナイザを 16 倍圧縮（f16c64）に切り替えた**ことが効いている（[[image-tokenizer]]）。DiT の計算量は潜在トークン数に対して二次的なので、$f8\to f16$ で系列長 1/4・計算量約 1/16 となり、**ネイティブ 2K 生成が現実的になる**。バックボーン側の工夫だけでなく、トークナイザ側の圧縮率がアーキテクチャの到達点を規定する好例である。
 
 ## 既存知識との接続
 
@@ -111,5 +133,6 @@ MM-DiT は DiT を text-to-image のマルチモーダル性に合わせて拡�
 - [[summaries/2023-dit]] — Scalable Diffusion Models with Transformers（DiT＝Transformer バックボーン・adaLN-Zero・Gflops スケーリング）
 - [[summaries/2023-sdxl]] — SDXL（改良 U-Net を 3× スケール・transformer block の不均一配分・transformer 化は当時見送り）
 - [[summaries/2024-sd3]] — Stable Diffusion 3（MM-DiT＝DiT のマルチモーダル拡張・QK-normalization・rectified flow）
+- [[summaries/2025-qwen-image]] — Qwen-Image（20B MMDiT。条件エンコーダを凍結 MLLM 1 本に置換、MSRoPE でテキストを画像対角線上に配置）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

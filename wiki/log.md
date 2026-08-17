@@ -3,6 +3,31 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-06-25] ingest | Qwen-Image Technical Report
+
+- 取り込み: `raw/papers/Qwen-Image Technical Report.pdf`（PDF・ケース B, arXiv:2508.02324, 2025年8月。Qwen Team / Alibaba。46 ページ、本文 §1–7＋References）。SD3 以降の最新世代 T2I 基盤モデルで、本 wiki に**未収録だった 3 領域**（画像内テキスト描画・指示ベース編集・拡散の強化学習）を一挙に持ち込む原典。
+- 作成: [[translations/2025-qwen-image]], [[summaries/2025-qwen-image]]
+- **新規概念ページ 3 件**（ユーザー回答「3 ページすべて作成」。いずれも既存 21 concept に記述ゼロだった領域）:
+  - [[concepts/visual-text-rendering]] — 画像内テキストレンダリング。なぜ文字だけ特別に難しいか（グリフの精密さ・表語文字のロングテール・レイアウト・**VAE が上限を決める**）、Qwen-Image の 4 層の対策（デコーダのみ微調整／3 種のデータ合成／非テキスト→テキストのカリキュラム／MSRoPE）、評価（CVTG-2K・ChineseWord・LongText-Bench）、限界（Level-3 漢字 6.48%）。
+  - [[concepts/instruction-based-image-editing]] — 指示ベース編集（TI2I）。視覚的一貫性↔意味的一貫性の綱引きと、**二重符号化（MLLM=意味／VAE=画素）でそれを分業に変える**設計。隣接タスク（inpainting・composition・personalization・空間条件付け）との棲み分け表、GEdit/ImgEdit、新視点合成・深度推定も編集として統一する「生成的理解」。
+  - [[concepts/reinforcement-learning-for-diffusion]] — 拡散の事後学習。なぜ必要か（分布再現≠良さ）、拡散特有の難しさ（多ステップの信用割り当て・尤度の扱い・**flow の ODE は決定論的で探索できない**）、DPO（速度予測誤差の差を選好に）と GRPO（Flow-GRPO は SDE 再定式化で探索性を得る）、報酬ハッキング等の限界。
+- 更新: [[concepts/text-to-image-generation]]（Qwen-Image を「MLLM を条件エンコーダに据える世代」として節追加）, [[concepts/diffusion-model-architecture]]（MSRoPE と条件エンコーダ置換の節を MM-DiT の後に追加）, [[concepts/flow-matching]]（rectified flow の後続＋**flow が事後学習の土台にもなった**点）, [[concepts/latent-diffusion]]（限界節に「VAE がテキスト再現の上限を決める」を追記）, [[concepts/image-inpainting]]・[[concepts/image-composition]]・[[concepts/controllable-generation]]（指示編集との棲み分けをクロスリンク）, [[overview]], [[index]]。加えて 11 概念ページの frontmatter に相互リンク（related/summaries）を追加。
+- 画像: **取り込まない**（PDF＝ケース B）。図 1–28 はキャプションのテキスト訳のみを `> 図N:` 形式で保持。
+- 翻訳: **本文 §1–6 全訳**（ユーザー回答）。§7 著者一覧・References は除外。表 1–14 を markdown 化（Table 7 の TIIF は多層表のため Overall/Text を抜粋）。rectified flow・DPO・GRPO・SDE 再定式化の数式は LaTeX 保持。
+- メモ: 核心＝(1) 凍結 Qwen2.5-VL（7B）＋Wan-2.1-VAE（単一エンコーダ・二重デコーダ、**画像デコーダのみ微調整**）＋20B MMDiT、(2) MSRoPE でテキストを画像対角線上に配置、(3) rectified flow＋logit-normal で事前学習、(4) SFT→DPO→Flow-GRPO の事後学習（GenEval 0.87→0.91）、(5) 編集は MLLM 意味特徴＋VAE 再構成特徴の二重符号化＋MSRoPE の frame 次元。成績＝ChineseWord 58.30（GPT Image 1 は 36.14）、GEdit/ImgEdit 首位、AI Arena でオープンソース唯一のトップ3。限界＝Level-3 漢字 6.48%、英語テキストは GPT Image 1 に及ばず、ablation が限定的、GEdit/ImgEdit は GPT-4.1 審判依存。未取り込み注記: TextDiffuser-2, AnyText, TextCrafter（テキスト描画の先行研究）, InstructPix2Pix, FLUX.1 Kontext（指示編集）, Diffusion-DPO 原典。
+
+## [2026-06-25] ingest | Qwen-Image-2.0 / Qwen-Image-VAE-2.0 Technical Report（2 件同時）
+
+- 取り込み: `raw/papers/Qwen-Image-2.0 Technical Report.md`（ar5iv 由来 markdown・ケース A, arXiv:2605.10730, 2026年4月22日）と `raw/papers/Qwen-Image-VAE-2.0 Technical Report.md`（同, arXiv:2605.13565）。いずれも Qwen Team（Alibaba）。**前ステップで取り込んだ [[summaries/2025-qwen-image]] の直接の後継 2 本**で、VAE-2.0 は Qwen-Image-2.0 の中で実際に使われているトークナイザの技術報告という関係にある。
+- 作成: [[translations/2026-qwen-image-2]], [[summaries/2026-qwen-image-2]], [[translations/2026-qwen-image-vae-2]], [[summaries/2026-qwen-image-vae-2]]
+- **新規概念ページ 2 件**（ユーザー回答「蒸留＋tokenizer」）:
+  - [[concepts/image-tokenizer]] — 画像トークナイザ／潜在空間を作るオートエンコーダの設計論。**圧縮率 $f$・チャネル $C$・総情報ボトルネック $N(z)=CHW/f^2$**、**三者間トレードオフ（圧縮率↔再構成忠実度↔拡散可能性 diffusability）**、GSC・attention-free・非対称エンコーダデコーダ、KL/GAN 除去、DINOv2 中間層への意味的整合、OmniDoc-TokenBench と OCR ベース NED。VAE-2.0 論文が丸ごとこのページの中身になる。
+  - [[concepts/diffusion-distillation]] — 蒸留による少ステップ生成。**「ソルバーを変える」[[diffusion-sampling]] と「モデル自体を変える」蒸留の対比表**、軌道ベース（progressive・consistency）と分布マッチング（DMD）の 2 系統、DMD の勾配（生徒スコア−教師スコア）の直感、限界（教師を超えられない・多様性低下・細部の劣化）。
+- 更新: [[concepts/diffusion-model-architecture]]（QI-2.0 節＝バイアスなし変調・SwiGLU・f16 トークナイザの影響）, [[concepts/diffusion-sampling]]（蒸留との対比節を新設）, [[concepts/visual-text-rendering]]（VAE-2.0 が**圧縮率を上げながら**文字再現の上限を上げた話、背景込み合成の知見）, [[concepts/text-to-image-generation]]（QI-2.0 と Prompt Enhancer の逆工学データ生成）, [[concepts/instruction-based-image-editing]]（生成と編集の統一＝入力表現の一本化＋学習比率制御）, [[concepts/reinforcement-learning-for-diffusion]]（5 種のタスク特化型報酬の表・CFG ハイブリッド戦略）, [[concepts/latent-diffusion]]（トークナイザ設計を [[image-tokenizer]] へ委譲）, [[overview]], [[index]]。加えて 11 概念ページの frontmatter に相互リンク（related/summaries）を追加。
+- 画像: **全 20 枚取得**（ケース A）。`raw/assets/2026-qwen-image-2/`（16 枚: x1–x15＋arena0422.png）と `raw/assets/2026-qwen-image-vae-2/`（4 枚: x1,x2,x3,x5）。`file` で全件 PNG 妥当確認。取得失敗なし。
+- 翻訳: **両方とも本文全訳**（ユーザー回答）。Abstract〜Conclusion を対象、Authors 章は除外（References 章は原典クリップに無く、`\cite` キーがインライン展開されている形式）。QI-2.0 は表 1（VAE 比較）・表 2（学習構成）、VAE-2.0 は表 1（モデル構成）・表 2（ベースライン比較）・表 3（OmniDoc-TokenBench）を markdown 化。原典のクリップに画像が無い図 17–19 は訳注付きで引用ブロックにした。
+- メモ: **QI-2.0 の要点** = (1) Qwen3-VL へ更新し、**視覚表現を VAE 潜在で置き換える**（初代の二重符号化から画像側を一本化。図8 で Qwen3-VL の視覚出力経路に ✗）、(2) f16c64 でネイティブ 2K、(3) バイアスなし変調＋SwiGLU で joint training を安定化、(4) Prompt Enhancer（詳細アノテーションを劣化させて短い指示を作り逆操作を CoT 化する逆工学＋GRPO）、(5) 5 報酬 RLHF＋CFG ハイブリッド、(6) DMD 蒸留 4 NFE、(7) 誤り帰属駆動のデータフライホイール。LMArena ELO 1168・世界 9 位。**VAE-2.0 の要点** = 三者間トレードオフを $C$ で補償＋GSC＋DINOv2 中間層整合（段階的にマージンを緩める）で解き、**f16c128 が NED 0.9617 で全 f8 VAE を上回る**（f16 で f8 超えは初）。KL は意味的整合と競合するため除去、GAN は予算十分なら不要。**批判的所見**: QI-2.0 は LMArena と VAE 表以外**定量ベンチマークもアブレーションも無い**（初代が GenEval/DPG/ChineseWord で詳細だったのと対照的）。またテキスト画像 PSNR は f16c64 の 32.81 < 初代 f8c16 の 36.63 で、高圧縮の代償が出ている（f16c128 なら解決するが採用は c64）。未取り込み注記: DMD 原典（Yin ら 2024）、Consistency Models、Progressive Distillation、VA-VAE、DC-AE。
+
 ## [2026-06-25] query | 拡散モデル理論の直感ガイド（DDPM → Flow Matching）
 
 - 質問: 拡散モデルの理論（DDPM〜flow matching）を数式なし・例え話で初心者向けに解説する記事を作成（まず理論項目を整理）。

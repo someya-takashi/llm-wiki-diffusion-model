@@ -9,12 +9,16 @@ related:
   - "[[diffusion-sampling]]"
   - "[[stochastic-interpolants]]"
   - "[[noise-schedule]]"
+  - "[[reinforcement-learning-for-diffusion]]"
+  - "[[image-tokenizer]]"
+  - "[[diffusion-distillation]]"
 summaries:
   - "[[summaries/2023-flow-matching]]"
   - "[[summaries/2024-sd3]]"
   - "[[summaries/2024-stochastic-interpolants]]"
   - "[[summaries/2025-flow-matching-diffusion-intro]]"
-updated: 2026-06-24
+  - "[[summaries/2025-qwen-image]]"
+updated: 2026-06-25
 ---
 
 # Flow Matching（フローマッチング）
@@ -85,6 +89,8 @@ $$
 
 これを大規模 text-to-image で初めて決定的に確立したのが **Stable Diffusion 3（SD3）**（[[summaries/2024-sd3]]）である。鍵は、一様時刻サンプリング $\mathcal{U}(t)$ を**中間時刻に重みを置く分布**に替える点：速度予測目標 $\epsilon-x_0$ は端点では単なる平均で簡単、中間ほど難しいので、**logit-normal**（logit 変換した時刻を正規分布でサンプル、$\pi_{\text{ln}}(t;m,s)$）や **mode** サンプラーで中間を厚くする。これは重み付き損失 $w_t^\pi=\frac{t}{1-t}\pi(t)$ と等価。61 定式化の大規模比較で **rf/lognorm(0.00, 1.00)** が一貫して最良で、EDM・LDM-Linear・一様 RF を上回り、特に少ステップで強い。SD3 はこれを **MM-DiT**（[[diffusion-model-architecture]]）と組み合わせ 8B までスケールした。SD3 により rectified flow / flow matching は SDXL までの拡散定式化に代わる実用標準になった。
 
+この路線は後続にそのまま引き継がれている。**Qwen-Image**（[[summaries/2025-qwen-image]]）も rectified flow（$x_t=tx_0+(1-t)x_1$、目標速度 $v_t=x_0-x_1$）＋ logit-normal 時刻サンプリングで 20B の MMDiT を事前学習する。さらに Qwen-Image は、この flow matching の定式化の**上に強化学習を積む**点が新しい（[[reinforcement-learning-for-diffusion]]）：DPO は勝ち画像・負け画像それぞれの**速度予測誤差の差**を選好スコアとして使い、Flow-GRPO は決定論的な ODE サンプリングでは探索できないため**サンプリングを SDE に再定式化**してランダム性を注入する。flow matching が「学習目的」だけでなく「事後学習の土台」としても機能し始めた例である。
+
 ## 既存知識との接続
 
 - [[probability-flow-ode]]：FM が学習する CNF は決定論的 ODE 生成。拡散の確率フロー ODE は FM の拡散パスの VF と一致し、FM はそれを「確率パスを直接指定する」視点へ一般化する。
@@ -103,3 +109,4 @@ FM・rectified flow をさらに一般化し、**flows（決定論 ODE）と dif
 - [[summaries/2024-sd3]] — Scaling Rectified Flow Transformers（SD3。rectified flow＋改良サンプラーを大規模 text-to-image で確立）
 - [[summaries/2024-stochastic-interpolants]] — Stochastic Interpolants（flows と diffusions を統一する一般化枠組み）
 - [[summaries/2025-flow-matching-diffusion-intro]] — An Introduction to Flow Matching and Diffusion Models（MIT 6.S184 講義ノート。conditional→marginal の構成と CFM を ODE/SDE 統一の枠組みから教科書的に導く入門）
+- [[summaries/2025-qwen-image]] — Qwen-Image（rectified flow＋logit-normal で 20B MMDiT を学習し、その上に DPO / Flow-GRPO の事後学習を重ねる）

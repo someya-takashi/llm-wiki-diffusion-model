@@ -8,6 +8,8 @@ related:
   - "[[latent-diffusion]]"
   - "[[image-inpainting]]"
   - "[[super-resolution]]"
+  - "[[visual-text-rendering]]"
+  - "[[instruction-based-image-editing]]"
 summaries:
   - "[[summaries/2021-score-sde]]"
   - "[[summaries/2023-controlnet]]"
@@ -16,7 +18,7 @@ summaries:
   - "[[summaries/2023-anydoor]]"
   - "[[summaries/2023-mix-of-show]]"
   - "[[summaries/2023-sdxl]]"
-updated: 2026-06-24
+updated: 2026-06-25
 ---
 
 # Controllable Generation（可制御生成 / 逆問題）
@@ -86,6 +88,8 @@ ControlNet は同時期の T2I-Adapter や、LoRA・IP-Adapter などと並ぶ�
 - [[multi-concept-customization]]：LoRA-Composer のレイアウト＋注意制御や Multi-LoRA Composition の復号制御も、重みを訓練し直さず推論時に複数概念を制御する系統。
 - [[lora-merging]]：Mix-of-Show（[[summaries/2023-mix-of-show]]）の **regionally controllable sampling** は、global＋領域プロンプトを region-aware cross-attention（マスク $M_i$ で cross-attention 出力を差し替え）で注入し、多概念生成の属性結合を解く。ControlNet/T2I-Adapter の空間条件制御を多概念マージに組み合わせた例で、LoRA-Composer の領域注入の源流。
 - [[latent-diffusion]]：SDXL（[[summaries/2023-sdxl]]）の **micro-conditioning** は、元画像サイズ・crop 座標・アスペクト比という**学習時メタデータ**を Fourier 埋め込みで条件化し timestep embedding に足す、別系統の可制御生成。スコア勾配ガイダンスや空間条件マップとは異なり、crop 条件で生成物のフレーミング（頭切れ回避・object-centered）を制御できる。
+- [[instruction-based-image-editing]]：制御を**エッジ・深度・姿勢マップではなく自然言語の指示文**で与える系統。ControlNet が「構造をどう保つか」を条件画像で明示するのに対し、指示編集は「何をどう変えるか」を文章から推論させる。Qwen-Image（[[summaries/2025-qwen-image]]）は深度推定や新視点合成すら編集タスクとして統一的に扱う。
+- [[visual-text-rendering]]：「どこに何の文字を書くか」というレイアウト制御は、空間条件付けと問題設定が重なる。
 
 ## 参考文献（summaries）
 

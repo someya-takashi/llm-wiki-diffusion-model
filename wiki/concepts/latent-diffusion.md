@@ -9,6 +9,8 @@ related:
   - "[[super-resolution]]"
   - "[[controllable-generation]]"
   - "[[diffusion-model-architecture]]"
+  - "[[visual-text-rendering]]"
+  - "[[image-tokenizer]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -16,7 +18,9 @@ summaries:
   - "[[summaries/2024-ziplora]]"
   - "[[summaries/2023-sdxl]]"
   - "[[summaries/2024-sd3]]"
-updated: 2026-06-24
+  - "[[summaries/2025-qwen-image]]"
+  - "[[summaries/2026-qwen-image-vae-2]]"
+updated: 2026-06-25
 ---
 
 # Latent Diffusion（潜在拡散）
@@ -88,7 +92,7 @@ $$
 ## 限界
 
 - 逐次サンプリングは依然 GAN より遅い（[[diffusion-sampling]]、DDIM 等で緩和）。
-- オートエンコーダの再構成限界が、画素単位の厳密精度を要するタスクのボトルネックになりうる。
+- オートエンコーダの再構成限界が、画素単位の厳密精度を要するタスクのボトルネックになりうる。**画像内の小さな文字**がその典型で、拡散モデルがどれだけ正しい潜在を作っても VAE デコーダが復元できなければ読めない——すなわち **[[visual-text-rendering]] の上限は VAE が決める**。Qwen-Image（[[summaries/2025-qwen-image]]）はここに手を入れ、Wan-2.1-VAE のエンコーダを凍結したまま**画像デコーダのみを PDF・スライド・ポスターなどテキストが密なコーパスで微調整**し、テキスト画像の再構成 PSNR を 26.77→36.63 へ引き上げた（学習は再構成損失＋知覚損失のみ。品質が上がると識別器が有効な勾配を出せなくなるため敵対的損失は外す）。「潜在拡散の弱点は、拡散側でなくオートエンコーダ側で直せることがある」という実例である。**このオートエンコーダ（画像トークナイザ）の設計論——圧縮率 $f$ とチャネル数 $C$ の選び方、再構成忠実度と「拡散可能性（diffusability）」のトレードオフ——は独立した研究領域になっており、[[image-tokenizer]] に集約した。**高解像度時代には $f8$ から $f16$・$f32$ へ圧縮率を上げる流れがあり（DiT の計算量は潜在トークン数に対して二次的なので効果が大きい）、Qwen-Image-VAE-2.0（[[summaries/2026-qwen-image-vae-2]]）は $f16$ でありながら文書テキストの再現で全 $f8$ VAE を上回った。
 - 高品質化は classifier-free guidance（[[classifier-free-guidance]]）に依存。生成時に条件付き／無条件スコアを混ぜて条件忠実度を高める標準技術。
 
 ## 既存知識との接続
@@ -111,3 +115,5 @@ $$
 - [[summaries/2024-ziplora]] — ZipLoRA（SDXL 上で被写体 LoRA × 画風 LoRA をマージ）
 - [[summaries/2023-sdxl]] — SDXL（LDM の大型化後継：3× UNet・micro-conditioning・base+refiner の 2 段）
 - [[summaries/2024-sd3]] — Stable Diffusion 3（LDM の次世代：MM-DiT＋rectified flow・潜在 16 チャネル）
+- [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE の単一エンコーダ・二重デコーダ構成。デコーダのみのテキスト特化微調整で文字再現の上限を引き上げ）
+- [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16/f32 の高圧縮トークナイザ。圧縮率・再構成・拡散可能性の三者間トレードオフを扱う。詳細は [[image-tokenizer]]）

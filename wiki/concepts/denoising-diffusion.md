@@ -9,11 +9,12 @@ related:
   - "[[diffusion-model-architecture]]"
   - "[[stochastic-interpolants]]"
   - "[[noise-schedule]]"
+  - "[[image-tokenizer]]"
 summaries:
   - "[[summaries/2020-ddpm]]"
   - "[[summaries/2021-adm]]"
   - "[[summaries/2022-edm]]"
-updated: 2026-06-24
+updated: 2026-06-25
 ---
 
 # Denoising Diffusion（ノイズ除去拡散モデル）

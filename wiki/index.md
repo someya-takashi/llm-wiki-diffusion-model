@@ -32,6 +32,9 @@
 - [[summaries/2024-sd3]] — Stable Diffusion 3（Esser ら 2024・ICML）。rectified flow＋改良ノイズサンプラー＋MM-DiT を 8B までスケール、SDXL・DALL-E 3 を上回る
 - [[summaries/2024-stochastic-interpolants]] — Stochastic Interpolants（Albergo ら 2023）。flows（ODE）と diffusions（SDE）を有限時間で統一する理論枠組み
 - [[summaries/2022-edm]] — EDM（Karras ら 2022・NeurIPS）。拡散の設計空間を分解し Heun サンプラー＋ρ スケジュール＋preconditioning＋ノイズ分布を体系化、35 NFE で SOTA
+- [[summaries/2025-qwen-image]] — Qwen-Image（Qwen Team 2025・Alibaba）。凍結 Qwen2.5-VL を条件エンコーダに据えた 20B MMDiT＋MSRoPE。中国語テキスト描画で大差の SOTA、二重符号化の編集、DPO/Flow-GRPO の事後学習
+- [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen Team 2026）。生成と編集を単一モデルに統一する「全能型」。Qwen3-VL＋f16 トークナイザ＋MMDiT、Prompt Enhancer・5 報酬 RLHF・DMD 蒸留（4 NFE）。LMArena ELO 1168
+- [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（Qwen Team 2026）。f16/f32 高圧縮トークナイザ。圧縮率・再構成・拡散可能性の三者間トレードオフ、GSC・DINOv2 中間層整合・KL/GAN 除去、OmniDoc-TokenBench
 
 ### article / 講義ノート
 - [[summaries/2025-flow-matching-diffusion-intro]] — An Introduction to Flow Matching and Diffusion Models（Holderrieth & Erives, MIT 6.S184, 2025・arXiv:2506.02070）。flow matching と拡散を ODE/SDE 統一の枠組みで導く教科書的講義ノート。conditional→marginal・連続の方程式・Fokker-Planck・CFG・U-Net/DiT/MM-DiT を自己完結的にカバー
@@ -62,6 +65,9 @@
 - [[translations/2024-stochastic-interpolants]] — Stochastic Interpolants 全文翻訳（本文§1–8＋Appendix A–C、全証明逐次）
 - [[translations/2022-edm]] — EDM 全文翻訳（本文§1–6＋Appendix A–F、表 markdown 化・Alg コードブロック、PDF のため画像なし）
 - [[translations/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門 全文翻訳（本文§1–5＋Appendix A,B、図 16 枚・アルゴリズム 5 個、§6 謝辞/References 除外）
+- [[translations/2025-qwen-image]] — Qwen-Image テクニカルレポート 全文翻訳（本文§1–6、表 1–14 markdown 化、§7 著者一覧/References 除外、PDF のため画像なし）
+- [[translations/2026-qwen-image-2]] — Qwen-Image-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–2 markdown 化、図 16 枚、Authors 章除外）
+- [[translations/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–3 markdown 化、図 4 枚、Authors 章除外）
 
 ## Concepts
 
@@ -86,6 +92,11 @@
 - [[lora-merging]] — 複数 LoRA の重みマージ／融合（Mix-of-Show の gradient fusion・ZipLoRA の学習係数マージ）
 - [[image-composition]] — 画像コンポジション / object teleportation（参照物体をシーンの指定位置に zero-shot 合成、AnyDoor）
 - [[super-resolution]] — 超解像（LDM-SR / LDM-BSR、SR3 比較）
+- [[visual-text-rendering]] — 画像内テキストレンダリング（読める文字を描く。VAE の再現限界・表語文字のロングテール・データ合成・MSRoPE。ランドマークは Qwen-Image）
+- [[instruction-based-image-editing]] — 指示ベース画像編集 / TI2I（マスクなしで自然言語だけで編集。二重符号化・GEdit/ImgEdit・新視点合成や深度推定も編集として統一）
+- [[reinforcement-learning-for-diffusion]] — 拡散モデルの強化学習・事後学習（SFT→DPO→Flow-GRPO、タスク別報酬。flow の SDE 化で探索性を得る）
+- [[image-tokenizer]] — 画像トークナイザ／潜在空間を作るオートエンコーダ（圧縮率 f・チャネル C・拡散可能性の三者間トレードオフ、GSC、意味的整合、OmniDoc-TokenBench）
+- [[diffusion-distillation]] — 蒸留による少ステップ生成（DMD・consistency・progressive。ソルバー改良と違い「モデル自体」を作り替える）
 
 略称リダイレクト：
 - DDPM → [[denoising-diffusion]]
@@ -133,6 +144,13 @@
 - AnyDoor / object teleportation / 物体合成 → [[image-composition]]
 - Paint-by-Example / ObjectStitch → [[image-composition]]
 - DINO-V2 / HF-map / 高周波マップ → [[image-composition]]
+- Qwen-Image / MSRoPE / Qwen2.5-VL 条件エンコーダ → [[diffusion-model-architecture]] ・ [[text-to-image-generation]]
+- テキストレンダリング / グリフ / 文字描画 / ChineseWord / CVTG-2K / LongText-Bench → [[visual-text-rendering]]
+- TI2I / 指示編集 / instruction editing / GEdit / ImgEdit / 二重符号化 / dual-encoding → [[instruction-based-image-editing]]
+- DPO / GRPO / Flow-GRPO / RLHF / 事後学習 / post-training / 報酬モデル → [[reinforcement-learning-for-diffusion]]
+- Qwen-Image-2.0 / Qwen3-VL / Prompt Enhancer / PE / bias-free modulation / SwiGLU → [[text-to-image-generation]] ・ [[diffusion-model-architecture]]
+- VAE 設計 / f16 / f32 / f8c16 / diffusability / 拡散可能性 / GSC / Global Skip Connection / semantic alignment / OmniDoc-TokenBench → [[image-tokenizer]]
+- DMD / Distribution Matching Distillation / consistency models / progressive distillation / 少ステップ生成 / NFE 削減 → [[diffusion-distillation]]
 
 ## Questions
 

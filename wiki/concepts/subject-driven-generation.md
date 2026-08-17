@@ -11,6 +11,7 @@ related:
   - "[[low-rank-adaptation]]"
   - "[[multi-concept-customization]]"
   - "[[lora-merging]]"
+  - "[[instruction-based-image-editing]]"
 summaries:
   - "[[summaries/2023-dreambooth]]"
   - "[[summaries/2022-textual-inversion]]"
@@ -18,7 +19,7 @@ summaries:
   - "[[summaries/2023-anydoor]]"
   - "[[summaries/2022-lora]]"
   - "[[summaries/2024-ziplora]]"
-updated: 2026-06-24
+updated: 2026-06-25
 ---
 
 # Subject-Driven Generation / Personalization（被写体駆動生成 / 個人化）

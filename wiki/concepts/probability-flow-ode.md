@@ -9,6 +9,8 @@ related:
   - "[[flow-matching]]"
   - "[[stochastic-interpolants]]"
   - "[[noise-schedule]]"
+  - "[[reinforcement-learning-for-diffusion]]"
+  - "[[diffusion-distillation]]"
 summaries:
   - "[[summaries/2021-score-sde]]"
   - "[[summaries/2021-ddim]]"
