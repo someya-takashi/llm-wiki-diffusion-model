@@ -444,3 +444,21 @@
   - NP-LoRA: 命題 1 が示すのは**厳密な保存の不可能性**であって干渉の大きさではない。**GPT-5 評価の候補順が固定**（NP-LoRA が常に [Model_6]）で位置バイアスが統制されていない。$\mu=0.5$ は経験的、層をまたぐ独立性を仮定、rank 8 固定。
   - SSR-Merge: **最適性定理の射程と主張の射程がずれる**——定理が保証するのは「各タスクが単独で出したはずの出力の再現」で、最大の改善が出た RQ2（複合プロンプトでの同時生成）を保証しない。「タスクの事前知識に依拠しない」と述べつつワンショット較正は各タスクのトリガー語を要する。Qwen-Image（97〜99%）と FLUX.1（90〜98%）の差が未説明。ZipLoRA・K-LoRA・NP-LoRA と比較されていない。
 - メモ: この 3 本は「LoRA 合成で他に読むべき論文は？」への推薦 #4 と #5 にあたる。昨日 ingest した Orthogonal Adaptation / B-LoRA と合わせると、**干渉をどこで断つか**という軸で 5 本が綺麗に並ぶ——学習時に基底を直交化（Orthogonal Adaptation）／学習する層を絞って分離を創発させる（B-LoRA）／マージ時に零空間へ射影（NP-LoRA）／マージ時に統計量でルーティング（SSR-Merge）／推論時に片方だけ使う（K-LoRA）。この表を [[summaries/2026-ssr-merge]] の位置づけ節に置いた。
+
+## [2026-08-19] query | 前景物体 LoRA × 背景スタイル LoRA をどう合成するか
+
+- 質問: 前景（iPhone などの特定物体）と背景のスタイルをそれぞれ LoRA で学習し、最終的に合成したい。おすすめの手法は？
+- 作成: [[questions/lora-foreground-background-composition]]
+- 更新: [[index]]
+- 参照: [[summaries/2025-k-lora]], [[summaries/2025-np-lora]], [[summaries/2024-b-lora]], [[summaries/2024-orthogonal-adaptation]], [[summaries/2024-lora-composer]], [[summaries/2023-anydoor]], [[summaries/2026-ssr-merge]], [[summaries/2024-ziplora]] ／ [[concepts/lora-merging]], [[concepts/style-content-disentanglement]], [[concepts/multi-concept-customization]], [[concepts/image-composition]], [[concepts/visual-text-rendering]]
+- 回答の骨子:
+  - **切り分け 1**: 「背景のスタイル」が全体にかかる**様式**か、**特定のシーン**かで推奨が分かれる（前者は style-content-disentanglement、後者は multi-concept-customization）。
+  - **切り分け 2（最重要）**: **LoRA 融合の手法群は「互いを壊さないこと」を解いており、「前景をどこに置くか」は解かない**。[[summaries/2024-orthogonal-adaptation]] が限界として明記している点を、実用上の判断基準として前面に出した。
+  - 推奨順: K-LoRA → NP-LoRA（$\mu$ を下げる）→ LoRA-Composer（前景/背景分離損失）→ 背景生成 ＋ AnyDoor の逐次パイプライン。
+- 新しく引き出した接続:
+  - **K-LoRA と NP-LoRA の鏡像**（content 1 位/style 3 位 対 style 1 位/content 4 位）を、**剛体の工業製品なら被写体側で勝つ K-LoRA を先に試す**という実務的な判断基準へ翻訳した。
+  - **NP-LoRA の $\mu$ を「同一性が崩れたら下げるつまみ」として提示**。$\mu\to0$ が直和＝コンテンツ優勢という対応関係は原典に書かれているが、チューニング手順としては整理されていなかった。
+  - **NP-LoRA の射影の非対称性が実用上の制約になる**ことを明示——守られるのは常にスタイル側で、「物体を守る」向きの選択肢は存在しない（逆向きはスタイルが消える）。
+  - **[[summaries/2024-b-lora]] の「色がスタイル側に取られる」限界が、工業製品の色（同一性の一部）に直撃する**という接続。B-LoRA の $\alpha\in[0.4,0.5]$ の手当てが転用できる。
+  - **[[concepts/visual-text-rendering]] との接続**——ロゴや画面内 UI 文字は LoRA 融合では守れず、後段 inpainting 前提の設計が要る。
+- メモ: 回答末尾に限界を明記した——**K-LoRA / NP-LoRA の評価は「DreamBooth の被写体 × StyleDrop の画風」であって「工業製品 × 背景シーン」ではない**。前景／背景という空間的に分かれた構成はこれらの手法の想定外で、問題設定への当てはまりは LoRA-Composer と逐次パイプラインの方が良い、と率直に述べた。

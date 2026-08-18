@@ -241,3 +241,4 @@
 
 <!-- query で得た比較表・分析等 -->
 - [[questions/diffusion-theory-ddpm-to-flow-matching]] — 拡散モデル理論の直感ガイド（DDPM → Flow Matching を数式なし・例え話で。コア理論＋応用編 guidance/latent diffusion）
+- [[questions/lora-foreground-background-composition]] — 前景物体 LoRA × 背景スタイル LoRA の合成（**融合手法は配置を解かない**という切り分け、K-LoRA と NP-LoRA の鏡像、$\mu$ の使い方、逐次パイプラインという代替、工業製品固有の注意点）
