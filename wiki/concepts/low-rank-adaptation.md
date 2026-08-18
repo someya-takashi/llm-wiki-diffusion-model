@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [LoRA, Low-Rank Adaptation, 低ランク適応, PEFT, parameter-efficient fine-tuning]
-tags: [low-rank-adaptation, subject-driven-generation, diffusion-model-architecture, generative-models, style-content-disentanglement]
+tags: [low-rank-adaptation, subject-driven-generation, diffusion-model-architecture, generative-models, style-content-disentanglement, model-merging]
 related:
   - "[[subject-driven-generation]]"
   - "[[latent-diffusion]]"
@@ -9,12 +9,16 @@ related:
   - "[[multi-concept-customization]]"
   - "[[lora-merging]]"
   - "[[style-content-disentanglement]]"
+  - "[[model-merging]]"
 summaries:
   - "[[summaries/2022-lora]]"
   - "[[summaries/2023-mix-of-show]]"
   - "[[summaries/2024-ziplora]]"
   - "[[summaries/2024-orthogonal-adaptation]]"
   - "[[summaries/2024-b-lora]]"
+  - "[[summaries/2025-k-lora]]"
+  - "[[summaries/2025-np-lora]]"
+  - "[[summaries/2026-ssr-merge]]"
 updated: 2026-08-19
 ---
 
@@ -44,12 +48,15 @@ LLM で生まれた LoRA は、拡散モデルでは **U-Net（とテキスト�
 - **低ランク性の傍証**：Custom Diffusion（[[summaries/2023-custom-diffusion]]）は cross-attention の $W^k,W^v$ を全 fine-tune した差分行列の特異値が急減することを観察し、SVD 低ランク近似で 75MB→15MB（上位 60% rank, 5× 圧縮）に圧縮しても品質が保たれることを示した——personalization の重み変化が本質的に低ランクという、LoRA の前提を裏づける結果。ただし同論文は fine-tune **中**に低ランク更新を強制すると結果が suboptimal だったとも報告する。
 - **どこに当てるか、が設計変数になる**：LoRA は伝統的に「注意・線形層すべてに当てる」を既定としてきたが、**B-LoRA**（[[summaries/2024-b-lora]]）は SDXL の 11 transformer ブロックのうち**第 4 ブロック（コンテンツを支配）と第 5 ブロック（色／スタイルを支配）の 2 つだけ**に当てると、style と content が勝手に分離した表現が得られることを示した。保存量は 70% 減り、学習容量が絞られるため**過学習もしない**（他手法が 400 ステップで止めるところ 1000 ステップ回せる）。層は等価ではない、という認識は $\mathcal{P}+$（層ごとのテキスト埋め込み）や ED-LoRA にも共通する。詳細は [[style-content-disentanglement]]。
 - **何を学習しないか、も設計変数になる**：**Orthogonal Adaptation**（[[summaries/2024-orthogonal-adaptation]]）は $\Delta\theta = AB^\top$ の **$B$ を凍結して $A$ だけ学習する**。$B$ を共有直交基底からランダムに選んだ列に固定すれば、別々に学習された LoRA どうしが $B_i^\top B_j \approx 0$ を満たし、**素朴な足し算でマージしても干渉しない**。$B$ を凍結しても単一概念の忠実度が落ちないのは、text-to-image モデルが**過剰パラメータ化**されているためである——これは LoRA の前提（適応の内在階数は低い）をさらに一歩進めた観察と読める。
+- **$\Delta W$ の内部構造**：LoRA の低ランク空間は一様ではない。**NP-LoRA**（[[summaries/2025-np-lora]]）は $\Delta W$ を SVD し、**上位の特異ベクトル（主方向）を摂動するとスタイルの一貫性が急激に崩れる一方、微小な成分を摂動してもほとんど変わらない**ことを示した。ZipLoRA の「$\Delta W$ は疎」という観察を、**どの部分が重要かを特異値の順で特定する**ところまで進めたものである。**K-LoRA**（[[summaries/2025-k-lora]]）も同じ性質を別の形で使い、各層の重要度を**Top-K 要素の絶対値和**で測って層ごとにどちらの LoRA を使うか決める。
+- **rank 方向は連結できる**：$K$ 個の LoRA を足すことは、下方射影を縦に・上方射影を横に並べた 1 つの LoRA と厳密に等しい（$\sum_k B_kA_k = \mathbf{B}_\text{comb}\mathbf{A}_\text{comb}$）。**SSR-Merge**（[[summaries/2026-ssr-merge]]）はこの構造を使い、間にルータを挿すことで信号を制御する。低ランク構造に固有の性質で、詳細は [[model-merging]]。
 - **複数概念の合成（[[multi-concept-customization]]）と重みマージ（[[lora-merging]]）**：単一概念 LoRA を複数組み合わせて 1 枚に合成する研究が派生した。素朴な重みマージ（LoRA Merge $W'=W_0+\sum_i w_i B_iA_i$）は数が増えると identity loss・列干渉で不安定なため、推論挙動を整合させる gradient fusion（Mix-of-Show）や学習係数マージ（ZipLoRA）といった**重みマージ系（[[lora-merging]]）**、および重みを混ぜない注意制御（LoRA-Composer）・復号過程合成（Multi-LoRA Composition）が提案されている。
 
 ## 既存知識との接続
 
 - [[subject-driven-generation]]：LoRA は personalization の軽量手段。DreamBooth（全層 fine-tune）・Textual Inversion（埋め込みのみ）と並ぶ第 3 の選択肢で、表現力↔コストのバランスが良い。
 - [[multi-concept-customization]]：複数の単一概念 LoRA を 1 枚に合成するタスク。LoRA がプラグ&プレイで共有可能だからこそ成立する。
+- [[model-merging]]：LoRA が加算可能でプラグ&プレイだからこそマージが成立する。rank 方向の連結という操作も低ランク構造に固有。
 - [[style-content-disentanglement]]：LoRA を「どの層に当てるか」が分離能力を決めるという観察。LoRA の適用範囲そのものを設計対象にする視点。
 - [[lora-merging]]：複数 LoRA を重みレベルで融合する系統（Mix-of-Show の gradient fusion・ZipLoRA の学習係数マージ）。LoRA の加算可能性と疎性を前提にする。
 - [[diffusion-model-architecture]]：LoRA はバックボーン（U-Net でも Transformer/DiT でも）の重み行列に後付けで低ランク適応を施す。アーキテクチャ本体は変えない。
@@ -62,3 +69,6 @@ LLM で生まれた LoRA は、拡散モデルでは **U-Net（とテキスト�
 - [[summaries/2024-ziplora]] — ZipLoRA（LoRA の疎性に基づく content+style マージ）
 - [[summaries/2024-b-lora]] — B-LoRA（SDXL の 2 ブロックのみに LoRA を当てる。当てる場所の選択が手法になる）
 - [[summaries/2024-orthogonal-adaptation]] — Orthogonal Adaptation（$B$ を凍結し $A$ のみ学習。過剰パラメータ化ゆえ表現力は落ちない）
+- [[summaries/2025-np-lora]] — NP-LoRA（$\Delta W$ の主方向が生成を支配することを摂動実験で実証。SVD と QR の等価性）
+- [[summaries/2025-k-lora]] — K-LoRA（Top-K 要素の和で層の重要度を測る。注意層の半分に LoRA を当てれば全層と区別がつかないという観察）
+- [[summaries/2026-ssr-merge]] — SSR-Merge（rank 方向の連結という低ランク構造固有の操作。素朴な和 $=$ 単位ルータ）

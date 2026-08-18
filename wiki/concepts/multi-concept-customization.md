@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Multi-Concept Customization, 多概念カスタマイズ, Multi-LoRA Composition, LoRA Composition, LoRA Merge, LoRA Switch, LoRA Composite, ComposLoRA]
-tags: [multi-concept-customization, low-rank-adaptation, subject-driven-generation, controllable-generation, generative-models, style-content-disentanglement]
+tags: [multi-concept-customization, low-rank-adaptation, subject-driven-generation, controllable-generation, generative-models, style-content-disentanglement, model-merging]
 related:
   - "[[low-rank-adaptation]]"
   - "[[lora-merging]]"
@@ -11,6 +11,7 @@ related:
   - "[[classifier-free-guidance]]"
   - "[[character-consistency]]"
   - "[[style-content-disentanglement]]"
+  - "[[model-merging]]"
 summaries:
   - "[[summaries/2023-custom-diffusion]]"
   - "[[summaries/2023-mix-of-show]]"
@@ -19,6 +20,7 @@ summaries:
   - "[[summaries/2024-multi-lora-composition]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2024-orthogonal-adaptation]]"
+  - "[[summaries/2026-ssr-merge]]"
 updated: 2026-08-19
 ---
 
@@ -68,6 +70,21 @@ LoRA 重みを一切いじらず、**ノイズ除去（復号）の各ステッ�
 - **LoRA Composite (LoRA-c)**：各ステップで全 LoRA の条件付き／無条件スコアを個別に計算し平均してガイダンスにする（[[classifier-free-guidance]] の多 LoRA 拡張）。
 - どちらも任意個の LoRA を統合でき、重み操作の不安定さを回避。評価用に **ComposLoRA** テストベッドと GPT-4V 評価を提案。LoRA 数が増えるほど LoRA Merge への優位が拡大（LoRA-s は composition 品質、LoRA-c は image 品質で勝る）。
 
+## 規模を上げると疎化が裏目に出る（2026）
+
+本ページの (a)(b)(c) は 2〜4 概念を主戦場にしてきた。**SSR-Merge**（[[summaries/2026-ssr-merge]]）は $K$ 個（最大 21）のタスク LoRA を 1 モデルに詰める設定で、**concept vanishing が疎化ベースのマージで構造的に起きる**ことを示した。
+
+複数被写体を 1 枚に生成させ、Grounding DINO で全部検出できた割合を成功率として測る（検出されなかった物体には類似度 0 を与える）。
+
+| 手法 | DINO | 成功率 |
+| --- | --- | --- |
+| Task Arithmetic（素朴な和） | 0.4052 | 0.76 |
+| TIES（刈り込み＋符号の選挙） | 0.4475 | **0.69** |
+| DARE（ランダム疎化＋再スケール） | 0.5050 | **0.62** |
+| SSR-Merge | **0.5704** | **0.91** |
+
+**TIES と DARE の成功率が、素朴な和より低い。** 忠実度（DINO）は上がっているのに、**要求された概念が画像に現れない**確率が増える——疎化は衝突を避ける代わりにタスクそのものを落としている。本ページ冒頭で挙げた concept vanishing が、マージ手法の設計に起因して起きる例であり、「干渉を減らす」ことと「全概念を出す」ことが同じではないことを示している。詳細と汎用の重みマージの系譜は [[model-merging]] を参照。
+
 ## 関連手法・隣接概念
 
 - **Custom Diffusion**（[[summaries/2023-custom-diffusion]]）：本領域の**源流**。Stable Diffusion の cross-attention の $W^k,W^v$（全体の約 5%・75MB）だけを数枚で fine-tune し、複数概念を (i) joint training か (ii) 上記の閉形式マージで合成する。LoRA-Composer/Multi-LoRA Composition が **複数の独立 LoRA を推論時に**合成するのに対し、Custom Diffusion は **概念を学習して重みに焼き込み**、必要なら閉形式で結合する学習型である。似カテゴリ（cat+dog）や 3 概念以上は苦手で、これが後続の動機になった。
@@ -93,6 +110,7 @@ Qwen-Image-Edit の崩壊の仕方が示唆的である。本ページ冒頭で�
 
 - [[low-rank-adaptation]]：合成対象の単一概念が LoRA で表される。LoRA がプラグ&プレイで共有可能だからこそ「複数を合成する」課題が成立する。
 - [[lora-merging]]：重みマージ／融合系統（Mix-of-Show・ZipLoRA）を細粒度に扱う子ページ。本ページの (a) を詳説する。
+- [[model-merging]]：$K$ 個のタスクを 1 モデルに詰める汎用の重みマージ。本ページが「1 枚の画像に複数概念を載せる」のに対し、あちらは「1 つのモデルに複数能力を載せる」。SSR-Merge の RQ2 で両者が交差する。
 - [[style-content-disentanglement]]：概念が「被写体 × 画風」の 2 成分に限られる特殊ケース。任意個の被写体へ広げると本ページになる。複数スタイルの合成は両ページの未解決の交差点。
 - [[subject-driven-generation]]：単一概念 personalization の多概念版。
 - [[classifier-free-guidance]]：LoRA Composite は CFG のスコア平均を多 LoRA に拡張したもの。
@@ -110,3 +128,4 @@ Qwen-Image-Edit の崩壊の仕方が示唆的である。本ページ冒頭で�
 - [[summaries/2024-lora-composer]] — LoRA-Composer（訓練不要・注意制御による多概念合成）
 - [[summaries/2024-multi-lora-composition]] — Multi-LoRA Composition（LoRA Switch / Composite、decoding-centric）
 - [[summaries/2024-orthogonal-adaptation]] — Orthogonal Adaptation（modular customization の定式化、crosstalk、$B$ 凍結＋共有直交基底で素朴な線形和を安全にする）
+- [[summaries/2026-ssr-merge]] — SSR-Merge（$K$ 最大 21 のマージ。**疎化ベースの TIES・DARE が素朴な和より成功率を落とす**ことを実測し、concept vanishing がマージ設計に起因することを示した）

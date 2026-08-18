@@ -18,6 +18,7 @@ related:
   - "[[position-embedding]]"
   - "[[efficient-attention]]"
   - "[[style-content-disentanglement]]"
+  - "[[model-merging]]"
 summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2020-ddpm]]"

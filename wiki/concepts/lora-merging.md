@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [LoRA Merging, LoRA Fusion, LoRA Merge, Gradient Fusion, Weight Fusion, ED-LoRA, ZipLoRA, LoRAHub]
-tags: [lora-merging, low-rank-adaptation, multi-concept-customization, subject-driven-generation, generative-models, style-content-disentanglement, orthogonal-adaptation]
+tags: [lora-merging, low-rank-adaptation, multi-concept-customization, subject-driven-generation, generative-models, style-content-disentanglement, orthogonal-adaptation, model-merging]
 related:
   - "[[low-rank-adaptation]]"
   - "[[multi-concept-customization]]"
@@ -9,6 +9,7 @@ related:
   - "[[controllable-generation]]"
   - "[[latent-diffusion]]"
   - "[[style-content-disentanglement]]"
+  - "[[model-merging]]"
 summaries:
   - "[[summaries/2023-custom-diffusion]]"
   - "[[summaries/2023-mix-of-show]]"
@@ -16,6 +17,9 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2024-orthogonal-adaptation]]"
   - "[[summaries/2024-b-lora]]"
+  - "[[summaries/2025-k-lora]]"
+  - "[[summaries/2025-np-lora]]"
+  - "[[summaries/2026-ssr-merge]]"
 updated: 2026-08-19
 ---
 
@@ -107,9 +111,9 @@ $B_i$ を凍結して表現力が落ちないのは、text-to-image モデルが
 
 LoRAHub は下流タスクに合わせて複数 LoRA の結合係数を（勾配フリー最適化で）学習する汎用的な重みベース融合。ZipLoRA の「係数を学習する」発想と同系統だが、画像の content×style 特化ではなくタスク適応寄り。
 
-## 隣接：基盤モデル自身のマージ（model merging）
+## 隣接：基盤モデル自身のマージ（[[model-merging]]）
 
-本ページは LoRA どうしのマージを扱ってきたが、**同じ発想が基盤モデルの全重みに対しても使われている**。**Z-Image**（[[summaries/2025-z-image]]）は SFT の最終段階で **モデルマージ** を採る。
+本ページは LoRA どうしのマージを扱ってきたが、**同じ発想が基盤モデルの全重みに対しても使われている**。Task Arithmetic・TIES-Merging・DARE・RegMean といった汎用の重みマージの系譜は [[model-merging]] に集約したので、ここでは拡散モデル側の具体例だけを挙げる。**Z-Image**（[[summaries/2025-z-image]]）は SFT の最終段階で **モデルマージ** を採る。
 
 やり方は本ページ (1) の素朴な線形和そのものである：同じバックボーンから初期化した複数の SFT 変種を、それぞれ**異なる能力次元へわずかに偏らせて**微調整し（例：厳密な指示追従に寄せたもの、美的レンダリングに寄せたもの）、重みを線形補間する。
 
@@ -118,6 +122,36 @@ $$\theta_{\text{final}}=\sum_{i}\alpha_{i}\theta_{i}$$
 動機が本ページの文脈と少し違う点が興味深い。LoRA マージの目的は「**別々の概念を 1 枚に共存させる**」ことだったが、こちらの目的は「**個々のバイアスを中和して頑健にする**」ことである。SFT を特定の高品質データセットで行うと写実性 対 様式の柔軟性といったトレードオフやバイアスが入るので、複数の偏りを平均して**パレート最適に近づける**。著者らは「損失地形を実効的に滑らかにする」と表現する。
 
 なぜ素朴な線形和で破綻しないのか——本ページ冒頭で見た通り、LoRA マージでは方向の干渉が deterioration を招いた。違いは**すべての変種が同じ初期点から短く離れただけ**である点にあるだろう。互いに独立に学習された LoRA と違い、共通の親から派生した近傍の点どうしなので、線形補間が意味を持つ領域に留まりやすい（LLM 側で model soup と呼ばれる現象と同じ構図）。**マージが成立する条件は「何を混ぜるか」より「どこから来たか」に依る**、という見方を補強する事例である。
+
+### (6) 主方向の零空間へ射影する — NP-LoRA
+
+(0)〜(5) はいずれも「どんな係数で、どう足すか」を工夫してきた。**NP-LoRA**（[[summaries/2025-np-lora]]）は、**加重和という操作の形そのものでは干渉を消せない**ことを証明する。
+
+スタイル LoRA の上位特異ベクトルを $V_k$、射影子を $P=V_kV_k^\top$ とすると、加重マージ $\Delta W_m = a\Delta W_c + b\Delta W_s$ が元のスタイル成分を保つ条件は $a\,P\Delta W_{c}=(1-b)\Delta W_{s}$ である。これが成り立つのは $P\Delta W_c$ と $\Delta W_s$ が**共線である場合に限られ**、独立に学習された LoRA では高次元空間においてほぼ確実にそうならない。**係数の選び方の問題ではなく、加重和という形の問題**である——ZipLoRA が係数を学習しても、K-LoRA が層ごとに切り替えても、この結論は変わらない。
+
+そこで足す前に**射影する**。零空間への直交射影 $P_\text{null}=I-V_kV_k^\top$ を作り、
+
+$$\Delta W_{m}=\Delta W_{s}+\Delta W_{c}(I-V_{k}V_{k}^{\top})$$
+
+とすれば、$V_kV_k^\top(I-V_kV_k^\top)=0$ から**コンテンツの寄与がスタイルの主方向に一切入らない**ことが直ちに従う。
+
+硬い射影はコンテンツを削りすぎるので、Tikhonov 正則化された目的から閉形式のソフト射影 $P_{\text{soft}}=I-\tfrac{\mu}{1+\mu}V_{k}V_{k}^{\top}$ を導く。**$\mu\to0$ で直和、$\mu\to\infty$ で硬射影**——本ページの系統が離散的な選択肢だったところに、**連続なつまみ**が入った。実装は SVD ではなく $A_s^\top$ の QR 分解で等価に済み、計算量は 1 桁下がる。マージ時間は 13.4 秒で **Direct（13.5 秒）とほぼ同じ**である。
+
+**この手法は非対称**である点に注意が要る。射影されるのは常にコンテンツ側で、逆向き（スタイルをコンテンツの零空間へ）にすると**スタイルの痕跡がほぼ完全に消える**。著者らの結論は「コンテンツの表現は本質的に支配的で干渉に強く、スタイルは脆い」——[[style-content-disentanglement]] が別の角度から述べてきた性質の、部分空間の言葉での再確認になっている。どちらを保護するかは設計者が決めなければならない。
+
+### (7) そもそもパラメータ空間で足さない — SSR-Merge
+
+**SSR-Merge**（[[summaries/2026-ssr-merge]]）は問題の規模も設定も変える——被写体×画風の 2 個ではなく、**任意のタスク $K$ 個（最大 21）**を 1 モデルに詰める。そして**パラメータ空間で足すことをやめ、信号をルーティングする**。
+
+$K$ 個の LoRA を rank 方向に連結し（$\mathbf{A}_\text{comb}$、$\mathbf{B}_\text{comb}$）、間に二次統計量から閉形式で導かれるルータ $R=\mathbf{Q}\mathbf{G}^{-1}$ を挿す。$\mathbf{G}^{-1}$ が白色化フィルタとして混ざった信号の相関を落とし、$\mathbf{Q}$ が浄化された信号を各タスクの $B_k$ へ導く。
+
+**本ページ全体を見直させる同定が 1 つある**——素朴な線形和は、この連結形で $R=\mathbf{I}$ とすることに**厳密に等しい**。
+
+$$\sum_{k}B_{k}A_{k}=\mathbf{B}_{\text{comb}}\,\mathbf{I}\,\mathbf{A}_{\text{comb}}$$
+
+本ページは冒頭で素朴な直和の破綻を identity loss と signal interference の 2 つで説明し、(5) で crosstalk、(6) で非直交な部分空間という語彙を加えてきた。SSR の定式化はそれらを**「rank 方向に並べたときに信号を制御していない」という 1 点**に還元する。
+
+汎用の重みマージの系譜（Task Arithmetic・TIES・DARE・RegMean など）とその整理は [[model-merging]] に集約した。
 
 ## 第三の道：マージ機構が要らない LoRA を作る
 
@@ -133,12 +167,13 @@ $$\theta_{\text{final}}=\sum_{i}\alpha_{i}\theta_{i}$$
 LoRA を 1 枚に合成する手法は、重みマージ（本ページ）以外に 2 系統ある（詳細は [[multi-concept-customization]]）：
 
 - **(b) 訓練不要の注意制御**：LoRA-Composer（[[summaries/2024-lora-composer]]）。重みを混ぜず、推論時に U-Net の注意を領域ごとに操作。
-- **(c) 復号中心の合成**：Multi-LoRA Composition（[[summaries/2024-multi-lora-composition]]）の LoRA Switch / Composite。各ノイズ除去ステップで LoRA を切替・平均。
+- **(c) 復号中心の合成**：Multi-LoRA Composition（[[summaries/2024-multi-lora-composition]]）の LoRA Switch / Composite。各ノイズ除去ステップで LoRA を切替・平均。**K-LoRA**（[[summaries/2025-k-lora]]）はこれを重みの統計量で駆動する形に発展させたもので、各注意層で両 LoRA の **Top-K 要素の絶対値和**を比較して片方を丸ごと使う（$K=r_c\cdot r_s$）。加えて時間依存のスケール $S=\alpha t/T+\beta$ でスタイル側を傾け、**初期ステップは content、後期は style が勝ちやすく**する——「初期は構図、後期は細部」という [[diffusion-sampling]] の性質を合成のスケジューリングに使った例である。出所の違うコミュニティ LoRA の重み規模差を吸収する $\gamma$ も持つ。
 
-重みマージは「**1 度融合すれば追加推論コストがない**（推論は 1 モデル）」のが利点で、(b)(c) は「**重みを保つので元 LoRA を壊さず柔軟**」だが推論が重い、というトレードオフがある。
+重みマージは「**1 度融合すれば追加推論コストがない**（推論は 1 モデル）」のが利点で、(b)(c) は「**重みを保つので元 LoRA を壊さず柔軟**」だが推論が重い、というトレードオフがある。この代償は実測されている——NP-LoRA の計測（[[summaries/2025-np-lora]] 表 III）では **K-LoRA の画像あたり生成時間は 60.4 秒で、直接マージ（22.9 秒）の 2.6 倍**である。「学習不要」を謳う手法のコストが推論側へ移っている点は、選択の際に見落としやすい。
 
 ## 既存知識との接続
 
+- [[model-merging]]：本ページの親にあたる汎用の重みマージ。Task Arithmetic・TIES・DARE・RegMean・SSR の系譜と、**素朴な線形和 $=R=\mathbf{I}$** という統一的な見方を扱う。
 - [[style-content-disentanglement]]：本ページの ZipLoRA（content×style マージ）を、スタイル-コンテンツ分離という問題設定の側から扱う子ページ。B-LoRA の「分離を作らず見つける」という対極の答えを含む。
 - [[low-rank-adaptation]]：マージ対象は単一概念の LoRA。$\Delta W=BA$ がプラグ&プレイで共有・加算可能だからこそマージが成立する。ED-LoRA は LoRA の派生。
 - [[multi-concept-customization]]：本ページは多概念合成の「(a) 重みマージ／融合」系統の詳細版。注意制御・復号中心系は親ページに。
@@ -157,3 +192,6 @@ LoRA を 1 枚に合成する手法は、重みマージ（本ページ）以外
 - [[summaries/2024-lora-composer]] — LoRA-Composer（重みを混ぜない注意制御系）
 - [[summaries/2024-orthogonal-adaptation]] — Orthogonal Adaptation（$B$ を凍結し共有直交基底からランダムに列を配る。crosstalk の定式化、素朴な線形和で 1 秒未満・唯一劣化しない。既存 LoRA には適用不可、直交可能な概念数に上限）
 - [[summaries/2024-b-lora]] — B-LoRA（SDXL のブロック 4/5 だけを共同学習すると style/content が勝手に分離。マージ機構も組合せごとの再最適化も不要）
+- [[summaries/2025-k-lora]] — K-LoRA（各注意層で両 LoRA の Top-K 絶対値和を比較して片方を丸ごと使う。時間依存スケールで初期は content・後期は style へ傾ける。学習不要だが生成時間は Direct の 2.6 倍）
+- [[summaries/2025-np-lora]] — NP-LoRA（**加重マージでは干渉が原理的に消せない**ことを証明。SVD の主方向の零空間へコンテンツを射影、Tikhonov 正則化で連続なソフト射影。射影の向きは非対称）
+- [[summaries/2026-ssr-merge]] — SSR-Merge（rank 方向に連結して統計量由来のルータを挿入。**素朴な線形和 $=R=\mathbf{I}$** の同定、OLS 最適性、$K=21$ まで検証。詳細は [[model-merging]]）

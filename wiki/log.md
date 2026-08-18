@@ -415,3 +415,32 @@
   - ブロック対アブレーションが 2 物体のみ、比較実装の多くが非公式、本文の「単一画像」と付録 D（複数画像で personalization）の齟齬。
 - メモ: この 2 本は「LoRA 合成で他に読むべき論文は？」というユーザーの問いに対して推薦した #1 と #3 にあたる。読み合わせると、2023 年末〜2024 年に**マージ機構そのものを不要にする**という共通の転換が起きていたことが見える——Orthogonal Adaptation は「どう学習するか」を、B-LoRA は「どこを学習するか」を変えた。[[concepts/lora-merging]] に「第三の道」の節を設けて両者を並置した。
 - 付随修正: 既存の [[translations/2025-qwen-image]] に残っていたキリル文字の混入（「過小представされた」×3）を「過小表現された」に修正。
+
+## [2026-08-19] ingest | K-LoRA / NP-LoRA / SSR-Merge（学習不要の LoRA 融合 3 本）
+
+- 取り込み:
+  - `raw/papers/K-LoRA_ Unlocking Training-Free Fusion of Any Subject and Style LoRAs.md`（arXiv:2502.18461・Ouyang ら / 南開大学・CVPR 2025）
+  - `raw/papers/NP-LoRA_ Null Space Projection Unifies Subject and Style in LoRA Fusion.md`（arXiv:2511.11051・Chen ら / 中国科学院）
+  - `raw/papers/SSR-Merge_ Subspace Signal Routing for Training-Free LoRA Merging in Diffusion Models.md`（arXiv:2606.10617・Wei ら / 南京大学・vivo BlueImage Lab）
+- 作成: [[translations/2025-k-lora]], [[summaries/2025-k-lora]], [[translations/2025-np-lora]], [[summaries/2025-np-lora]], [[translations/2026-ssr-merge]], [[summaries/2026-ssr-merge]], [[concepts/model-merging]]
+- 更新: [[concepts/lora-merging]]（系統 (6)(7) を新設、「重みを混ぜない」節に K-LoRA、「隣接」節を model-merging へ委譲）, [[concepts/style-content-disentanglement]]（系統 (a′) を新設）, [[concepts/multi-concept-customization]], [[concepts/low-rank-adaptation]], [[concepts/diffusion-sampling]], [[concepts/instruction-based-image-editing]], [[overview]], [[index]]
+- 翻訳範囲: 3 本とも本文 ＋ 付録の全訳（ユーザー選択）。K-LoRA は §1–5 ＋ Appendix A–F、NP-LoRA は §I–VI ＋ 補足 §VII–XV、SSR-Merge は §1–5 ＋ Appendix A–H。References・謝辞は除外。SSR-Merge の HTML テーブル（表 1・5・8）は markdown へ変換。K-LoRA の疑似コードと NP-LoRA の GPT-5 評価プロンプト（原典では SVG 埋め込み）はコードブロック化した。
+- 画像メモ: ar5iv から計 41 枚を取得（K-LoRA 19、NP-LoRA 14、SSR-Merge 8）。**プレースホルダ・重複・取得失敗ともにゼロ**。
+  - K-LoRA は `picturemap.png`（図 10）と `pictureMap.png`（図 12）が大文字小文字違いで衝突するが、`figN` 連番で保存したため問題なし。
+  - **SSR-Merge の図 2（手法概観）は ar5iv・arXiv のいずれの HTML 変換でも画像が生成されない**。訳注で明示した。
+- 版の相違（NP-LoRA）: 取り込んだ原典は **arXiv v1 相当**で、arXiv は現在より新しい版を配信している（図 14 → 13 枚、表 I と表 II の統合、ランク別比較・コミュニティ LoRA 評価の表の新設）。**Z-Image と同じ方針で raw ファイル（旧版）に忠実に訳し**、翻訳冒頭と要約に相違を明記した。
+- 新概念の設置理由: [[concepts/model-merging]] を新設（ユーザー選択）。SSR-Merge は subject×style ではなく**汎用の $K$ 個マージ**（最大 21）で、Task Arithmetic・TIES・DARE・RegMean・RobustMerge・IterIS という LLM 側の重みマージ理論を丸ごと持ち込み、GLUE での検証まで行う。[[concepts/lora-merging]] の「隣接：基盤モデル自身のマージ」節は Z-Image の記述だけで原典の裏づけがなかったが、ここで埋まった。lora-merging を model-merging の子ページとして位置づけ直した。
+- 記録すべき指摘:
+  - **素朴な線形和 $=$ ルータが単位行列**（$\sum_k B_kA_k=\mathbf{B}_\text{comb}\mathbf{I}\mathbf{A}_\text{comb}$）。[[concepts/lora-merging]] が identity loss・signal interference・crosstalk・非直交部分空間と複数の語彙で説明してきた破綻が、「rank 方向に並べたときに信号を制御していない」の 1 点に還元された。
+  - **NP-LoRA の命題 1**——加重マージがスタイル成分を保つには $P\Delta W_c$ と $\Delta W_s$ が共線でなければならず、独立学習の LoRA ではほぼ確実にそうならない。**係数の選び方ではなく加重和という操作の形の問題**であり、ZipLoRA・K-LoRA を含む既存手法すべてに及ぶ。
+  - **RegMean が高次元 DiT で破綻する**（SSR 付録 E）。FLUX.1 は $d\approx12{,}288$ に対し $N\approx4{,}096$ で共分散行列が特異。SSR が $Kr\approx96$ の部分空間で統計を取るのはこの回避で、**アーキテクチャの規模がマージ手法の選択を決めている**例。
+  - **疎化ベースのマージ（TIES・DARE）は複数被写体の同時生成で素朴な和より成功率が低い**（0.69・0.62 対 0.76）。忠実度を守る代わりにタスクを落としており、[[concepts/multi-concept-customization]] の concept vanishing がマージ設計に起因して起きる。
+  - **K-LoRA の時間依存スケール**は [[concepts/diffusion-sampling]] の「初期は構図・後期は細部」を合成のスケジューリングへ応用した初例。同じ観察が noise-schedule（学習側）・inference-caching（計算の間引き）と合わせ 3 通りに使われている。
+  - **NP-LoRA は SVD ではなく $A_s^\top$ の QR 分解で等価**（Cholesky 経由の証明あり）。$\mathcal{O}(mnr)\to\mathcal{O}(nr^2)$。
+- 批判として要約に記録した点:
+  - **K-LoRA と NP-LoRA は評価軸の鏡像**。K-LoRA は content 1 位・style 3 位、NP-LoRA は style 1 位・content 4 位で、**両者の事実認識は一致しており違いは勝てる軸の選択だけ**。K-LoRA の表で共同学習が Style Sim 68.2% と最高なのに DINO 17.4%（被写体を失っても様式指標は最良）である点が決定的で、2 指標はトレードオフ曲線上の座標にすぎない。NP-LoRA の調和平均 $S_\text{harm}$ はこの交絡への正面からの手当て。[[concepts/style-content-disentanglement]] の中心的論点の実証として (a′) 節に記録した。
+  - **K-LoRA は生成時間を報告していない**。NP-LoRA の実測では画像あたり 60.4 秒で Direct（22.9 秒）の 2.6 倍。「学習不要」の代償が推論へ移っている。
+  - K-LoRA: 要旨の「定量的にも SOTA を上回る」はスタイル側で成立していない。ユーザー評価 52.7% と GPT-4o 評価 83.3% の乖離が未説明。$K=r_c\cdot r_s$ の根拠が弱く、観察 (i)（$x>50$ で見分けがつかない）が定性的。
+  - NP-LoRA: 命題 1 が示すのは**厳密な保存の不可能性**であって干渉の大きさではない。**GPT-5 評価の候補順が固定**（NP-LoRA が常に [Model_6]）で位置バイアスが統制されていない。$\mu=0.5$ は経験的、層をまたぐ独立性を仮定、rank 8 固定。
+  - SSR-Merge: **最適性定理の射程と主張の射程がずれる**——定理が保証するのは「各タスクが単独で出したはずの出力の再現」で、最大の改善が出た RQ2（複合プロンプトでの同時生成）を保証しない。「タスクの事前知識に依拠しない」と述べつつワンショット較正は各タスクのトリガー語を要する。Qwen-Image（97〜99%）と FLUX.1（90〜98%）の差が未説明。ZipLoRA・K-LoRA・NP-LoRA と比較されていない。
+- メモ: この 3 本は「LoRA 合成で他に読むべき論文は？」への推薦 #4 と #5 にあたる。昨日 ingest した Orthogonal Adaptation / B-LoRA と合わせると、**干渉をどこで断つか**という軸で 5 本が綺麗に並ぶ——学習時に基底を直交化（Orthogonal Adaptation）／学習する層を絞って分離を創発させる（B-LoRA）／マージ時に零空間へ射影（NP-LoRA）／マージ時に統計量でルーティング（SSR-Merge）／推論時に片方だけ使う（K-LoRA）。この表を [[summaries/2026-ssr-merge]] の位置づけ節に置いた。

@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Style-Content Disentanglement, スタイル-コンテンツ分離, Style Transfer, スタイル転送, Image Stylization, 画像スタイライゼーション, B-LoRA, Style-Content Separation, Neural Style Transfer, NST]
-tags: [style-content-disentanglement, low-rank-adaptation, lora-merging, subject-driven-generation, diffusion-model-architecture, controllable-generation, generative-models]
+tags: [style-content-disentanglement, low-rank-adaptation, lora-merging, subject-driven-generation, diffusion-model-architecture, controllable-generation, generative-models, k-lora, np-lora]
 related:
   - "[[low-rank-adaptation]]"
   - "[[lora-merging]]"
@@ -10,9 +10,12 @@ related:
   - "[[diffusion-model-architecture]]"
   - "[[character-consistency]]"
   - "[[instruction-based-image-editing]]"
+  - "[[model-merging]]"
 summaries:
   - "[[summaries/2024-b-lora]]"
   - "[[summaries/2024-ziplora]]"
+  - "[[summaries/2025-k-lora]]"
+  - "[[summaries/2025-np-lora]]"
 updated: 2026-08-19
 ---
 
@@ -31,6 +34,7 @@ updated: 2026-08-19
 | **(a) 別々に学習してマージ** | style LoRA と content LoRA を作り、干渉を抑えて混ぜる | ZipLoRA | **必要** |
 | **(b) 内在する分離を見つける** | モデル内で既に役割分化している層だけを学習する | B-LoRA, InstantStyle | 不要 |
 | **(c) 注意特徴の共有・操作** | 推論時に注意の特徴を参照画像から借りる | StyleAligned, Cross Image Attention, Plug-and-Play | 不要（学習自体が不要） |
+| **(a′) 混ぜずに片方を選ぶ／射影してから足す** | 既存 LoRA をそのまま使い、干渉を推論時または射影で断つ | K-LoRA, NP-LoRA | **不要** |
 | **(d) エンコーダ／アダプタ** | 参照画像を埋め込みに落として注入する | IP-Adapter, InstantStyle | 不要（事前学習済み） |
 
 系統 (c) は [[training-free-conditioning]] の発想（事前学習済みモデルを凍結し、サンプリング過程だけで条件を課す）をスタイルへ適用したもの、(d) は [[controllable-generation]] のアダプタ路線にあたる。本ページは主に (a) と (b) を扱う。
@@ -71,6 +75,29 @@ SDXL の UNet（70 注意層／11 transformer ブロック）の内側 6 ブロ�
 ### 独立した傍証
 
 同時期の **InstantStyle** も、まったく別のアプローチ（IP-Adapter の CLIP 埋め込み注入）でありながら、**スタイルの条件付けに同じ第 5 ブロックを選んでいる**。異なる手法が独立に同じ層へ収束したことは、この役割分化が実在することの強い傍証になっている。
+
+## (a′) 既存の LoRA をそのまま使う — K-LoRA と NP-LoRA
+
+(a) の ZipLoRA は組合せごとの再最適化を要し、(b) の B-LoRA は専用の学習を要する。**どちらもコミュニティに既にある LoRA 資産をそのまま使えない。** 2025 年に現れた 2 本は、この空白を別々のやり方で埋める。
+
+**K-LoRA**（[[summaries/2025-k-lora]]）は**重みを混ぜること自体をやめる**。各注意層で content と style の Top-K 要素の絶対値和を比較し、勝った方の層をそのまま使う。加えて「初期の拡散ステップは被写体、後期はスタイルを担う」という観察を時間依存のスケール係数として実装する。$\Delta W$ には一切手を触れないので、Hugging Face の LoRA をそのまま投入できる。
+
+**NP-LoRA**（[[summaries/2025-np-lora]]）は**足す前に射影する**。スタイル LoRA を SVD して主方向 $V_k$ を保護対象と定め、コンテンツ LoRA をその零空間へ落としてから足す。Tikhonov 正則化から導かれるソフト射影 $P_\text{soft}=I-\frac{\mu}{1+\mu}V_kV_k^\top$ により、$\mu$ ひとつで直和から硬射影までを連続的に動かせる（詳細は [[lora-merging]] の系統 (6)）。
+
+### 2 本が示した鏡像——本ページの中心的な論点の実証
+
+この 2 本を並べると、下の「評価の落とし穴」で述べる交絡が最も鮮明な形で現れる。
+
+| | 被写体（content） | スタイル |
+| --- | --- | --- |
+| K-LoRA 自身の表 | **CLIP 69.4 / DINO 46.9（1 位）** | 58.7（ZipLoRA 60.4・Joint 68.2 に劣る） |
+| NP-LoRA の表 | 0.73（K-LoRA 0.76 に劣る） | **CLIP 0.59 / DINO 0.33（1 位）** |
+
+**両者の事実認識は完全に一致している。** NP-LoRA は本文で「K-LoRA は被写体の同一性をよく保存するが、所望のスタイルの捕捉に苦戦する」と明記し、自らの表でも K-LoRA を content 最良と記録する。K-LoRA も自らの表でスタイル 3 位を隠していない。**違いはどちらの軸で勝つかを選んだ点にしかない。**
+
+さらに K-LoRA の表にある **Joint（共同学習）が Style Sim 68.2% で最高なのに DINO は 17.4%** という組合せが決定的である。これは**スタイルを塗りつぶして被写体を失った状態**であり、それでもスタイル指標は最良になる。**2 つの指標はトレードオフ曲線上の座標であって、片方だけを見て順位を付けることに意味はない。**
+
+NP-LoRA はこれに具体的な提案で応じる——**調和平均 $S_\text{harm}$** の導入である。4 指標の調和平均は片方が低いと大きく下がるので、「片側だけ勝つ」戦略が報われない。本ページが提起してきた指標の問題に対する、この分野で初めての正面からの手当てにあたる。
 
 ## 「スタイル」とは何かという未解決の問題
 
@@ -115,11 +142,14 @@ B-LoRA の発見は、スタイル転送という応用を超えた含意を持�
 - [[character-consistency]]：同じ被写体を複数枚にわたって保つ時間方向の一貫性。「同一性を保ちながら見た目を変える」という点で本ページと目的を共有し、FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）の visual drift の議論と接続する。
 - [[instruction-based-image-editing]]：「変えるべき所だけ変える」という編集の要請は、スタイル-コンテンツ分離の一般化にあたる。Qwen-Image の意味特徴／再構成特徴の二重符号化は、分離を**入力表現の側**で行う別解と読める。
 - [[diffusion-model-architecture]]：層の役割分化という観察は、アーキテクチャ設計そのものへのフィードバックになりうる。
+- [[model-merging]]：content×style の 2 個マージは汎用の $K$ 個マージの最小ケースにあたる。ただし本ページの設定は「両方を等しく保つ」のではなく**どちらを保護するか**という非対称な問題になる点が異なる（NP-LoRA の射影の向きの非対称性）。
 - [[training-free-conditioning]]：StyleAligned・Cross Image Attention・Plug-and-Play といった系統 (c) は、凍結モデルの注意を推論時に操作するという点で同じ枠組みに属する。
 
 ## 参考文献（summaries）
 
 - [[summaries/2024-b-lora]] — B-LoRA（SDXL のブロック 4/5 が content/style を支配することをプロンプト注入で同定し、その 2 ブロックのみを単一画像から共同学習。マージ機構も組合せごとの再最適化も不要、保存量 70% 減、過学習しない）
 - [[summaries/2024-ziplora]] — ZipLoRA（content LoRA と style LoRA を列ごとの学習係数で干渉最小化してマージ。組合せごとに最適化が必要という構造的代償を持つ）
+- [[summaries/2025-k-lora]] — K-LoRA（既存 LoRA をそのまま使う学習不要の融合。層ごとに Top-K 和で片方を選び、時間依存スケールで初期 content・後期 style へ傾ける。**content で最良・style で 3 位**）
+- [[summaries/2025-np-lora]] — NP-LoRA（加重マージでは干渉が原理的に消せないことを証明し、主方向の零空間へ射影。**style で最良・content で 4 位**。調和平均 $S_\text{harm}$ で指標の交絡に対処）
 
 > 未取り込みの主要原典：Neural Style Transfer（Gatys ら 2016）、AdaIN（Huang & Belongie 2017）、StyleDrop（Sohn ら 2023）、StyleAligned（Hertz ら 2023）、InstantStyle（Wang ら 2024, 独立に同じブロック 5 へ到達）、IP-Adapter（Ye ら 2023）、Cross Image Attention（Alaluf ら 2023）、Plug-and-Play（Tumanyan ら 2023）、$\mathcal{P}+$（Voynov ら 2023）。今後の ingest で本ページへ追記する。

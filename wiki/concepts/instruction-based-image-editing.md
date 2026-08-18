@@ -16,6 +16,7 @@ related:
   - "[[position-embedding]]"
   - "[[unified-multimodal-generation]]"
   - "[[style-content-disentanglement]]"
+  - "[[model-merging]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
@@ -25,6 +26,7 @@ summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
+  - "[[summaries/2026-ssr-merge]]"
 updated: 2026-08-19
 ---
 
@@ -157,6 +159,8 @@ $$F_c = F\times M \quad(\text{変えるべき画素}),\qquad F_k = F\times(1-M)\
 - 非写実的画像（イラスト・漫画）の編集はスタイル一貫性が崩れやすい。
 
 ## 既存知識との接続
+
+- [[model-merging]]：複数の編集能力を 1 モデルに詰める方向。SSR-Merge（[[summaries/2026-ssr-merge]]）は口紅・チーク・アイシャドウの 3 つの編集 LoRA をマージし、**逐次適用の結果を正解として並列マージがそれを再現できるか**を測る評価軸を提示した。疎化ベースのマージは「口紅だけ過剰で他が消える」という属性の不均衡を起こす。
 
 - [[style-content-disentanglement]]：「変えるべき所だけ変える」という編集の要請は、スタイル-コンテンツ分離の一般化にあたる。Qwen-Image の意味特徴（MLLM）と再構成特徴（VAE）の**二重符号化**は分離を**入力表現の側**で行う解であり、B-LoRA が**重みの側**（どのブロックを学習するか）で行うのと対をなす。
 
