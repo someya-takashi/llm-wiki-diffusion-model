@@ -11,12 +11,15 @@ related:
   - "[[super-resolution]]"
   - "[[text-to-image-generation]]"
   - "[[mixture-of-experts-diffusion]]"
+  - "[[unified-multimodal-generation]]"
+  - "[[position-embedding]]"
 summaries:
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2020-ddpm]]"
   - "[[summaries/2021-adm]]"
-updated: 2026-08-17
+  - "[[summaries/2025-hunyuanimage-3]]"
+updated: 2026-08-18
 ---
 
 # Pixel-Space Diffusion（ピクセル空間拡散）
@@ -93,6 +96,14 @@ LLM をそのまま拡散バックボーンにする際の核心的な難所は�
 - **記憶（memorization）のリスク**。潜在圧縮を挟まないモデルは、学習画像をそのまま覚え込みやすい可能性がある。この論点は現時点の原典では扱われていない。
 - **超高解像度の扱い**。2,048² を扱うと明記されるが、それを超える領域で系列長がどう振る舞うかは未検証。ここは伝統的に [[super-resolution]] のカスケードが担ってきた領域である。
 
+## 統一とピクセル空間化は独立した判断である
+
+本ページで見た HiDream-O1-Image は、**VAE を捨てる**ことと **理解と生成を統一する**ことを同時に行ったので、この 2 つが不可分に見えるかもしれない。そうではない。
+
+**HunyuanImage 3.0**（[[summaries/2025-hunyuanimage-3]]）が明確な反例になる。事前学習済みの MoE LLM を土台にテキストと画像を同じ系列に置き、理解・生成・言語モデリングを 1 本で扱う——統一の度合いはむしろ HiDream-O1-Image より深い（[[unified-multimodal-generation]]）。しかし**画像は VAE 潜在のまま**である（$f16$・32 チャネル）。Z-Image も同様に単一ストリーム化しつつ Flux VAE を流用する。
+
+つまり本 wiki が 2026 年に見てきた収束は、**「LLM の形に寄せる」という 1 本の流れ**であって、「ピクセル空間へ行く」はその中の**独立した追加の賭け**である。前者はほぼ全社が採り、後者は HiDream-O1-Image だけが採った。この切り分けは、本ページの主張（VAE の情報ボトルネックが上限を作る）を評価する上で重要である——**統一モデルの成功をピクセル空間化の証拠として数えることはできない**。
+
 ## 既存知識との接続
 
 - [[latent-diffusion]]：本ページが問い直す対象。LDM の「圧縮してから拡散する」は 2022 年以降の暗黙の前提であり、pixel-space はその代償（情報ボトルネック）を計上し直す立場。両者は排他ではなく、**圧縮率をどこまで下げるか**という連続軸の両端と見ることもできる。
@@ -108,6 +119,7 @@ LLM をそのまま拡散バックボーンにする際の核心的な難所は�
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（VAE も外部テキストエンコーダも捨てる Unified Transformer。LongText-Bench で前作の 0.024 → 0.978）
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（対立する立場。潜在空間を精緻に設計し尽くす路線）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（同チームの前作。潜在空間＋外部エンコーダ 4 系統という正反対の設計）
+- [[summaries/2025-hunyuanimage-3]] — HunyuanImage 3.0（統一しつつ VAE を保つ反例。統一とピクセル空間化が独立した判断であることを示す）
 - [[summaries/2020-ddpm]] — DDPM（ピクセル空間で始まった拡散モデルの原型）
 - [[summaries/2021-adm]] — ADM（ピクセル空間 U-Net の到達点）
 

@@ -3,6 +3,19 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-08-19] ingest | HunyuanImage 3.0 Technical Report
+
+- 取り込み: `raw/papers/HunyuanImage 3.0 Technical Report.md`（ar5iv 由来 markdown・ケース A, arXiv:2509.23951, 2025年9月。Tencent Hunyuan Foundation Model Team）。**Z-Image と ERNIE-Image が「scale-at-all-costs の代表例」として名指しで批判していた 80B の当事者**を直接読む形になった。
+- 作成: [[translations/2025-hunyuanimage-3]], [[summaries/2025-hunyuanimage-3]], [[concepts/unified-multimodal-generation]], [[concepts/position-embedding]]
+- **新規概念ページ 2 件**（ユーザー回答「unified-multimodal-generation ＋ position-embedding」）:
+  - [[concepts/unified-multimodal-generation]] — 統一マルチモーダル生成。**Janus-Pro・BAGEL・Emu3・Show-o・OmniGen・BLIP3-o が本 wiki のほぼすべてのベンチマーク表に比較対象として並びながら、それらが何かを説明する場所がなかった**という認識から新設。統一したい 3 つの動機、テキストと画像の性質の違い（離散/連続・順序・生成方式・注意）を表で整理し、**(A) 全離散 AR／(B) AR＋拡散ハイブリッド／(C) 拡散の単一トークン空間**の 3 分類を立てた。注意マスクの混ぜ方（HiDream-O1 と HunyuanImage 3.0 が独立に同型解へ到達、および多画像学習時の「穴」）、位置符号化における「LLM を壊さない」制約、統一が可能にすること（MoE の専門化・自動解像度・ネイティブ CoT・タスク境界の消失）。
+  - [[concepts/position-embedding]] — 位置符号化。RoPE の仕組みから始め、画像を扱うと生じる 3 つの問題（画像は 2 次元／座標系の衝突／複数画像の区別）を立て、**5 通りの答え**を対比した：MSRoPE（Qwen）・仮想タイムステップ（FLUX.1 Kontext）・3D Unified RoPE（Z-Image）・**Generalized 2D RoPE**（本論文）・動画の 3D RoPE（Wan）。**共通構造**（空間座標は使い切っているので画像どうしの区別には別の軸が要る）と**分岐点**（テキストをどこに置くか）を明示した。
+- 更新（本文）: [[concepts/mixture-of-experts-diffusion]]（**長年の空白だった「エキスパートが何を専門化したかの分析がない」を実測が埋めた**。動機が逆から来る場合＝MoE LLM の転用、モダリティ専門化の KL 増大、および「浅い層ほど分布が近い」が FLUX.1 系の直観と逆向きという食い違いの記録）, [[concepts/diffusion-model-architecture]]（LLM 側から拡散へ寄る系譜、目的関数の同居、Generalized Causal Attention、二重エンコーダ）, [[concepts/image-tokenizer]]（**同じ実効圧縮率への 2 つの到達路**＝f16 単体 対 f8＋パッチ化。統一モデルではトークナイザへの要求が変わる）, [[concepts/reinforcement-learning-for-diffusion]]（**5 段階の事後学習**。DPO は「壊れを直す」・オンライン RL は「良くする」という割り当て、MixGRPO / SRPO / ReDA）, [[concepts/prompt-enhancement]]（**5 つ目の設計＝書き換えの内部化**。実効パラメータ数が不透明という問題が消える利点と、分離できない／大きな LLM が要るという代償）, [[concepts/text-to-image-generation]]（**批判される側の言い分**と、SSAE の CLIP Score 批判＝「少年の下の蜂」と「蜂の下の少年」）, [[concepts/data-curation]]（**AIGC をソース単位で除去**、階層的キャプションスキーマと構成的合成、双方向検証ループ）, [[concepts/pixel-space-diffusion]]（**統一とピクセル空間化は独立した判断**であることの反例）, [[concepts/video-diffusion]]（時間軸の「発明」と「実在」、位置で分けるか注意で分けるか）, [[concepts/instruction-based-image-editing]], [[concepts/visual-text-rendering]]
+- 更新: [[overview]]（「LLM 側から拡散へ寄る」の項）, [[index]]（Summaries / Translations / Concepts＋略称リダイレクト 7 行）
+- 画像: ar5iv から **8 枚**を取得（プレースホルダなし、取得失敗なし、欠落した図もなし）。ar5iv の変換が完全だった珍しいケース。
+- 翻訳: 本文 §1–6 を全訳。References と §7 貢献者一覧を除外。**付録は存在しない**。表 1（学習ステージ）を markdown 化。図 8 のキャプションは ar5iv で数式が壊れていたため LaTeX を復元して訳した。
+- メモ: 本 ingest の要点は 4 つ。(1) **批判される側の言い分が分かった**——Tencent の主張は「大きさ」ではなく「**既存の MoE LLM をそのまま土台にした**」であり、80B は画像モデルを大きく作った結果ではない。ただし推論コストが一切報告されないため、Z-Image の 8.19GB VRAM・$628K と並べられず、**効率論争は片方だけが数字を出している**状態にある。(2) **目的関数レベルの異種混合**——テキストは AR・画像は拡散が同一の重みに同居する点で、HiDream-O1 や Z-Image の「統一」（学習目的は拡散ひとつ）とは質が違う。(3) **[[concepts/mixture-of-experts-diffusion]] の限界が 1 つ解消**——エキスパートのモダリティ専門化が初めて実測された。ただし「様式ごと・被写体ごと」という細粒度の専門化は依然として未検証。(4) **位置符号化が独立したページに値するだけ事例が溜まった**——5 通りの設計が揃い、とくに本論文の「1D RoPE への後方互換」という基準は、ゼロから学習するモデルには存在しない LLM 由来の制約である。**批判的視点として記録した主要な点**: (i) **アブレーションが 1 つもない**——f16 単体・二重エンコーダ・Generalized 2D RoPE のいずれも比較実験がなく、「実証する」と書きながら実証がない、(ii) 推論コスト・VRAM・学習コストがすべて非公開、(iii) GSB の勝率が Seedream 4.0 に +1.17% 等の**僅差**で信頼区間も検定もない、(iv) SSAE も自作ベンチマークで数値表がない、(v) 「ネイティブなマルチモーダルモデル」を謳いながら**公開されるのは画像生成モジュールのみ**（理解も image-to-image も非公開）、(vi) MixGRPO / SRPO / ReDA の詳細が外部論文に投げられている、(vii) **CoT ありなしの比較数値がない**（ERNIE-Image が PE ありなしを分離報告したのと比べると後退）。
+
 ## [2026-08-18] ingest | ERNIE-Image Technical Report
 
 - 取り込み: `raw/papers/ERNIE-Image Technical Report.md`（ar5iv 由来 markdown・ケース A, arXiv:2605.25347, 2026年。ERNIE Team / Baidu）。**直前に取り込んだ Z-Image を名指しで引き継ぐ論文**で、8B の単一ストリーム DiT（FLUX.2 VAE ＋ Ministral-3 3B のテキストエンコーダ）。

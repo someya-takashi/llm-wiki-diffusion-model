@@ -35,6 +35,7 @@
 - [[summaries/2025-qwen-image]] — Qwen-Image（Qwen Team 2025・Alibaba）。凍結 Qwen2.5-VL を条件エンコーダに据えた 20B MMDiT＋MSRoPE。中国語テキスト描画で大差の SOTA、二重符号化の編集、DPO/Flow-GRPO の事後学習
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen Team 2026）。生成と編集を単一モデルに統一する「全能型」。Qwen3-VL＋f16 トークナイザ＋MMDiT、Prompt Enhancer・5 報酬 RLHF・DMD 蒸留（4 NFE）。LMArena ELO 1168
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（Qwen Team 2026）。f16/f32 高圧縮トークナイザ。圧縮率・再構成・拡散可能性の三者間トレードオフ、GSC・DINOv2 中間層整合・KL/GAN 除去、OmniDoc-TokenBench
+- [[summaries/2025-hunyuanimage-3]] — HunyuanImage 3.0（Tencent Hunyuan 2025・arXiv:2509.23951）。総 80B / 活性 13B の MoE LLM に拡散を接ぎ木したネイティブ・マルチモーダルモデル。**テキストは自己回帰・画像は拡散**、Generalized Causal Attention と「穴」、Generalized 2D RoPE、自動解像度、ネイティブ CoT、5 段階の事後学習、**エキスパートのモダリティ専門化を初めて実測**
 - [[summaries/2026-ernie-image]] — ERNIE-Image（ERNIE Team / Baidu 2026・arXiv:2605.25347）。8B の単一ストリーム DiT。**美的スコアリングを主題化**（ERNIE-Image-Aes・ERIA-1K・既存予測器のバイアス）、MT-DMD による多教師蒸留、flow matching 上の DPO と Anchor Loss、PE ありなしの分離報告。GenEval 0.89、人間評価でオープンソース 1 位
 - [[summaries/2025-z-image]] — Z-Image（Z-Image Team / Alibaba 2025・arXiv:2511.22699）。6B・$628K（314K H800 GPU 時間）で Elo 世界 4 位・オープンソース 1 位。完全な単一ストリームの S3-DiT、4 エンジンのデータ基盤、PE-aware SFT、Decoupled DMD と DMDR、8 NFE・16GB VRAM 未満
 - [[summaries/2025-wan]] — Wan（Wan Team / Alibaba 2025・arXiv:2503.20314）。本 wiki 初の**動画生成**。3D causal VAE（GroupNorm→RMSNorm＋特徴キャッシュ）、cross-attention 型 DiT、2D Context Parallel、Diffusion Cache、Streamer による無限長生成、I2V/VACE/personalization/カメラ制御/V2A の 7 応用。VBench 86.22% で Sora 超え、1.3B は 8.19GB VRAM
@@ -74,6 +75,7 @@
 - [[translations/2025-qwen-image]] — Qwen-Image テクニカルレポート 全文翻訳（本文§1–6、表 1–14 markdown 化、§7 著者一覧/References 除外、PDF のため画像なし）
 - [[translations/2026-qwen-image-2]] — Qwen-Image-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–2 markdown 化、図 16 枚、Authors 章除外）
 - [[translations/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–3 markdown 化、図 4 枚、Authors 章除外）
+- [[translations/2025-hunyuanimage-3]] — HunyuanImage 3.0 全文翻訳（本文§1–6、表 1 markdown 化、図 8 枚、References/§7 貢献者一覧を除外。付録なし）
 - [[translations/2026-ernie-image]] — ERNIE-Image 全文翻訳（本文§1–5、表 1–7 markdown 化、図 29 枚、ar5iv で分解されていた図 5・6・8・11 の構成画像を arXiv から回収し訳注で明示、References/§6 著者一覧を除外）
 - [[translations/2025-z-image]] — Z-Image 全文翻訳（本文§1–6、表 1–15 markdown 化（TIIF・PRISM の広表は列群で分割）、図 28 枚＋図 8 の構成画像 4 枚、図 7・11 は HTML 側で画像が生成されず訳注で明示、References/§7 著者一覧/付録 A のプロンプト集を除外）
 - [[translations/2025-wan]] — Wan 全文翻訳（本文§1–6、表 1–8 markdown 化、図 29 枚、図 4・11・13・14 は HTML 側で画像が生成されず訳注で明示、References/§7 貢献者一覧を除外）
@@ -109,6 +111,8 @@
 - [[reinforcement-learning-for-diffusion]] — 拡散モデルの強化学習・事後学習（SFT→DPO→Flow-GRPO、タスク別報酬。flow の SDE 化で探索性を得る）
 - [[image-tokenizer]] — 画像トークナイザ／潜在空間を作るオートエンコーダ（圧縮率 f・チャネル C・拡散可能性の三者間トレードオフ、GSC、意味的整合、OmniDoc-TokenBench）
 - [[diffusion-distillation]] — 蒸留による少ステップ生成（DMD・consistency・progressive・ADD/LADD。ソルバー改良と違い「モデル自体」を作り替える）
+- [[unified-multimodal-generation]] — 統一マルチモーダル生成 / ネイティブ・マルチモーダルモデル（理解と生成を単一ネットワークで。全離散 AR／AR＋拡散ハイブリッド／単一トークン空間の 3 分類、Generalized Causal Attention）
+- [[position-embedding]] — 位置符号化（RoPE とその 2D/3D 拡張。MSRoPE・仮想タイムステップ・3D Unified RoPE・Generalized 2D RoPE の対比）
 - [[aesthetic-scoring]] — 美的スコアリング（データ選別と RLHF 報酬の両方を規定する信号。Likert のスコアドリフト・Elo・スイス式トーナメント、既存予測器のバイアス、ERIA-1K）
 - [[data-curation]] — データキュレーション / データ基盤（重複除去・品質フィルタ・再キャプション・世界知識グラフによる概念均衡・能動的精錬・編集ペアの構築）
 - [[prompt-enhancement]] — プロンプト拡張 / 書き換え（学習キャプションと実ユーザー入力の分布のずれ、推論連鎖、凍結するか RL するかの 4 通りの設計）
@@ -199,6 +203,12 @@
 - ERNIE-Image / ERNIE-Image-Aes / ERIA-1K / Ministral-3 / FLUX.2 VAE → [[aesthetic-scoring]] ・ [[text-to-image-generation]]
 - 美的スコアリング / LAION-Aesthetic / ArtiMuse / UniPercept / SRCC / PLCC / スイス式トーナメント / スコアドリフト → [[aesthetic-scoring]]
 - MT-DMD / Multi-Teacher DMD / Capability Drift / 能力の漂流 / DMD2 / 専門家教師 → [[diffusion-distillation]]
+- HunyuanImage 3.0 / Hunyuan-A13B / ネイティブ・マルチモーダル / Transfusion / JanusFlow / Janus-Pro / Emu3 / Show-o / BAGEL → [[unified-multimodal-generation]]
+- Generalized Causal Attention / 一般化因果注意 / ハイブリッド注意 / 注意マスクの穴 → [[unified-multimodal-generation]]
+- RoPE / Rotary Position Embedding / 位置符号化 / MSRoPE / Generalized 2D RoPE / 3D Unified RoPE / 仮想タイムステップ → [[position-embedding]]
+- Automatic Resolution / 自動解像度 / img_size トークン / img_ratio トークン → [[unified-multimodal-generation]]
+- MixGRPO / SRPO / ReDA / Reward Distribution Alignment → [[reinforcement-learning-for-diffusion]]
+- SSAE / GSB / Good-Same-Bad / CLIP Score の限界 → [[text-to-image-generation]]
 - Anchor Loss / flow matching 上の DPO / 速度場の L2 報酬 → [[reinforcement-learning-for-diffusion]]
 
 ## Questions

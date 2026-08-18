@@ -21,6 +21,7 @@ summaries:
   - "[[summaries/2022-edm]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-hunyuanimage-3]]"
 updated: 2026-08-18
 ---
 

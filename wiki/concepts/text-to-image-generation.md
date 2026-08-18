@@ -18,6 +18,7 @@ related:
   - "[[prompt-enhancement]]"
   - "[[data-curation]]"
   - "[[aesthetic-scoring]]"
+  - "[[unified-multimodal-generation]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -33,6 +34,7 @@ summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
+  - "[[summaries/2025-hunyuanimage-3]]"
 updated: 2026-08-18
 ---
 
@@ -129,6 +131,25 @@ Z-Image の翌年、**ERNIE-Image**（[[summaries/2026-ernie-image]]）が同じ
 
 ERNIE-Image はまた、美的評価そのものを主題化した点でも本 wiki に新しい（[[aesthetic-scoring]]）。**LAION-Aesthetic の人間ラベルとの順位相関が 0.29 しかない**という測定は、各社が「高品質データで学習した」と述べるときの足場に直接関わる。
 
+### 批判される側の言い分 — HunyuanImage 3.0（Tencent 2025）
+
+上で見た Z-Image と ERNIE-Image は、どちらも冒頭で「大規模化は限界収穫の逓減に直面する」と論じ、その代表例として **Hunyuan-Image-3.0 の 80B** を名指ししていた。当事者の主張も記録しておくべきだろう（[[summaries/2025-hunyuanimage-3]]）。
+
+Tencent 側の言い分は、実は「大きさ」ではない。**既存の MoE 大規模言語モデル（Hunyuan-A13B）をそのまま土台にした**結果が 80B（活性 13B）なのであって、画像モデルを大きく作ったわけではない、という構図である。狙いは LLM が既に持っている世界知識・推論能力・指示追従を**内側で**使うことにある（[[unified-multimodal-generation]]）。したがって「素朴なスケーリング」という批判が正確に的を射ているとは限らない——ただし**推論コストが一切報告されない**ので、Z-Image の 8.19GB VRAM・$628K と並べて比較することはできない。**効率論争は片方だけが数字を出している**状態にある。
+
+結果は GSB（Good/Same/Bad）による人間評価で、HunyuanImage 2.1 に対し相対勝率 14.10%、Seedream 4.0 に +1.17%、Nano Banana に +2.64%、GPT-Image に +5.00%。ただし後ろの 3 つは 1,000 サンプルの評価としては**統計的に有意か怪しい僅差**であり、信頼区間も検定も示されない。「クローズドソースに匹敵する」は妥当だが「上回る」と読むのは慎重であるべきだろう。
+
+#### SSAE — CLIP Score 批判の具体例
+
+本ページの評価をめぐる議論に、この論文は鋭い一例を加える。既存ベンチマーク（T2I-CompBench・GenEval）への批判が 2 点あり、
+
+1. プロンプトが定型的で短い（「a photo of a [object] with [attribute]」）ため、実世界の複雑な指示を負荷試験できない。
+2. **CLIP Score が人間の判断の代理として貧弱**である。
+
+2 番目に付く具体例が効いている——CLIP Score は「**『少年の下の蜂』と『蜂の下の少年』を取り違えた画像を高く評価しうる**」。CLIP は語の集合としての一致は測れても、**空間的な関係の向き**を区別できない。本ページで繰り返し見てきた「Position が弱い」という各モデルの傾向が、**そもそも指標の側でも捉えられていなかった**可能性を示唆する。
+
+代替として提案される **SSAE** は、500 プロンプトから LLM で 3,500 のキーポイントを抽出し、12 の細粒度フィールド（主要／副次的な被写体の名詞・属性・動作、場面、カメラのショット、様式、構図）に分類する。別の LLM が幻覚ポイントを除去して欠落を補い、人間が修正する。以降のモデル比較ではこのポイント集合を**固定**し、MLLM が CoT で 0-1 照合する。ただし**これも自作ベンチマークであり、図で「すべてのフィールドで同等」と述べるのみで数値表がない**。
+
 ### 評価が「AI っぽさ」に報いる問題 — bakeyness
 
 FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の論点も記しておく価値がある。T2I ベンチマークが「**どちらの画像を好むか**」という単一の問いに頼ると、**過飽和の色・中心被写体への過度な集中・強いボケ・均質なスタイル**という特徴的な「AI 的美学」が有利になってしまう。著者らはこれを **bakeyness** と名づけ、単一軸の選好評価が**モデルをその方向へ最適化させてしまう**危険を指摘する。
@@ -165,6 +186,7 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の�
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（T2I と編集を単一の rectified flow に統一。bakeyness 批判と 5 次元評価、1024² を 3〜5 秒）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（17B・疎な MoE と 4 系統のハイブリッドテキスト符号化。HPSv2.1 全カテゴリ 1 位、Position と Global に穴）
 - [[summaries/2025-wan]] — Wan（テキストエンコーダを直接アブレーション。umT5 の双方向注意が decoder-only LLM を上回る）
+- [[summaries/2025-hunyuanimage-3]] — HunyuanImage 3.0（80B/活性 13B の MoE LLM を土台に。GSB でクローズドソースに匹敵、SSAE で CLIP Score の空間関係の盲点を指摘）
 - [[summaries/2026-ernie-image]] — ERNIE-Image（8B。GenEval 0.89・Position 0.86、人間評価でオープンソース 1 位。PE ありなしを分離報告し、美的評価を主題化）
 - [[summaries/2025-z-image]] — Z-Image（6B・$628K で Elo 世界 4 位。S3-DiT＋データ基盤＋PE＋Decoupled DMD の総合。合成データ蒸留を明示的に拒否）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（8B で GenEval 0.90・Position 0.93。VAE も外部テキストエンコーダも持たない統一トークン空間）

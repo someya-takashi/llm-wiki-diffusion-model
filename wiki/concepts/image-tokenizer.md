@@ -11,6 +11,8 @@ related:
   - "[[pixel-space-diffusion]]"
   - "[[video-diffusion]]"
   - "[[large-scale-training-infrastructure]]"
+  - "[[unified-multimodal-generation]]"
+  - "[[position-embedding]]"
 summaries:
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-qwen-image-2]]"
@@ -21,6 +23,7 @@ summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
+  - "[[summaries/2025-hunyuanimage-3]]"
 updated: 2026-08-18
 ---
 
@@ -134,6 +137,18 @@ $f$ を上げる動機は計算量である。拡散 Transformer（DiT, [[diffus
 
 Wan-VAE は 127M と極小ながら PSNR と速度の両方で競争力を持ち、HunyuanVideo の VAE より再構成が 2.5 倍速い。また、再構成損失を拡散損失に置き換えた変種（VAE-D）は FID が一貫して悪化しており、**トークナイザは素直に再構成を目的に学習した方がよい**という、Qwen-Image-VAE-2.0 が KL も GAN も外した判断と同じ方向の結果になっている。
 
+## 同じ圧縮率への 2 つの到達路
+
+本ページは圧縮率 $f$ を「VAE がどれだけ空間を縮めるか」として扱ってきたが、実際に DiT へ入るトークン数を決めるのは **VAE とパッチ化の合わせ技**である。従来の主流は **$f8$ の VAE ＋ 2×2 のパッチ化**で、実効的に 16 倍の空間圧縮を得ていた。
+
+**HunyuanImage 3.0**（[[summaries/2025-hunyuanimage-3]]）はここに明確な主張を置く——**$f16$ の VAE 単体の方が単純かつ効果的で、優れた画像生成品質をもたらす**。潜在は 32 次元。同じ実効圧縮率でも、**VAE で払うかパッチ化で払うか**という設計判断がある、という指摘である。
+
+直感的には、パッチ化は「学習された圧縮」ではなく**単なる並べ替えと線形射影**なので、隣接パッチ間の冗長性を VAE ほど賢く畳めない。VAE 側で 16 倍まで学習して落とす方が、情報の落とし方が良いという理屈は立つ。Qwen-Image-VAE-2.0（[[summaries/2026-qwen-image-vae-2]]）が「$f8 \to f16$ へ圧縮を強め、失った容量はチャネル $C$ で補償する」と論じたのと同じ方向で、**別の角度からの独立した支持**になっている（あちらは 128 チャネル、こちらは 32 チャネル）。
+
+ただし **HunyuanImage 3.0 はこの主張のアブレーションを示さない**。「$f16$ 単体の方が優れた品質をもたらすことを実証する」と書きながら、$f8$＋パッチ化との比較実験は本文に存在しない。
+
+もう 1 つ、統一マルチモーダルモデル（[[unified-multimodal-generation]]）ではトークナイザへの要求が変わる。**VAE 特徴が生成にも理解にも使われる**からで、HunyuanImage 3.0 は条件画像について VAE の潜在と ViT の特徴を**両方連結する**二重エンコーダを採る。「理解には意味的な特徴、生成には再構成的な特徴」という分業（Qwen-Image の二重符号化・[[instruction-based-image-editing]]）を、**分けずに両方渡す**方向へ倒した設計である。
+
 ## 既存知識との接続
 
 - [[latent-diffusion]]：トークナイザは LDM の第一段階そのもの。本ページはその「第一段階」を独立した設計問題として扱う。LDM 原典（[[summaries/2022-latent-diffusion]]）が $f4$〜$f8$ を最適点としたのに対し、高解像度時代は $f16$・$f32$ へ移りつつある。
@@ -145,6 +160,7 @@ Wan-VAE は 127M と極小ながら PSNR と速度の両方で競争力を持ち
 ## 参考文献（summaries）
 
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（トークナイザを作らない立場。同じ問題への正反対の答え）
+- [[summaries/2025-hunyuanimage-3]] — HunyuanImage 3.0（**f16 の VAE 単体**が f8＋パッチ化より良いと主張。潜在 32 次元、条件画像には VAE と ViT の二重エンコーダ）
 - [[summaries/2025-wan]] — Wan-VAE（3D causal VAE。GroupNorm→RMSNorm で時間的因果性を保ち、特徴キャッシュで無限長を一定メモリで処理。127M で HunyuanVideo VAE の 2.5 倍速）
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16/f32 高圧縮 VAE。GSC・attention-free・非対称構成、KL/GAN 除去、DINOv2 中間層への意味的整合、OmniDoc-TokenBench）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（f16c64 を採用しネイティブ 2K 生成を実現した基盤モデル）

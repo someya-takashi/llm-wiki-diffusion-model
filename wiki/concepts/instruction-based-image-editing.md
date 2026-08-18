@@ -13,6 +13,8 @@ related:
   - "[[video-diffusion]]"
   - "[[data-curation]]"
   - "[[prompt-enhancement]]"
+  - "[[position-embedding]]"
+  - "[[unified-multimodal-generation]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
@@ -21,6 +23,7 @@ summaries:
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
+  - "[[summaries/2025-hunyuanimage-3]]"
 updated: 2026-08-18
 ---
 
@@ -161,6 +164,8 @@ $$F_c = F\times M \quad(\text{変えるべき画素}),\qquad F_k = F\times(1-M)\
 - [[subject-driven-generation]]：被写体ごとに学習する personalization とは対照的に、指示編集は**追加学習なし**で任意の画像を編集する。
 - [[visual-text-rendering]]：「看板の文字を書き換えて」は、編集の一貫性と文字描画能力の両方を要求する複合タスク。
 - [[controllable-generation]]：ControlNet 的な空間条件付けと目的（制御性）を共有するが、条件の与え方が構造マップか自然言語かで異なる。
+
+> **位置符号化で参照と対象を区別する、という共通解。** 上で見た FLUX.1 Kontext の仮想タイムステップ、Z-Image の時間軸オフセット、Qwen-Image-2.0 の frame 次元は、いずれも「**空間座標は画像の中身を表すのに使い切っているので、画像どうしの区別には別の軸が要る**」という同じ構造から出ている。この系譜は [[position-embedding]] に集約した。HunyuanImage 3.0（[[summaries/2025-hunyuanimage-3]]）は逆に**注意マスクの側**で区別する——学習系列に複数の生成画像がある場合、文脈中の生成画像を後続トークンから見えなくする「穴」を空ける。位置で分けるか注意で分けるかという選択がある。
 
 ## 参考文献（summaries）
 

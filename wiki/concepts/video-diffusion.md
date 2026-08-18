@@ -20,8 +20,11 @@ related:
   - "[[image-inpainting]]"
   - "[[data-curation]]"
   - "[[prompt-enhancement]]"
+  - "[[position-embedding]]"
+  - "[[unified-multimodal-generation]]"
 summaries:
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-hunyuanimage-3]]"
 updated: 2026-08-18
 ---
 
@@ -159,6 +162,14 @@ FVD（Fréchet Video Distance）や FID は人間の知覚と乖離する、と�
 - **評価の自作依存**。VBench は公開だが、各社が自作ベンチマークで首位を主張する状況が続いている。
 - **物理法則の理解**。「物理的妥当性」が評価次元に立てられていること自体が、ここが弱点であることを示している。
 - **音声との統合が後付け**。Wan の V2A は生成済み動画に音を付ける別モデルであり、映像と音声を同時に生成する枠組みではない。
+
+## 時間軸の「発明」と「実在」
+
+本ページで見た通り、動画では時間軸が実在する。ところが画像側のモデルは、**多画像を区別するために時間軸を発明した**——FLUX.1 Kontext の仮想タイムステップ（コンテキスト画像に時間方向の定数オフセットを与える）と Z-Image の 3D Unified RoPE（参照と対象で時間次元を単位区間ずらす）である。
+
+この対応関係が明示的に往復する事例が出ている。Qwen-Image-2.0 の MSRoPE に追加された **frame 次元**は、動画側で当たり前だった「フレームを区別する」という発想の画像側への移入にあたる。逆に **HunyuanImage 3.0**（[[summaries/2025-hunyuanimage-3]]）は、**画像を 2 次元のまま扱う** Generalized 2D RoPE を採り、時間軸を使わずに済ませる——ただしその代償として、多画像の区別は**注意マスク**の側（生成画像を後続から見せない「穴」）で処理する。
+
+**位置符号化で区別するか、注意マスクで区別するか**という選択があり、動画・多画像編集・統一マルチモーダルの各文脈で答えが違う。詳細は [[position-embedding]] と [[unified-multimodal-generation]] に集約した。
 
 ## 既存知識との接続
 

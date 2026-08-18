@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Model Architecture, 拡散モデルのアーキテクチャ, ADM, AdaGN, U-Net for diffusion, DiT, Diffusion Transformer, adaLN, adaLN-Zero, patchify]
-tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion, video-diffusion]
+tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion, video-diffusion, unified-multimodal-generation, position-embedding]
 related:
   - "[[denoising-diffusion]]"
   - "[[latent-diffusion]]"
@@ -14,6 +14,8 @@ related:
   - "[[video-diffusion]]"
   - "[[large-scale-training-infrastructure]]"
   - "[[inference-caching]]"
+  - "[[unified-multimodal-generation]]"
+  - "[[position-embedding]]"
 summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2020-ddpm]]"
@@ -29,6 +31,7 @@ summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
+  - "[[summaries/2025-hunyuanimage-3]]"
 updated: 2026-08-18
 ---
 
@@ -199,6 +202,18 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 
 ただし本ページの観点で重要な留保がある：**Z-Image は単一ストリームと二重ストリームの直接比較（アブレーション）を提示していない**。「密なモダリティ横断の相互作用によりパラメータ効率が高い」は設計上の理屈であって測定結果ではない。6B で Elo 4 位という結果は強いが、それが S3-DiT のおかげだと分離する証拠はない。
 
+### HunyuanImage 3.0（Tencent 2025）——LLM 側から拡散へ寄る
+
+本ページが追ってきたのは一貫して「**拡散モデルのバックボーンをどう作るか**」だった。**HunyuanImage 3.0**（[[summaries/2025-hunyuanimage-3]]）は出発点が逆で、**事前学習済みの MoE 大規模言語モデル（Hunyuan-A13B）に拡散を接ぎ木する**。詳細は [[unified-multimodal-generation]] に分離したが、本ページに関わる 3 点を挙げる。
+
+**(1) 目的関数がトークンの種類で切り替わる。** テキストトークンは自己回帰的な次トークン予測、**画像トークンは拡散**。同じ Transformer の同じ重みが、2 つの異なる損失を受ける。HiDream-O1-Image も Z-Image も「テキストと画像を同じ系列に置く」ところまでは同じだが、**学習目的は拡散ひとつ**だった。ここが質的な違いである。
+
+**(2) Generalized Causal Attention。** 言語モデリングの因果マスクと画像生成の完全注意を、1 つの注意行列の中で使い分ける——**テキストトークンは先行するトークンのみ、画像トークンは先行するすべて＋同じ画像セグメント内の後続する画像トークン**にも注意する。HiDream-O1-Image のハイブリッド注意と同型の解に独立に到達している。さらに多画像の学習時には、文脈中の生成画像が後続トークンから見えないよう**マスクに「穴」を空ける**必要が生じる（学習と推論の条件を揃えるため）。
+
+**(3) 二重エンコーダ。** 条件画像について、VAE の潜在特徴と視覚エンコーダ（ViT）の特徴を**両方連結する**。従来の統一モデルが「理解には ViT 特徴、生成には VAE 特徴」とタスクごとに分離していたのに対し、常に両方を使うことでパイプラインの切り替えが不要になる。プロジェクタも 2 種類で、VAE 側は**タイムステップ変調された残差ブロック**、ViT 側は 2 層 MLP。
+
+なお位置符号化の **Generalized 2D RoPE**（画像がなければ 1D RoPE に厳密に退化する設計）は、本ページで断片的に触れてきた MSRoPE・仮想タイムステップ・3D Unified RoPE と合わせて [[position-embedding]] に集約した。
+
 ## 既存知識との接続
 
 - [[denoising-diffusion]]：アーキテクチャはノイズ予測 $\epsilon_\theta$ の中身。DDPM の U-Net がこの系譜の起点。
@@ -222,6 +237,7 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2025-hidream-i1]] — HiDream-I1（dual/single stream の FFN を疎な MoE に置換。テキスト符号化は 4 系統のハイブリッド）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（decoder-only LLM をバックボーンに転用。adaLN を捨ててタイムステップをトークン化、ハイブリッド注意）
 - [[summaries/2025-wan]] — Wan（動画 DiT。cross-attention 型を選択、full spatio-temporal attention、adaLN 共有のアブレーション、umT5 の双方向注意）
+- [[summaries/2025-hunyuanimage-3]] — HunyuanImage 3.0（MoE LLM に拡散を接ぎ木。AR と拡散の同居、Generalized Causal Attention、二重エンコーダ）
 - [[summaries/2026-ernie-image]] — ERNIE-Image（8B の単一ストリーム DiT。FLUX.2 VAE と 3B の Ministral-3 を流用。ただし層数・次元等の構成は非公開）
 - [[summaries/2025-z-image]] — Z-Image（S3-DiT＝完全な単一ストリーム。3D Unified RoPE・Sandwich-Norm・低ランク条件射影で 6B に圧縮）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
