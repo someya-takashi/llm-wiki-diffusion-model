@@ -10,6 +10,7 @@ related:
   - "[[super-resolution]]"
   - "[[visual-text-rendering]]"
   - "[[instruction-based-image-editing]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2021-score-sde]]"
   - "[[summaries/2023-controlnet]]"
@@ -18,7 +19,8 @@ summaries:
   - "[[summaries/2023-anydoor]]"
   - "[[summaries/2023-mix-of-show]]"
   - "[[summaries/2023-sdxl]]"
-updated: 2026-06-25
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Controllable Generation（可制御生成 / 逆問題）
@@ -78,6 +80,16 @@ ControlNet は同時期の T2I-Adapter や、LoRA・IP-Adapter などと並ぶ�
 
 このアダプタ型の条件付けは、テキストや空間マップだけでなく**参照画像（物体）**にも使える。**AnyDoor**（[[image-composition]] / [[summaries/2023-anydoor]]）は、参照物体の高周波マップを ControlNet スタイルの UNet エンコーダに通して detail map を作り、Stable Diffusion のデコーダ特徴に concat することで、物体をシーンの指定位置に合成する。条件が「テキスト→空間マップ→参照画像」へと広がっている例である。
 
+## 動画への拡張：マスクとカメラ軌道
+
+条件付けの発想は動画（[[video-diffusion]]）でも変わらないが、**時間軸が加わることで制御の対象が増える**。[[summaries/2025-wan]] が示す 2 つの形を挙げる。
+
+**(1) 二値マスクで「どのフレームを保持し、どのフレームを生成するか」を指定する。** 条件画像をゼロ埋めフレームと時間方向に連結して VAE で符号化し、マスク（1=保持、0=生成）と一緒にノイズ潜在へチャネル方向に連結する。入力チャネルが増える分の射影層は**ゼロ初期化**する——ControlNet の zero convolution（[[summaries/2023-controlnet]]）とまったく同じ発想で、学習開始時に条件枝の影響をゼロにして事前学習済みモデルを壊さない。
+
+面白いのは、**マスクの置き方を変えるだけでタスクが切り替わる**ことである：先頭 1 フレームを保持すれば image-to-video、先頭数秒なら動画継続、先頭と末尾なら first-last frame 変換、中間を虫食いにすればフレーム補間。本ページの「アプローチ 1：推論時のスコア操作」が inpainting・colorization・逆問題を 1 つの枠組みで扱ったのと同型の統一が、時間軸上で起きている。
+
+**(2) カメラ軌道による制御。** カメラの外部パラメータ $[R,t]$ と内部パラメータ $K_f$ を **Plücker 座標**（3 次元空間の直線を 6 次元ベクトルで表す幾何表現。各ピクセルを通る光線を符号化する）へ変換し、畳み込みで多段階特徴にする。注入は**ゼロ初期化畳み込みからスケール $\gamma_i$ とシフト $\beta_i$ を作り**、各 DiT ブロックに $f_i=(\gamma_i+1)f_{i-1}+\beta_i$ で適用する——ControlNet 的なアダプタ枝と adaLN 的な変調を組み合わせた形である。「視点をどう動かすか」という、静止画には存在しない制御次元がここで加わる。
+
 ## 既存知識との接続
 
 - [[score-based-generative-models]]：可制御生成は逆時間 SDE のスコアに条件項を足すだけで実現される。Score-SDE がこの統一定式化を与えた。
@@ -92,6 +104,8 @@ ControlNet は同時期の T2I-Adapter や、LoRA・IP-Adapter などと並ぶ�
 - [[visual-text-rendering]]：「どこに何の文字を書くか」というレイアウト制御は、空間条件付けと問題設定が重なる。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-wan]] — Wan（マスク機構で I2V・動画継続・first-last frame・補間を統一。カメラ制御は Plücker 座標＋ゼロ初期化畳み込みによる変調）
 
 - [[summaries/2021-score-sde]] — Score-Based Generative Modeling through SDEs（§5・付録 I で可制御生成／逆問題を定式化）
 - [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（ControlNet, zero convolution による空間条件制御）

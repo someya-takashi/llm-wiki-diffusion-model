@@ -8,11 +8,13 @@ related:
   - "[[training-free-conditioning]]"
   - "[[image-composition]]"
   - "[[instruction-based-image-editing]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2022-repaint]]"
   - "[[summaries/2023-anydoor]]"
-updated: 2026-06-25
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Image Inpainting（画像 inpainting / 欠損補完）
@@ -57,6 +59,14 @@ inpainting では、入力として「マスクされた画像」と「マスク
 <figcaption>図2（再掲, [[summaries/2022-repaint]] より）: resampling ステップ数 n を増やした効果。n=1（DDPM ベースライン）は毛皮テクスチャの延長で意味的に誤るが、resampling を増やすほど犬の顔として調和していき、n=10 程度で飽和する。</figcaption>
 </figure>
 
+## 動画へ：マスクがタスクを定義する
+
+inpainting の発想——「マスクで指定した領域だけを生成し、外は保つ」——は動画（[[video-diffusion]]）で**タスクを統一する道具**になる。[[summaries/2025-wan]] の I2V は、条件フレームとノイズ潜在をチャネル方向に連結し、二値マスク（1=保持、0=生成）を添えるだけで、image-to-video・動画継続・first-last frame 変換・フレーム補間を**同一モデル・同一学習で**扱う。空間方向の穴埋めだった inpainting が、時間方向の穴埋めとして再登場する形である。
+
+さらに **VACE**（Wan の統一動画編集）は **概念分離（concept decoupling）** という一手を加える。文脈フレーム $F$ とマスク $M$ から $F_c = F\times M$（変えるべき画素）と $F_k = F\times(1-M)$（保つべき画素）を**明示的に別々の系列へ分けて**トークン化する。本ページの LDM-inpainting がマスクを追加チャネルとして与えていたのに対し、**「変える側」と「保つ側」を最初から分離して渡す**——タスク定義を曖昧さなくモデルに伝えることで、多様なタスクにわたる収束を確保するという主張である。
+
+動画 personalization でも同じ枠組みが使われる。顔画像を動画の先頭に $K$ フレーム分継ぎ足し、先頭を「保持（再構成）」・以降を「生成」とマスクで指定して、**個人化を inpainting として解く**（[[subject-driven-generation]]）。
+
 ## 既存知識との接続
 
 - [[latent-diffusion]]：マスク画像を潜在へ連結する条件付けで inpainting に適用し SOTA を達成した代表手法（学習型）。
@@ -67,6 +77,8 @@ inpainting では、入力として「マスクされた画像」と「マスク
 - [[instruction-based-image-editing]]：「この人を消して」のように**マスクを描かず自然言語で**編集を指定する系統。inpainting が「どこを」をマスクで明示するのに対し、指示編集は対象領域の特定までモデルに委ねる。実際 Qwen-Image（[[summaries/2025-qwen-image]]）の ImgEdit 評価では Remove/Replace が主要タスクとして測られる。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-wan]] — Wan（マスク機構で動画の各種タスクを統一。VACE の概念分離は「変える画素」と「保つ画素」を別系列に分ける）
 
 - [[summaries/2022-latent-diffusion]] — Latent Diffusion Models（Places で inpainting SOTA を達成、学習型 concat）
 - [[summaries/2022-repaint]] — RePaint（凍結無条件 DDPM＋推論時条件付け＋resampling、学習不要）

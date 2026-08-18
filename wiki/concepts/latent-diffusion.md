@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [LDM, Latent Diffusion, Latent Diffusion Models, Stable Diffusion, 潜在拡散]
-tags: [latent-diffusion, generative-models, image-generation, text-to-image-generation, pixel-space-diffusion]
+tags: [latent-diffusion, generative-models, image-generation, text-to-image-generation, pixel-space-diffusion, video-diffusion]
 related:
   - "[[denoising-diffusion]]"
   - "[[text-to-image-generation]]"
@@ -12,6 +12,7 @@ related:
   - "[[visual-text-rendering]]"
   - "[[image-tokenizer]]"
   - "[[pixel-space-diffusion]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -22,7 +23,8 @@ summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Latent Diffusion（潜在拡散）
@@ -99,6 +101,12 @@ $$
 
 現時点で決着はついていない。LDM の圧縮は依然として実用上圧倒的に安く、pixel-space 側は計算コストの報告を欠いている。**本 wiki は両方を並べて記録する立場を取る**。
 
+## 時間軸への拡張
+
+潜在空間で拡散するという本ページの枠組みは、動画（[[video-diffusion]]）へそのまま持ち上がる。ただし**圧縮の意味が変わる**。画像では圧縮は「あると効率的」だったが、動画では**圧縮なしには学習が物理的に成立しない**。1280×720・81 フレームの動画は $4\times8\times8$ 圧縮を経てもなお潜在トークンが数十万から 100 万に達し、注意計算がその二乗で効く。[[summaries/2025-wan]] の実測では系列長 100 万で**注意が学習時間の 95%**、活性化メモリが **8 TB** を超える。
+
+つまり LDM が画像で獲得した「まず圧縮する」という戦略は、動画において**選択肢から前提条件へ**変わっている。同じ 2026 年に [[pixel-space-diffusion]] が画像側で「圧縮をやめる」方向を打ち出しているのと対照的で、**モダリティによって同じ設計判断の重みがまったく変わる**ことを示す好例である。
+
 ## 限界
 
 - 逐次サンプリングは依然 GAN より遅い（[[diffusion-sampling]]、DDIM 等で緩和）。
@@ -124,6 +132,7 @@ $$
 - [[summaries/2023-dit]] — Scalable Diffusion Models with Transformers（LDM 潜在空間で U-Net を Transformer 化）
 - [[summaries/2024-ziplora]] — ZipLoRA（SDXL 上で被写体 LoRA × 画風 LoRA をマージ）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（VAE を捨てる立場。本ページの前提への異議申し立て）
+- [[summaries/2025-wan]] — Wan（動画への拡張。圧縮が「効率化」から「学習成立の前提」へ変わる）
 - [[summaries/2023-sdxl]] — SDXL（LDM の大型化後継：3× UNet・micro-conditioning・base+refiner の 2 段）
 - [[summaries/2024-sd3]] — Stable Diffusion 3（LDM の次世代：MM-DiT＋rectified flow・潜在 16 チャネル）
 - [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE の単一エンコーダ・二重デコーダ構成。デコーダのみのテキスト特化微調整で文字再現の上限を引き上げ）

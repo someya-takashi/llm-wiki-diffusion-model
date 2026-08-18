@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Sampling, サンプリング, サンプラー, DDIM, ancestral sampling]
-tags: [diffusion-sampling, denoising-diffusion, probability-flow-ode, generative-models]
+tags: [diffusion-sampling, denoising-diffusion, probability-flow-ode, generative-models, inference-caching]
 related:
   - "[[denoising-diffusion]]"
   - "[[probability-flow-ode]]"
@@ -11,6 +11,7 @@ related:
   - "[[noise-schedule]]"
   - "[[reinforcement-learning-for-diffusion]]"
   - "[[diffusion-distillation]]"
+  - "[[inference-caching]]"
 summaries:
   - "[[summaries/2021-ddim]]"
   - "[[summaries/2021-score-sde]]"
@@ -19,7 +20,8 @@ summaries:
   - "[[summaries/2022-repaint]]"
   - "[[summaries/2022-edm]]"
   - "[[summaries/2026-qwen-image-2]]"
-updated: 2026-06-25
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Diffusion Sampling（拡散モデルのサンプリング）
@@ -106,6 +108,14 @@ EDM の Heun サンプラーは後続の標準になり、**SD3**（[[summaries/
 
 両者は排他ではなく、蒸留した生徒を良いソルバーで回すこともできる。
 
+## もう 1 つの別系統：ステップ内の計算を省く（[[inference-caching]]）
+
+本ページの手法群は「**何ステップで、どうたどるか**」を設計する。蒸留は「**モデルそのもの**」を作り替える。2024 年以降、そのどちらでもない第 3 の軸が現れた——**ステップ数もモデルも変えないまま、1 ステップの中身の計算を省く**推論キャッシュである。
+
+根拠は、拡散のサンプリング過程が構造的な冗長性を持つことにある。[[summaries/2025-wan]] が挙げるのは 2 つで、(a) 隣接するステップの**注意出力がよく似ている**（潜在がわずかしか動かないので、どのトークンがどこを見るかは急に変わらない）、(b) サンプリングの**後期では条件付きと無条件の出力が似てくる**（構図はもう決まっていて細部を詰めているだけなので、[[classifier-free-guidance]] の 2 回評価に意味が薄れる）。そこで数ステップに 1 回だけ実際に計算し、間はキャッシュを再利用する。
+
+サンプラー改良と同じく**学習不要**だが、効き方が違う。ソルバーの改良は歩幅を大きくして**ステップ数を減らす**ので、粗くしすぎれば道を外れる。キャッシュは歩幅を変えずに**各歩の計算を間引く**ので、失敗の仕方も別である。両者は併用でき、実際には良いソルバーで 50→30 ステップに減らした上でキャッシュを掛ける、という積み方になる。詳細は [[inference-caching]] を参照。
+
 ## 既存知識との接続
 
 - [[denoising-diffusion]]：DDIM は DDPM の学習済みモデルを再学習なしに高速サンプリングする手法。学習は DDPM、生成は DDIM という分業。
@@ -117,6 +127,8 @@ EDM の Heun サンプラーは後続の標準になり、**SD3**（[[summaries/
 - [[noise-schedule]]：サンプラーが使う時刻離散化 $\{\sigma_i\}$（EDM の ρ=7 等）はノイズスケジュールの推論側の側面。サンプラー（Heun）とスケジュール（ρ）は一体で少ステップ・高品質を決める。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-wan]] — Wan（Diffusion Cache。注意と CFG のステップ間類似性を突いて 1.62×。ソルバー改良・蒸留と直交する第 3 の軸）
 
 - [[summaries/2021-ddim]] — Denoising Diffusion Implicit Models（決定論サンプラー DDIM、Song, Meng, Ermon, ICLR 2021）
 - [[summaries/2021-score-sde]] — Score-Based Generative Modeling through SDEs（predictor-corrector・逆拡散・確率フロー ODE サンプラー）

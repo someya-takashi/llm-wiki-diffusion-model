@@ -10,13 +10,15 @@ related:
   - "[[subject-driven-generation]]"
   - "[[visual-text-rendering]]"
   - "[[character-consistency]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Instruction-Based Image Editing（指示ベース画像編集）
@@ -97,6 +99,18 @@ FLUX.1 Kontext が**系列方向**に連結したのに対し、同時期の **H
 
 さらに 2026 年の **HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）は、この表の外に出る——条件画像を SigLIP-2 で符号化した**条件トークン**として、テキストトークン・生成トークンと**同じ 1 本の系列**に並べ、編集も生成も個人化も区別しない。編集を「専用の入力経路を持つタスク」ではなく「**文脈内推論の一形態**」として扱う立場であり、GEdit で Q-O 7.60 と、16.8B の FLUX.1 Kontext（6.34）や 27B の Qwen-Image-Edit（7.41）を 8B で上回る。ただし ImgEdit 総合では 4.14 と Qwen-Image-Edit（4.27）に及ばない。
 
+## 動画編集への一般化：VACE の概念分離
+
+動画（[[video-diffusion]]）で同じ問題を解くと、本ページ冒頭の「視覚的一貫性↔意味的一貫性」の綱引きが**入力形式のレベルで分業**に変わる。Wan の **VACE**（[[summaries/2025-wan]]）は、多様な編集タスクを **Video Condition Unit** $V=[T;F;M]$——テキストプロンプト $T$、文脈フレーム系列 $F$、マスク系列 $M$——という 1 つの入力形式へ統一する。
+
+要は **概念分離（concept decoupling）** である。$F$ と $M$ から
+
+$$F_c = F\times M \quad(\text{変えるべき画素}),\qquad F_k = F\times(1-M)\quad(\text{保つべき画素})$$
+
+という**同一形状の 2 本の系列を作り、別々にトークン化して**モデルに渡す。Qwen-Image の二重符号化が「意味（MLLM）と画素（VAE）」でモダリティを分業させたのに対し、こちらは「**変える領域と保つ領域**」で空間を分業させる。著者らはこれが「明確なタスク定義を確保し、異なるタスクにわたる収束を保証する」と述べており、**曖昧さをモデルに推論させない**という設計思想が共通している。
+
+学習は 2 モードあり、Wan 全体を完全微調整する方式と、基盤重みを一切変えずに **Context Adapter**（Res-Tuning 方式の着脱可能なブロック）を足す方式が用意される。後者は [[controllable-generation]] の ControlNet 的なアダプタ路線の動画版にあたる。
+
 ## 「編集」として解ける意外なタスク
 
 指示編集の枠組みは、一見別ジャンルに見えるタスクも飲み込む。Qwen-Image は次を**すべて TI2I として**扱う：
@@ -134,6 +148,7 @@ FLUX.1 Kontext が**系列方向**に連結したのに対し、同時期の **H
 ## 参考文献（summaries）
 
 - [[summaries/2025-hidream-i1]] — HiDream-E1（潜在マップを空間的に横並び連結＋差分領域を重く取る空間重み付き損失。EmuEdit 6.40 / ReasonEdit 7.54）
+- [[summaries/2025-wan]] — Wan / VACE（Video Condition Unit で編集入力を統一。概念分離で「変える画素」と「保つ画素」を別系列に分ける）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（条件画像をテキスト・生成トークンと同一系列に置き、編集を文脈内推論として扱う。8B で GEdit Q-O 7.60）
 
 - [[summaries/2025-qwen-image]] — Qwen-Image（意味特徴＋再構成特徴の二重符号化、MSRoPE の frame 次元、GEdit/ImgEdit で首位。新視点合成・深度推定まで TI2I として統一）

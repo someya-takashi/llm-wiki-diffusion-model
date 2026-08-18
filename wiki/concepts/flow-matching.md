@@ -12,6 +12,7 @@ related:
   - "[[reinforcement-learning-for-diffusion]]"
   - "[[image-tokenizer]]"
   - "[[diffusion-distillation]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2023-flow-matching]]"
   - "[[summaries/2024-sd3]]"
@@ -21,7 +22,8 @@ summaries:
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Flow Matching（フローマッチング）
@@ -117,4 +119,5 @@ FM・rectified flow をさらに一般化し、**flows（決定論 ODE）と dif
 - [[summaries/2025-qwen-image]] — Qwen-Image（rectified flow＋logit-normal で 20B MMDiT を学習し、その上に DPO / Flow-GRPO の事後学習を重ねる）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（条件にコンテキスト画像を加えた rectified flow。α シフト⇔logit-normal の等価性を導出）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（線形補間パスの latent flow matching を疎な MoE バックボーンで学習）
+- [[summaries/2025-wan]] — Wan（同じ rectified flow ＋ logit-normal を**動画**へ。定式化は一切変えず、変わるのはデータの形と計算規模だけ）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（同じ flow matching を**潜在空間ではなく生ピクセル**の上で回し、LPIPS・DINO の知覚損失を併用する）

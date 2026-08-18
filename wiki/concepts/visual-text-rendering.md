@@ -10,13 +10,15 @@ related:
   - "[[controllable-generation]]"
   - "[[image-tokenizer]]"
   - "[[pixel-space-diffusion]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2024-sd3]]"
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Visual Text Rendering（画像内テキストレンダリング）
@@ -85,6 +87,14 @@ Qwen 系の 2 手——デコーダを微調整する、圧縮率を上げつつ
 
 ただし因果の帰属には留保が要る。前作との差は VAE の有無だけではなく、Qwen3-VL からの初期化・共有トークン空間・OCR 報酬による GRPO（[[reinforcement-learning-for-diffusion]]）も同時に導入されている。**アブレーションが存在しない**ため、「VAE を外したから描けた」という主張の切り分けはできていない。とはいえ Qwen-Image-VAE-2.0 が「f16 で f8 を超えるテキスト忠実度」に苦心して到達した水準を、圧縮なしなら素直に超えられることは、本ページの中心命題を別角度から裏書きしている。
 
+## 動画へ：文字が「動く」ことの難しさ
+
+**Wan**（[[summaries/2025-wan]]）は**動画内に中国語と英語のテキストを描ける最初のモデル**を謳う。処方箋は画像側と同型で、(a) 純白の背景に漢字をレンダリングした合成データを数億枚、(b) 実世界の画像から複数の OCR モデルで文字を読み取り、その内容を Qwen2-VL に渡して自然な記述を作らせた実データ——この 2 系統を事前学習で併用する。本ページ §「(2) データ合成でロングテールを埋める」で整理した Qwen-Image の戦略とほぼ同じ構図である。
+
+動画固有の難しさは、**同じ文字が全フレームで同じ形を保たねばならない**ことにある。画像なら 1 枚で字形が合っていればよいが、動画では字形がフレーム間で揺れると即座に破綻して見える。これは [[character-consistency]] の「同一性がターンをまたいで崩れる」問題の、文字における対応物にあたる。Wan はこの点を定量評価しておらず、CVTG-2K や LongText-Bench のような文字レベルの指標も動画版が存在しない——**動画のテキスト描画は測る手段自体がまだない**というのが現状である。
+
+なお本ページの中心命題「**VAE がテキスト描画の上限を決める**」は動画でも生きている。Wan-VAE の定性評価（原典 図8）はテキストを含む場面を再構成の 4 つの検証シナリオの 1 つに挙げており、文字の歪みと欠落が VAE の主要な失敗モードであるという認識は共有されている。
+
 ## 評価をどうするか
 
 文字の正しさは FID（[[text-to-image-generation]] で使う画質指標）では測れないため、専用ベンチマークが使われる。
@@ -117,4 +127,5 @@ Qwen 系の 2 手——デコーダを微調整する、圧縮率を上げつつ
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16c128 が文書テキスト再構成で全 f8 VAE を上回る。OmniDoc-TokenBench と OCR ベース NED を提案）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（最大 1K トークンの超長文レンダリングと多言語対応を主張。ただし定性評価中心）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（VAE を外す。LongText-Bench-ZH で前作の 0.024 から 0.978 へ）
+- [[summaries/2025-wan]] — Wan（動画内に中国語・英語を描ける最初のモデルを謳う。白背景の合成データ＋OCR→Qwen2-VL の実データ。ただし定量評価なし）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（テキスト描画の評価を行わなかった世代。後年 LongText-Bench-ZH 0.024 と報告される）

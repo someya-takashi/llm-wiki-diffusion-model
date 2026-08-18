@@ -14,6 +14,7 @@ related:
   - "[[character-consistency]]"
   - "[[pixel-space-diffusion]]"
   - "[[mixture-of-experts-diffusion]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -26,7 +27,8 @@ summaries:
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Text-to-Image Generation（テキストからの画像生成）
@@ -84,6 +86,14 @@ Qwen-Image がとくに押し進めたのが **[[visual-text-rendering]]（画�
 
 この 2 本が並ぶと、2025→2026 の T2I 基盤モデルが「**パラメータを増やす**」から「**表現空間の断片化を減らす**」へ重心を移したことが見える。
 
+### テキストエンコーダ論争に測って答える — Wan（2025）
+
+上で見た通り、条件エンコーダの設計は 2025 年に真っ二つに割れた——Qwen-Image の「凍結 MLLM 1 本に集約する」引き算と、HiDream-I1 の「Long-CLIP×2＋T5-XXL＋Llama 3.1 中間層を混ぜる」足し算である。どちらも自説を主張するだけで、直接比較はなかった。
+
+動画側から出た **Wan**（[[summaries/2025-wan]]・[[video-diffusion]]）が、この論点を**アブレーションで比べている**。候補は umT5（5.3B, encoder-only）・Qwen2.5-7B-Instruct・GLM-4-9B。結果は **umT5 が勝つ**。理由として引かれるのは HunyuanVideo の観察で、**decoder-only の LLM は因果注意（各トークンは前だけを見る）だが、umT5 は双方向注意なので拡散モデルに適する**——拡散の条件付けは「プロンプト全体を一度に見て意味を固める」作業なので、後ろを見られない表現は不利だ、という理屈である。HunyuanVideo に倣って双方向の token refiner をアダプタとして足しても umT5 が勝ったとも報告される。MLLM（Qwen-VL-7B）との比較では FID がほぼ互角（42.91 対 43.01）だがモデルが大きく、コスト対効果で umT5 を採る。
+
+**「LLM の方が新しくて強いのだから条件エンコーダも LLM にすべき」という直観を、測って否定した数少ない事例**である。ただし動画・二言語という条件下での結果なので、そのまま画像へ一般化はできない——ここが決着したと見るのは早い。
+
 ### 評価が「AI っぽさ」に報いる問題 — bakeyness
 
 FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の論点も記しておく価値がある。T2I ベンチマークが「**どちらの画像を好むか**」という単一の問いに頼ると、**過飽和の色・中心被写体への過度な集中・強いボケ・均質なスタイル**という特徴的な「AI 的美学」が有利になってしまう。著者らはこれを **bakeyness** と名づけ、単一軸の選好評価が**モデルをその方向へ最適化させてしまう**危険を指摘する。
@@ -119,4 +129,5 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の�
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen3-VL＋f16 トークナイザで生成と編集を単一モデルに統一。Prompt Enhancer・5 報酬 RLHF・DMD 蒸留、LMArena ELO 1168）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（T2I と編集を単一の rectified flow に統一。bakeyness 批判と 5 次元評価、1024² を 3〜5 秒）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（17B・疎な MoE と 4 系統のハイブリッドテキスト符号化。HPSv2.1 全カテゴリ 1 位、Position と Global に穴）
+- [[summaries/2025-wan]] — Wan（テキストエンコーダを直接アブレーション。umT5 の双方向注意が decoder-only LLM を上回る）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（8B で GenEval 0.90・Position 0.93。VAE も外部テキストエンコーダも持たない統一トークン空間）

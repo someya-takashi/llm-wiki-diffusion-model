@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Distillation, 拡散モデルの蒸留, 少ステップ生成, Few-step Generation, DMD, Distribution Matching Distillation, Consistency Models, Progressive Distillation, One-step Generation]
-tags: [diffusion-distillation, diffusion-sampling, flow-matching, text-to-image-generation, generative-models]
+tags: [diffusion-distillation, diffusion-sampling, flow-matching, text-to-image-generation, generative-models, inference-caching]
 related:
   - "[[diffusion-sampling]]"
   - "[[flow-matching]]"
@@ -10,12 +10,16 @@ related:
   - "[[text-to-image-generation]]"
   - "[[reinforcement-learning-for-diffusion]]"
   - "[[mixture-of-experts-diffusion]]"
+  - "[[inference-caching]]"
+  - "[[video-diffusion]]"
+  - "[[large-scale-training-infrastructure]]"
 summaries:
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Diffusion Distillation（拡散モデルの蒸留 / 少ステップ生成）
@@ -96,6 +100,12 @@ $$\mathcal{L}_{\text{total}}=\mathcal{L}_{\text{DMD}}+\lambda_{\text{diff}}\math
 
 結果として、**Qwen-Image-2.0-RL（40 ステップ）を教師とする 4-NFE の生徒**が、肖像・風景・自然シーンにわたって視覚品質・意味的整合・構成の一貫性を維持したと報告している。対話的な創作ワークフローに耐える推論速度を、品質を犠牲にせず得たことになる。
 
+## 動画では：無限長生成の前提条件になる
+
+動画（[[video-diffusion]]）において蒸留は「あると速い」ではなく、**リアルタイム生成という応用そのものを成立させる条件**になる。[[summaries/2025-wan]] は **LCM（Latent Consistency Model）とその動画版 VideoLCM** で 4 ステップ化し、10–20 倍の加速を得る。これを滑動窓のストリーミング生成（Streamer）と組み合わせることで、**8 台の A100 で 15 分の動画を 8 FPS**、int8＋TensorRT 量子化で**単一 RTX 4090 で 20 FPS** に到達する。
+
+ここで注目すべきは、蒸留が単独では足りず、**3 つの直交する軸を掛け算している**ことである——蒸留（ステップ数を減らす）、[[inference-caching]]（1 ステップの中身を削る）、量子化（1 演算を安くする・[[large-scale-training-infrastructure]]）。本ページ冒頭の表に「サンプラー vs 蒸留」を並べたが、実務ではこの 4 つ全部を積む。
+
 ## 限界と注意点
 
 - **教師を超えられない**（通常は）。蒸留は教師の能力を圧縮する枠組みであり、生徒の上限は教師である。**ただし敵対的蒸留（ADD/LADD）は例外**で、識別器が「本物らしさ」を直接押し上げるため、ステップ数を削りつつ鮮鋭さを増しうる。
@@ -121,5 +131,7 @@ $$\mathcal{L}_{\text{total}}=\mathcal{L}_{\text{DMD}}+\lambda_{\text{diff}}\math
 
 - [[summaries/2025-hidream-i1]] — HiDream-I1（DMD ＋ 敵対的損失。識別器は凍結教師バックボーンの多段階特徴で判定）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（さらに標準の拡散損失を安定化項として追加。50 → 28 ステップ）
+
+- [[summaries/2025-wan]] — Wan（LCM / VideoLCM で 4 ステップ化。滑動窓ストリーミングと組み合わせてリアルタイム動画生成を成立させる）
 
 > 未取り込みの主要原典：Progressive Distillation（Salimans & Ho 2022）、Consistency Models（Song ら 2023）、DMD 原典（Yin ら 2024）、ADD / LADD 原典（Sauer ら 2023・2024）。今後の ingest で本ページへ追記する。（ADD/LADD の実適用例は [[summaries/2025-flux-kontext]] で取り込み済み。）

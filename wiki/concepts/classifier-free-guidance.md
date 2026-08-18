@@ -9,6 +9,7 @@ related:
   - "[[diffusion-sampling]]"
   - "[[controllable-generation]]"
   - "[[reinforcement-learning-for-diffusion]]"
+  - "[[inference-caching]]"
 summaries:
   - "[[summaries/2022-classifier-free-guidance]]"
   - "[[summaries/2023-controlnet]]"
@@ -16,7 +17,8 @@ summaries:
   - "[[summaries/2023-dit]]"
   - "[[summaries/2024-multi-lora-composition]]"
   - "[[summaries/2025-flow-matching-diffusion-intro]]"
-updated: 2026-06-25
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Classifier-Free Guidance（分類器なしガイダンス, CFG）
@@ -59,6 +61,15 @@ CFG は**暗黙の分類器** $p^i(c|z)\propto p(z|c)/p(z)$ の勾配 $-\frac1{\
 
 詳細・実験・式は [[summaries/2022-classifier-free-guidance]] を参照。
 
+## 「2 倍のコスト」への 2 つの答え
+
+CFG は条件付きと無条件の予測を**両方**計算するので、推論コストが構造的に 2 倍になる。これは長らく「CFG を使う以上仕方ないもの」として扱われてきたが、近年 2 方向から削られている。
+
+- **ガイダンス蒸留**（[[diffusion-distillation]]）：2 回の評価を 1 回に畳み込む生徒モデルを**学習する**。FLUX.1 Kontext [dev] がこれで作られている（[[summaries/2025-flux-kontext]]）。
+- **CFG キャッシュ**（[[inference-caching]]）：**学習せずに**同じ冗長性を突く。[[summaries/2025-wan]] の観察は「**サンプリングの後期では条件付きと無条件の出力が似てくる**」——序盤は何を描くかが決まっておらず条件の有無で出力が大きく違うが、終盤は構図も被写体も既に決まっていて両者とも同じ絵の細部を詰めているだけになる。ならば後期に無条件側を毎回計算する意味は薄い。そこで無条件側を数ステップに 1 回だけ計算し、間は条件付きの結果を再利用する（細部の劣化を防ぐため残差補償を併用）。
+
+後者は本ページにとって、コスト削減以上の含意を持つ。**CFG の効きがサンプリングの段階によって変わる**——序盤の条件付けは構図を決め、終盤の条件付けはほとんど何もしていない——という観察は、guidance が何をしているのかの理解そのものに関わる。冒頭で述べた「品質と多様性のトレードオフ」も、実は全ステップで一様に生じているわけではないことを示唆する。
+
 ## 既存知識との接続
 
 - [[classifier-guidance]]：CFG が分類器なしで置き換えた先行手法。両者は同じ「条件分布を鋭くする」効果を持つ。
@@ -70,6 +81,8 @@ CFG は**暗黙の分類器** $p^i(c|z)\propto p(z|c)/p(z)$ の勾配 $-\frac1{\
 - [[multi-concept-customization]]：Multi-LoRA Composition の **LoRA Composite** は、CFG のスコア（$e_\theta(\emptyset)+s(e_\theta(c)-e_\theta(\emptyset))$）を複数 LoRA について計算し平均する形で、CFG を多 LoRA 合成に拡張した例。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-wan]] — Wan（CFG キャッシュ。サンプリング後期では条件付きと無条件の出力が似てくることを利用し、学習なしで無条件側の計算を間引く）
 
 - [[summaries/2022-classifier-free-guidance]] — Classifier-Free Diffusion Guidance（Ho & Salimans, NeurIPS 2021 Workshop）
 - [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（CFG 解像度重み付け CFG-RW を提案）

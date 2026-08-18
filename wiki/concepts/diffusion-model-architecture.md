@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Model Architecture, 拡散モデルのアーキテクチャ, ADM, AdaGN, U-Net for diffusion, DiT, Diffusion Transformer, adaLN, adaLN-Zero, patchify]
-tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion]
+tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion, video-diffusion]
 related:
   - "[[denoising-diffusion]]"
   - "[[latent-diffusion]]"
@@ -11,6 +11,9 @@ related:
   - "[[image-tokenizer]]"
   - "[[mixture-of-experts-diffusion]]"
   - "[[pixel-space-diffusion]]"
+  - "[[video-diffusion]]"
+  - "[[large-scale-training-infrastructure]]"
+  - "[[inference-caching]]"
 summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2020-ddpm]]"
@@ -23,7 +26,8 @@ summaries:
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Diffusion Model Architecture（拡散モデルのアーキテクチャ）
@@ -145,6 +149,27 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 
 注意機構も作り変えられている。言語モデリングの因果マスクと拡散の完全注意は本来相容れないが、**条件・テキストトークンには因果マスク、生成トークンには完全注意**という**ハイブリッド注意**で 1 つの注意行列の中に同居させる。あわせて VAE も捨てているため、この設計全体は [[pixel-space-diffusion]] で扱う。
 
+### Wan（Alibaba 2025）——動画では MM-DiT が自明な最適解ではない
+
+**Wan**（[[summaries/2025-wan]]）は動画拡散（[[video-diffusion]]）の基盤モデルだが、本ページにとって重要なのは**画像側で決着したように見えた設計判断が、動画という条件下で差し戻されている**点である。
+
+- **cross-attention 型を選ぶ**。SD3 以降の主流は MM-DiT（テキストと画像を連結して完全注意で混ぜる）だが、Wan は元の DiT 流に **cross-attention でテキストを入れる**。理由は「長い文脈のモデリング下でも指示追従を確保できるから」——視覚トークンが数十万に達するところへテキスト 512 トークンを連結すると、**テキストが視覚に飲み込まれる**という判断だと読める。系列長がモダリティ融合の設計を左右する、という論点は画像だけを見ていては現れない。
+- **full spatio-temporal attention**。全フレーム・全空間位置が互いを見る自己注意で、二次コストを正面から払う。初期の動画モデルが採った「1D 時間注意 ＋ 2D 空間注意」への分解による軽量化を選ばない。
+- **テキストエンコーダの選択を実験で決めている**。umT5（encoder-only）が Qwen2.5-7B・GLM-4-9B を上回り、理由として「**decoder-only の LLM は因果注意だが umT5 は双方向注意なので拡散モデルに適する**」が挙げられる。拡散の条件付けは「プロンプト全体を一度に見て意味を固める」作業なので、後ろを見られない表現は不利だ、という理屈である。HiDream-I1 の「4 系統を足す」と Qwen-Image の「凍結 MLLM 1 本」という対立に、**測って答えた**数少ない事例になっている。
+
+#### adaLN のパラメータをどこに配分するか
+
+本ページで追ってきた adaLN-Zero（DiT・[[summaries/2023-dit]]）以来の条件付けについて、Wan は再利用価値の高いアブレーションを提供する。adaLN の MLP をブロックごとに持つとパラメータを食うので、**MLP を全ブロックで共有し、ブロックごとに異なるバイアスだけを学習する**（PixArt の AdaLN-single 系）。
+
+| 構成 | パラメータ | 学習損失 |
+| --- | --- | --- |
+| Full-shared-adaLN | 1.3B | やや高い |
+| Half-shared-adaLN | 1.5B | 中間 |
+| **Full-shared-adaLN（35 層へ深化）** | **1.5B** | **最低** |
+| Non-shared-adaLN | 1.7B | Full-shared-1.5B に劣る |
+
+**同一パラメータ数で比べると、adaLN に割くより層を深くする方が良い**。しかも 1.7B が 1.5B に負けるのだから、単なるパラメータ効率ではなく**配分の問題**である。25% の削減になる。FLUX.1 が変調パラメータ数を半減させた（fused feed-forward）のと同じ方向の知見で、**条件付け機構は思ったより安く済ませてよい**ことを示唆する。
+
 ## 既存知識との接続
 
 - [[denoising-diffusion]]：アーキテクチャはノイズ予測 $\epsilon_\theta$ の中身。DDPM の U-Net がこの系譜の起点。
@@ -167,5 +192,6 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（double stream → single stream の二段構成、fused feed-forward、3D RoPE の仮想タイムステップで文脈画像を分離）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（dual/single stream の FFN を疎な MoE に置換。テキスト符号化は 4 系統のハイブリッド）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（decoder-only LLM をバックボーンに転用。adaLN を捨ててタイムステップをトークン化、ハイブリッド注意）
+- [[summaries/2025-wan]] — Wan（動画 DiT。cross-attention 型を選択、full spatio-temporal attention、adaLN 共有のアブレーション、umT5 の双方向注意）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

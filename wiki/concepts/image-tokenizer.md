@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Image Tokenizer, 画像トークナイザ, VAE, Visual Tokenizer, Autoencoder, diffusability, 拡散可能性, 高圧縮VAE, High-Compression VAE]
-tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models, pixel-space-diffusion]
+tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models, pixel-space-diffusion, video-diffusion]
 related:
   - "[[latent-diffusion]]"
   - "[[diffusion-model-architecture]]"
@@ -9,6 +9,8 @@ related:
   - "[[denoising-diffusion]]"
   - "[[flow-matching]]"
   - "[[pixel-space-diffusion]]"
+  - "[[video-diffusion]]"
+  - "[[large-scale-training-infrastructure]]"
 summaries:
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-qwen-image-2]]"
@@ -16,7 +18,8 @@ summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Image Tokenizer（画像トークナイザ / 潜在空間を作るオートエンコーダ）
@@ -113,6 +116,22 @@ $f$ を上げる動機は計算量である。拡散 Transformer（DiT, [[diffus
 
 ただし pixel-space 側は本ページの中心命題——**DiT の計算量は潜在トークン数に二次的**——への回答を持っていない。トークン数は最大 $f^2$ 倍（$f=16$ なら 256 倍）になりうるが、原典はパッチサイズも系列長も推論コストも報告しない。「トークナイザを作らなくてよい」ことと「作らない方が安い」ことは別で、後者は未証明である。詳細は [[pixel-space-diffusion]] を参照。
 
+## 時間軸を持つトークナイザ（3D causal VAE）
+
+本ページはここまで画像のトークナイザを扱ってきたが、動画（[[video-diffusion]]）に踏み出すと**同じ三つ巴が時間方向へ拡張される**。標準的な設定は $4\times8\times8$（時間 4 倍・空間 8 倍）でチャネル 16。時間圧縮率は実装で分かれており、Wan・HunyuanVideo・CogVideoX が $4\times8\times8$、Mochi が $6\times8\times8$、Step Video が $8\times16\times16$（チャネル 64）、SVD は時間圧縮なしの $1\times8\times8$ である。**空間の圧縮率を上げるか、時間の圧縮率を上げるか**という新しい配分の問題が加わる。
+
+動画固有の制約が 2 つあり、どちらも画像の VAE 設計には対応物がない（[[summaries/2025-wan]]）。
+
+**(1) 時間的因果性が正規化層を縛る。** 未来のフレームが過去のフレームの符号化に影響してはならない。ところが **GroupNorm はフレーム群にまたがって平均と分散を取るので、未来の情報が過去へ漏れる**。Wan-VAE がすべての GroupNorm を **RMSNorm**（各要素の二乗平均だけで正規化する軽量な変種）へ置き換えたのはこのためである。正規化層の選択が因果性を壊すかどうかを決める、という論点は画像では意識する必要がなかった。
+
+**(2) チャンク処理と特徴キャッシュ。** 動画を $1+T/4$ 個のチャンク（最大 4 フレーム）に割り、1 チャンクずつ符号化・復号する。境界で切れ目が出ないよう、**因果畳み込みの過去 2 フレーム分の特徴をキャッシュして次のチャンクへ引き継ぐ**（カーネルサイズ 3 なので 2 枚）。これにより**任意長の動画を一定メモリで処理できる**。因果性を守った見返りがここで回収される構造になっている。
+
+もう 1 つ実用上効く工夫として、**最初のフレームだけ空間のみ圧縮する**（MagViT-v2 由来）。単一画像を「1 フレームの動画」として同じ VAE で扱えるようになり、画像と動画の共同学習が成立する。動画データは画像より桁違いに少ないので、この互換性は本質的である。
+
+なお本ページの中心命題——**トークナイザの設計は下流の計算可能性を直接決める**——は、動画でいっそう鋭くなる。$f8 \to f16$ にすればトークン数は 4 分の 1、注意は 16 分の 1 になる。系列長 100 万で注意が学習時間の 95% を占める世界（[[large-scale-training-infrastructure]]）では、圧縮率の 1 段の違いが学習の可否そのものを分ける。
+
+Wan-VAE は 127M と極小ながら PSNR と速度の両方で競争力を持ち、HunyuanVideo の VAE より再構成が 2.5 倍速い。また、再構成損失を拡散損失に置き換えた変種（VAE-D）は FID が一貫して悪化しており、**トークナイザは素直に再構成を目的に学習した方がよい**という、Qwen-Image-VAE-2.0 が KL も GAN も外した判断と同じ方向の結果になっている。
+
 ## 既存知識との接続
 
 - [[latent-diffusion]]：トークナイザは LDM の第一段階そのもの。本ページはその「第一段階」を独立した設計問題として扱う。LDM 原典（[[summaries/2022-latent-diffusion]]）が $f4$〜$f8$ を最適点としたのに対し、高解像度時代は $f16$・$f32$ へ移りつつある。
@@ -124,6 +143,7 @@ $f$ を上げる動機は計算量である。拡散 Transformer（DiT, [[diffus
 ## 参考文献（summaries）
 
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（トークナイザを作らない立場。同じ問題への正反対の答え）
+- [[summaries/2025-wan]] — Wan-VAE（3D causal VAE。GroupNorm→RMSNorm で時間的因果性を保ち、特徴キャッシュで無限長を一定メモリで処理。127M で HunyuanVideo VAE の 2.5 倍速）
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16/f32 高圧縮 VAE。GSC・attention-free・非対称構成、KL/GAN 除去、DINOv2 中間層への意味的整合、OmniDoc-TokenBench）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（f16c64 を採用しネイティブ 2K 生成を実現した基盤モデル）
 - [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE のデコーダのみをテキスト特化微調整し、文字再現の上限を引き上げた先行例）

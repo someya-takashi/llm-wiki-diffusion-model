@@ -3,6 +3,20 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-08-18] ingest | Wan: Open and Advanced Large-Scale Video Generative Models
+
+- 取り込み: `raw/papers/Wan_ Open and Advanced Large-Scale Video Generative Models.md`（ar5iv 由来 markdown・ケース A, arXiv:2503.20314, 2025年3月。Wan Team / Alibaba Group）。**本 wiki 初の動画生成の原典**。CLAUDE.md §1 が例示していた `video-diffusion` のスラグをここで開設した。
+- 作成: [[translations/2025-wan]], [[summaries/2025-wan]], [[concepts/video-diffusion]], [[concepts/inference-caching]], [[concepts/large-scale-training-infrastructure]]
+- **新規概念ページ 3 件**（ユーザー回答「video-diffusion ＋ 推論キャッシュ ＋ インフラ」）:
+  - [[concepts/video-diffusion]] — 動画拡散の総論。**「定式化は何も変わらず、変わるのはデータの形と計算の規模だけ」**を軸に、時間軸が持ち込む 4 つの困難（系列長爆発／時間的因果性／動きの品質という新評価軸／時間的一貫性）、3D causal VAE、cross-attention 型 DiT を選ぶ理由、マスクによるタスク統一（I2V・動画継続・first-last frame・補間が同一モデル）、Streamer の滑動窓ノイズ除去キュー、VBench と Wan-Bench。
+  - [[concepts/inference-caching]] — **サンプラー改良でも蒸留でもない第 3 の高速化軸**。何を変えるか／再学習の要否／出力が変わるかの 3 軸で既存 2 系統と対比する表を置いた。注意の類似性と CFG の類似性という 2 つの冗長性、後者が [[concepts/classifier-free-guidance]] の「2 倍コスト」に学習なしで効く点、加速率が 1.6 倍程度にとどまるという留保。
+  - [[concepts/large-scale-training-infrastructure]] — 本 wiki の完全な空白地帯。**計算は $s^2$・メモリは $s$ でスケールする非対称性**を中心に据え、そこから「長い系列ほど活性化オフロードが有利」が導かれる構造を明示。$b$/重み/$s$/$h$ のどの軸で切るかによる分散戦略の分類、2D Context Parallel（外 Ring・内 Ulysses）、モジュールごとの戦略切り替え、FP8 GEMM と 8-bit FlashAttention の数値的工夫。
+- 更新（本文）: [[concepts/diffusion-model-architecture]]（**動画では MM-DiT が自明な最適解ではない**という差し戻し、umT5 の双方向注意、adaLN 共有のアブレーション表＝「adaLN に割くより層を深くする方が良い」）, [[concepts/image-tokenizer]]（「時間軸を持つトークナイザ」節。GroupNorm→RMSNorm と因果性、特徴キャッシュ）, [[concepts/latent-diffusion]]（圧縮が「効率化」から**学習成立の前提**へ変わる。同年の [[concepts/pixel-space-diffusion]] と対照）, [[concepts/diffusion-sampling]]（第 3 の軸への導線）, [[concepts/classifier-free-guidance]]（「2 倍コスト」への 2 つの答え＝ガイダンス蒸留と CFG キャッシュ。**CFG の効きが段階で変わる**という含意）, [[concepts/controllable-generation]]（マスクでタスクが切り替わる構造、Plücker 座標のカメラ制御）, [[concepts/image-inpainting]]（VACE の概念分離＝変える画素と保つ画素を別系列に）, [[concepts/subject-driven-generation]]（**特徴抽出器を使わない第 3 の答え**＝顔画像を VAE 潜在に置いて inpainting として解く）, [[concepts/character-consistency]]（フレーム方向の一貫性、Wan-Bench の ID 一貫性次元）, [[concepts/instruction-based-image-editing]]（VACE の VCU と概念分離）, [[concepts/visual-text-rendering]]（動画内テキスト。**測る手段自体がない**）, [[concepts/super-resolution]]（カスケードから単一モデルの解像度漸進へ）, [[concepts/diffusion-distillation]]（LCM/VideoLCM、蒸留・キャッシュ・量子化の掛け算）, [[concepts/text-to-image-generation]]（**テキストエンコーダ論争に測って答えた**事例）, [[concepts/flow-matching]], [[concepts/noise-schedule]]
+- 更新: [[overview]]（「動画へ：時間軸が持ち込むもの」の項）, [[index]]（Summaries / Translations / Concepts＋略称リダイレクト 10 行）
+- 画像: ar5iv から **29 枚**を取得（プレースホルダ混入なし、取得失敗なし）。ただし**図 4・11・13・14 の 4 枚は ar5iv・arXiv HTML のどちらにも画像が存在しない**（LaTeX ネイティブのプロットで両変換系とも失敗したとみられる）。翻訳側では該当箇所を `> 図N: ...（訳注: ar5iv・arXiv HTML のいずれでも本図の画像が生成されておらず、取得できなかった）` の引用ブロックで明示した。ファイル名は元名保持（figures/ 配下のものは basename のみ）。
+- 翻訳: 本文 §1–6 を全訳（ユーザー確認済み、816 行）。References と §7 貢献者一覧は除外。表 1–8 を markdown テーブル化（表 1 のプロンプト書き換え例は英訳版を和訳）。
+- メモ: **本 ingest の主眼は「拡散モデルの定式化は動画でも一切変わらない」ことを確認した上で、では何が変わるのかを切り分けること**。rectified flow ＋ logit-normal も潜在拡散も DiT もそのまま持ち上がる。変わるのは (a) 系列長 100 万・活性化 8 TB という計算規模、(b) 時間的因果性という新しい制約、(c) 動きの品質という新しい評価軸、の 3 点に集約される。**批判的視点として記録した主要な点**: (1) Wan-Bench が自作でありその重み付けも自作——個別指標では Sora や CN-TopA に負けている項目が複数あり、総合首位は重みの決め方に支えられている（[[concepts/text-to-image-generation]] の bakeyness 批判の動画版）、(2) 競合が CN-TopA/B/C/D と匿名化されており追試不能、(3) **様式化能力 0.328 は自ら報告した最下位**なのに本文で一切説明されず「多様な芸術様式を巧みに扱う」という定性的主張と矛盾する、(4) VAE の設計判断（RMSNorm 置換・特徴キャッシュ・最初のフレームの特別扱い）にアブレーションがない、(5) Streamer の無限長生成と real-time が定性評価のみで、長時間での一貫性劣化を測る指標が提示されない、(6) 学習コスト（GPU 時間・総額）が非公開でデータ量も $\mathcal{O}(\cdot)$ 記法で伏せられている。
+
 ## [2026-08-17] ingest | HiDream-I1 / HiDream-O1-Image（姉妹論文 2 件）
 
 - 取り込み: `raw/papers/HiDream-I1_ ....md`（ar5iv 由来 markdown・ケース A, arXiv:2505.22705, 2025年5月）と `raw/papers/HiDream-O1-Image_ ....md`（同, arXiv:2605.11061, 2026年）。いずれも HiDream.ai（責任著者 Ting Yao / Tao Mei）で、著者も大きく重複する**同チームの前作・後作**。

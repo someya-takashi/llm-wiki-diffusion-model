@@ -12,7 +12,8 @@ summaries:
   - "[[summaries/2022-edm]]"
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Noise Schedule（ノイズスケジュール）
@@ -95,6 +96,8 @@ $$
 - [[flow-matching]]：SD3 の logit-normal/mode サンプラーは「時刻分布をどう選ぶか」という同じ問題で、EDM のノイズ分布思想を rectified flow へ移したもの。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-wan]] — Wan（動画でも SD3 由来の logit-normal タイムステップサンプリングをそのまま使う）
 
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（事前学習の logit-normal を SFT で一様サンプリングへ切り替え、後期ステップに学習の重みを回す）
 

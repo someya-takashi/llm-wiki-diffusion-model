@@ -6,11 +6,12 @@ related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
   - "[[flow-matching]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-flow-matching]]"
   - "[[summaries/2023-dreambooth]]"
-updated: 2026-06-24
+updated: 2026-08-18
 ---
 
 # Super-Resolution（超解像）
@@ -44,6 +45,14 @@ updated: 2026-06-24
 
 <figcaption>図10（再掲, [[summaries/2022-latent-diffusion]] より）: ImageNet 64→256 超解像。LDM-SR は写実的なテクスチャの描画に強みがあり、SR3 はより一貫した微細構造を合成できる。</figcaption>
 </figure>
+
+## 動画では：カスケードから単一モデルへ
+
+初期の動画生成は、本ページの cascaded SR（低解像度で生成してから段階的に拡大する）を前提にしていた。動画は 1 フレームあたりの計算が重いので、まず粗く作ってから上げるのが自然だったからである。
+
+**Wan**（[[summaries/2025-wan]]・[[video-diffusion]]）は代わりに、**単一モデルで 720p まで直接到達する**。手段は解像度漸進のカリキュラム——256px の text-to-image 事前学習 → 192px 動画との共同学習 → 480px → 720px と、**同じモデルの学習途中で解像度を上げていく**。推論時にカスケードを組むのではなく、学習時に段階を踏む形である。
+
+これは画像側で Imagen（カスケード）から SDXL・SD3（単一モデル）へ移った流れと同じ構図で、**モデル容量と潜在圧縮が十分なら、超解像を別工程に切り出す必要が薄れる**ことを示している。
 
 ## 既存知識との接続
 

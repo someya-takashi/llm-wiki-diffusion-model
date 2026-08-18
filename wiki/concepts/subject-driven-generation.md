@@ -13,6 +13,7 @@ related:
   - "[[lora-merging]]"
   - "[[instruction-based-image-editing]]"
   - "[[character-consistency]]"
+  - "[[video-diffusion]]"
 summaries:
   - "[[summaries/2023-dreambooth]]"
   - "[[summaries/2022-textual-inversion]]"
@@ -21,7 +22,8 @@ summaries:
   - "[[summaries/2022-lora]]"
   - "[[summaries/2024-ziplora]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-wan]]"
+updated: 2026-08-18
 ---
 
 # Subject-Driven Generation / Personalization（被写体駆動生成 / 個人化）
@@ -78,6 +80,12 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 
 文脈型の到達点として **HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）も挙げておく。参照被写体を SigLIP-2 で符号化した**条件トークン**として、テキスト・生成トークンと同じ 1 本の系列に並べるだけで個人化を行う——専用の経路も学習も持たない。注目すべきは**参照数へのスケーラビリティ**で、著者らが用意した UniSubject（1 人の人物＋1〜10 個の参照物体、300 ケース・1,800 被写体）では、参照が 9〜11 個になると Qwen-Image-Edit の総合スコアが 7.50 → 2.71 まで崩壊するのに対し、8B の HiDream-O1-Image は 7.95 → 7.65 を保つ。分断されたエンコーダ設計では**指示と複数の参照画像が互いに干渉する**が、共有トークン空間ではそれが緩和される、という主張である（[[multi-concept-customization]] の論点でもある）。ただしこのベンチマークは著者らの自作で、採点も VLM 依存である点は割り引いて読む必要がある。
 
+動画（[[video-diffusion]]）まで視野を広げると、**第 3 の答え**が現れる。Wan の動画 personalization（[[summaries/2025-wan]]）は、**ArcFace のような ID 抽出器も CLIP のような汎用視覚エンコーダも使わない**。著者らの診断は明快で、ID 抽出器は顔認識のための特徴に最適化されているので傷跡やステッカーといった手がかりを落とし、汎用エンコーダは粗粒度の意味に偏る——**どちらも抽出の段階で情報を失う**。
+
+そこで**顔画像を生成モデル自身の VAE 潜在空間に置いて直接条件付ける**。具体的には動画の先頭に $K$ フレーム分の顔画像を継ぎ足し、マスクで先頭を「保持（再構成）」・以降を「生成」と指定して、**個人化を inpainting として解く**（[[image-inpainting]]）。ベースモデルには一切手を入れない。著者らは「cross-attention は抽出器から得た密な表現との相互作用に向くが、**self-attention は同じ潜在空間にあるデータのモデリングに向く**」と述べており、これが設計の要になっている。
+
+学習型（被写体をモデルに焼き付ける）でも文脈型（別エンコーダで符号化して条件に足す）でもなく、**同じ潜在空間に並べる**——3 つ目の位置づけである。
+
 別の方向として、**物体ごとの学習を一切せず zero-shot で被写体を扱う**手法もある。**AnyDoor**（[[summaries/2023-anydoor]]）は参照物体画像をシーンの指定位置に合成する（[[image-composition]]）。DreamBooth の「テキストで新文脈に生成（tuning 型）」に対し、AnyDoor は「与えられたシーン・位置に合成（zero-shot・参照ベース）」で、対象の同一性保持という目標を共有しつつ入出力と学習方式が対照的である。
 
 ## 既存知識との接続
@@ -103,4 +111,5 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 - [[summaries/2022-lora]] — LoRA（低ランク適応による軽量 personalization の基礎）
 - [[summaries/2024-ziplora]] — ZipLoRA（被写体 content LoRA × 画風 style LoRA の学習係数マージ）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（学習なしの文脈型 personalization。多ターンでの同一性ドリフトを AuraFace で定量化）
+- [[summaries/2025-wan]] — Wan（動画の personalization。特徴抽出器を使わず顔画像を VAE 潜在空間へ置き、inpainting として解く）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（参照被写体を条件トークンとして同一系列に置く。UniSubject で 9〜11 参照でも劣化しにくい）
