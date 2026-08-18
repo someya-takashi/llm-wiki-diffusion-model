@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Image Tokenizer, 画像トークナイザ, VAE, Visual Tokenizer, Autoencoder, diffusability, 拡散可能性, 高圧縮VAE, High-Compression VAE]
-tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models, pixel-space-diffusion, video-diffusion]
+tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models, pixel-space-diffusion, video-diffusion, efficient-attention]
 related:
   - "[[latent-diffusion]]"
   - "[[diffusion-model-architecture]]"
@@ -13,6 +13,7 @@ related:
   - "[[large-scale-training-infrastructure]]"
   - "[[unified-multimodal-generation]]"
   - "[[position-embedding]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-qwen-image-2]]"
@@ -24,7 +25,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Image Tokenizer（画像トークナイザ / 潜在空間を作るオートエンコーダ）
@@ -146,6 +148,18 @@ Wan-VAE は 127M と極小ながら PSNR と速度の両方で競争力を持ち
 直感的には、パッチ化は「学習された圧縮」ではなく**単なる並べ替えと線形射影**なので、隣接パッチ間の冗長性を VAE ほど賢く畳めない。VAE 側で 16 倍まで学習して落とす方が、情報の落とし方が良いという理屈は立つ。Qwen-Image-VAE-2.0（[[summaries/2026-qwen-image-vae-2]]）が「$f8 \to f16$ へ圧縮を強め、失った容量はチャネル $C$ で補償する」と論じたのと同じ方向で、**別の角度からの独立した支持**になっている（あちらは 128 チャネル、こちらは 32 チャネル）。
 
 ただし **HunyuanImage 3.0 はこの主張のアブレーションを示さない**。「$f16$ 単体の方が優れた品質をもたらすことを実証する」と書きながら、$f8$＋パッチ化との比較実験は本文に存在しない。
+
+**その欠けているアブレーションは、実は 2 年前に存在していた。** Sana（[[summaries/2024-sana]]）は 1024px で**最終的なトークン数を揃えたまま**、圧縮をどこで払うかだけを変えた 3 条件を比較している。
+
+| 構成 | 空間圧縮（VAE） | 潜在チャネル | パッチ化 | 実効圧縮 | 結果 |
+| --- | --- | --- | --- | --- | --- |
+| F8C16P4 | 8 | 16 | 4×4 | 32 | 収束が最も遅い |
+| F16C32P2 | 16 | 32 | 2×2 | 32 | 中間 |
+| **F32C32P1** | **32** | **32** | **1×1** | 32 | **収束が最速・FID 最良** |
+
+**トークン数が同じでも、圧縮を深いオートエンコーダに任せた方が良い**。パッチ化は学習された線形射影 1 枚にすぎず、隣接パッチ間の冗長性を VAE ほど賢く畳めない——本節の直感的な理屈に、**同一トークン数という統制条件下での直接的な裏づけ**がついたことになる。HunyuanImage 3.0 の $f16$ 単体という主張は、この方向の連続線上にある。
+
+同時に Sana は**チャネル数の上限**も測っている。$C=32$ が最良で、$C=64$ では**再構成品質は改善するのに生成の FID は悪化する**。本ページ冒頭の三者間トレードオフ——再構成忠実度と拡散可能性（diffusability）は同じ方向を向かない——が、チャネル軸でも成立していることの実証である。Qwen-Image-VAE-2.0 が $C=128$ まで押し上げられたのは、DINOv2 中間層への意味的整合という**別の装置で拡散可能性を確保したから**であって、チャネルを増やせば良いという単純な話ではない。
 
 もう 1 つ、統一マルチモーダルモデル（[[unified-multimodal-generation]]）ではトークナイザへの要求が変わる。**VAE 特徴が生成にも理解にも使われる**からで、HunyuanImage 3.0 は条件画像について VAE の潜在と ViT の特徴を**両方連結する**二重エンコーダを採る。「理解には意味的な特徴、生成には再構成的な特徴」という分業（Qwen-Image の二重符号化・[[instruction-based-image-editing]]）を、**分けずに両方渡す**方向へ倒した設計である。
 

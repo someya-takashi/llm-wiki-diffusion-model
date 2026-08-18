@@ -12,6 +12,7 @@ related:
   - "[[reinforcement-learning-for-diffusion]]"
   - "[[diffusion-distillation]]"
   - "[[inference-caching]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2021-ddim]]"
   - "[[summaries/2021-score-sde]]"
@@ -22,7 +23,8 @@ summaries:
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-hunyuanimage-3]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Diffusion Sampling（拡散モデルのサンプリング）
@@ -96,6 +98,23 @@ DDIM の「サンプリング＝ODE 数値積分」という視点を体系化�
 
 EDM の Heun サンプラーは後続の標準になり、**SD3**（[[summaries/2024-sd3]]）や **Stochastic Interpolants**（[[summaries/2024-stochastic-interpolants]]）が採用する。なお、より少ステップ・高精度なソルバー（DPM-Solver 等の高次法）や、サンプリング過程を蒸留する consistency models へと発展する流れもある（これらは未取り込み）。
 
+## 代表手法：Flow-DPM-Solver と「$t \approx T$ で何を予測させるか」（Sana, 2024）
+
+[[flow-matching]]（rectified flow）が主流になると、サンプラーも flow の定式化に合わせて移植する必要が生じた。**Sana**（[[summaries/2024-sana]]）の **Flow-DPM-Solver** は DPM-Solver++ の flow 版だが、その導出過程に**サンプラー設計の一般的な教訓**が含まれているので、ここに記録しておく価値がある。
+
+論点は「**モデルに何を予測させて積分するか**」である。拡散モデルの出力はノイズ $\epsilon_\theta$・データ $x_\theta$・速度 $v_\theta$ のどれにも変換できるが、**数値積分の誤差はどれを積分するかで変わる**。
+
+Sana の付録は Tweedie の公式（ノイズを加えた観測から元データの事後平均を、対数密度の勾配で表す関係式）を使ってこう論じる。$t \approx T$（ほぼ純ノイズ）では $x_0$ と $x_t$ がほぼ独立になり $q(x_0 \mid x_t) \approx q(x_0)$ となるので、
+
+- **ノイズ予測モデルの最適解は $x_t$ の線形関数に退化する**：$\epsilon_\theta \approx (x_t - \alpha_t\mathbb{E}[x_0])/\sigma_t$
+- **データ予測モデルの最適解はほぼ定数になる**：$x_\theta \approx \mathbb{E}_{q_0}[x_0]$
+
+**定数を積分する方が、傾きを持つ線形関数を積分するより離散化誤差が小さい**。しかも $t=T$ で犯した誤差は以降の全ステップに伝播するので、この一点の精度が全体を決める。これが「$t \approx T$ 近傍でノイズ予測が不安定になり、CFG 付きサンプリングで元の DPM-Solver が苦戦する」ことの説明であり、DPM-Solver++ がデータ予測へ切り替えた理由でもある。
+
+Sana は速度予測モデルの出力を $x_\theta = x_t - \tilde{\sigma}_t v_\theta$ でデータ予測に変換してからソルバーに渡し、あわせてタイムステップのシフト係数 $s$ を $\tilde{\sigma}_t = s\sigma_t / (1 + (s-1)\sigma_t)$ で組み込む（[[noise-schedule]] のシフトと同じ式）。結果、**Flow-Euler が 30–50 ステップ必要なところを 10–20 ステップで収束**させる。
+
+本ページの他の代表手法と同じく**学習不要**で、既存の flow ベースのモデルに差し替えるだけで効く。EDM の Heun が「2 次法でカーブを先読みする」ことで少ステップ化したのに対し、こちらは「**予測対象を選び直す**」ことで同じ目的を達している——サンプラーの設計軸が、刻み方と次数だけでないことを示す例である。
+
 ## 別系統の高速化：蒸留（[[diffusion-distillation]]）
 
 本ページの手法はすべて「**学習済みモデルはそのままに、たどり方（数値解法）を賢くする**」ものである。歩幅を大きくし、カーブを先読みし、刻み方を最適化する——しかし同じ道を歩く以上、歩幅を伸ばしすぎればいずれ道を外れ、10 ステップ前後が実用上の限界になりやすい。
@@ -130,6 +149,7 @@ EDM の Heun サンプラーは後続の標準になり、**SD3**（[[summaries/
 ## 参考文献（summaries）
 
 - [[summaries/2025-wan]] — Wan（Diffusion Cache。注意と CFG のステップ間類似性を突いて 1.62×。ソルバー改良・蒸留と直交する第 3 の軸）
+- [[summaries/2024-sana]] — Sana（Flow-DPM-Solver。DPM-Solver++ を rectified flow へ移植。$t \approx T$ でノイズ予測が線形に退化しデータ予測が定数化するという Tweedie に基づく分析。10–20 ステップで収束）
 
 - [[summaries/2021-ddim]] — Denoising Diffusion Implicit Models（決定論サンプラー DDIM、Song, Meng, Ermon, ICLR 2021）
 - [[summaries/2021-score-sde]] — Score-Based Generative Modeling through SDEs（predictor-corrector・逆拡散・確率フロー ODE サンプラー）

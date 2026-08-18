@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Large-Scale Training Infrastructure, 大規模学習インフラ, 分散学習, Distributed Training, Context Parallelism, Ring Attention, Ulysses, FSDP, Activation Offloading, 量子化, Quantization, FP8, 8-bit FlashAttention]
-tags: [large-scale-training-infrastructure, video-diffusion, diffusion-model-architecture, inference-caching, generative-models]
+tags: [large-scale-training-infrastructure, video-diffusion, diffusion-model-architecture, inference-caching, generative-models, efficient-attention]
 related:
   - "[[video-diffusion]]"
   - "[[diffusion-model-architecture]]"
@@ -9,10 +9,12 @@ related:
   - "[[image-tokenizer]]"
   - "[[diffusion-distillation]]"
   - "[[data-curation]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Large-Scale Training Infrastructure（大規模な学習・推論インフラ）
@@ -102,6 +104,17 @@ Wan は 3 つを掛け算する。
 
 3 つ合わせて実用域に入る。それでも Wan 14B は**最適化なしで単一ハイエンド GPU に 1 本 30 分**であり、著者らは推論コストを主要な未解決課題として明記している。
 
+### 小さいモデルでは別の場所がボトルネックになる
+
+上の 3 つはいずれも 14B の動画モデルという「重い」設定を前提にしている。**Sana**（[[summaries/2024-sana]]）のように 0.6B で 1 ステップが軽いモデルでは、支配的なコストが移り、**カーネル起動のオーバーヘッドとメモリ帯域**が効いてくる。
+
+- **Triton によるカーネル融合**：ReLU の活性化を QKV 射影の末尾に、精度変換とパディングを KV／QKV の行列積の先頭に、除算を末尾に融合する。逆伝播でも同様に、除算を出力射影に、精度変換と ReLU を行列積に融合する。**学習 1.37×・推論 1.65×**。品質への影響はゼロ（原典 表12 で FID/CLIP が変わらないことを確認している）。
+- **W8A8 量子化**：重み 8 ビット・活性化 8 ビットで**ピークメモリを削る**ことを主目的とする。Wan の FP8 GEMM が「スループットを上げる」ために入れられたのと動機が違う点に注意——エッジ展開では**載るかどうか**が先に来る。CAME-8bit オプティマイザと組み合わせて、**16GB のラップトップ GPU に展開**している。
+
+対比として整理すると、**大規模学習では「1 サンプルが GPU に載らない」ことが制約で分散が主役**（上の 2D Context Parallel）だが、**エッジ推論では「モデルとアクティベーションが載らない」ことが制約で量子化が主役**になる。同じ量子化という道具でも、大規模側ではスループット、エッジ側ではメモリという別の目的で使われている。
+
+なお Sana の線形注意は、本ページの守備範囲であるインフラ側の工夫ではなく**アーキテクチャ側で注意のコストを消す**アプローチにあたる（下の「限界と注意点」で述べる「アルゴリズムとインフラの境界が動く」の典型例）。詳細は [[efficient-attention]] を参照。
+
 **クラスタの信頼性**についても短く触れられている。数千 GPU 規模の学習では**ノード故障が日常的に起きる**ので、起動時のハードウェア検査、故障ノードの隔離と修復、タスクの自動再起動と再開が前提設備になる。研究の議論には現れにくいが、大規模学習が成立する条件の一部である。
 
 ## 限界と注意点
@@ -123,5 +136,6 @@ Wan は 3 つを掛け算する。
 ## 参考文献（summaries）
 
 - [[summaries/2025-wan]] — Wan（2D Context Parallel＝外 Ring・内 Ulysses、活性化オフロード優先、FP8 GEMM と 8-bit FlashAttention。系列長 100 万で注意が学習時間の 95%、活性化 8 TB）
+- [[summaries/2024-sana]] — Sana（Triton カーネル融合で学習 1.37×・推論 1.65×、W8A8 ＋ CAME-8bit で 16GB ラップトップ GPU に展開。小規模側でボトルネックがどう移るかの対照例）
 
 > 未取り込みの主要原典：Megatron-LM（Shoeybi ら 2019, TP/SP）、ZeRO / FSDP（Rajbhandari ら 2020）、Ring Attention（Liu ら 2023）、DeepSpeed-Ulysses（Jacobs ら 2023）、USP（Fang & Zhao 2024）、FlashAttention-3（Shah ら 2024）、SageAttention（Zhang ら 2024）。いずれも LLM 側で確立した基礎で、今後の ingest で本ページへ追記する。

@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Model Architecture, 拡散モデルのアーキテクチャ, ADM, AdaGN, U-Net for diffusion, DiT, Diffusion Transformer, adaLN, adaLN-Zero, patchify]
-tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion, video-diffusion, unified-multimodal-generation, position-embedding]
+tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion, video-diffusion, unified-multimodal-generation, position-embedding, efficient-attention]
 related:
   - "[[denoising-diffusion]]"
   - "[[latent-diffusion]]"
@@ -16,6 +16,7 @@ related:
   - "[[inference-caching]]"
   - "[[unified-multimodal-generation]]"
   - "[[position-embedding]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2020-ddpm]]"
@@ -32,7 +33,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Diffusion Model Architecture（拡散モデルのアーキテクチャ）
@@ -111,6 +113,16 @@ DiT はクラス条件付き生成のために設計され、テキストのよ�
 - **スケーリング**：深さ $d$ で hidden=$64d$・ヘッド数=$d$ とパラメータ化し 8B までスケール。検証損失が人間評価・ベンチマークと強く相関し飽和しない。
 
 MM-DiT は DiT を text-to-image のマルチモーダル性に合わせて拡張したもので、本 wiki のアーキテクチャ系譜「改良 U-Net（ADM）→ SDXL（U-Net スケール）→ DiT（Transformer 化）→ MM-DiT（マルチモーダル化）」の主要な地点にあたる。詳細は [[summaries/2024-sd3]]。
+
+### Sana の Linear DiT（NVIDIA / MIT 2024）——注意そのものを安くする
+
+ここまでの改良（MM-DiT・二重ストリーム・MoE）は、**注意演算そのものはフル注意のまま**、その周りの構成を組み替えるものだった。**Sana**（[[summaries/2024-sana]]）はその前提を外し、**DiT 内のすべての通常の注意を線形注意に置き換える**。
+
+- **ReLU 線形注意**：softmax を ReLU カーネルに置換し、行列積の結合則で $\sum_j \text{ReLU}(K_j)^\top V_j$（クエリに依存しない $d \times d$ 行列）を先に計算する。計算量は $O(N^2 d) \to O(N d^2)$ になり、系列長 $N$ に**線形**。
+- **Mix-FFN**：線形注意に置き換えるだけでは FID 18.7 → 21.5 と明確に劣化する。Sana は FFN の中に **3×3 depthwise convolution**を挟んだ Mix-FFN でこれを補償し、18.9 まで戻す。softmax が持っていた「少数トークンへの鋭い集中」という局所性を、畳み込みの帰納バイアスで代替した形である。
+- **NoPE**：Mix-FFN の畳み込みが空間的な隣接関係を暗黙に伝えるため、**位置符号化を削除できる**（[[position-embedding]]）。ただし 2K/4K の微調整では PE を再導入している。
+
+本ページの他の改良と決定的に異なるのは、**得られる効果が解像度に強く依存する**ことである。512px での対 FLUX-dev 高速化は 44.5× だが、4096px では **104×** に伸びる。$O(N^2)$ と $O(Nd^2)$ の差は $N \gg d$ でしか現れないので当然だが、裏返せば **1024px 以下が主戦場のモデルには動機が弱い**。実際、2025–2026 の大規模モデル（FLUX.1・Qwen-Image・HunyuanImage 3.0・Z-Image）はいずれもフル注意を保ち、効率は FlashAttention と FP8、そしてトークナイザ側の圧縮（[[image-tokenizer]]）で稼いでいる。注意の計算量に対する各種の答えは [[efficient-attention]] に集約した。
 
 ### Qwen-Image（Qwen Team 2025）——条件エンコーダの置換と MSRoPE
 
@@ -219,6 +231,7 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[denoising-diffusion]]：アーキテクチャはノイズ予測 $\epsilon_\theta$ の中身。DDPM の U-Net がこの系譜の起点。
 - [[classifier-guidance]]：ADM は guidance と同時にこのアーキテクチャ改良を提案。両者あわせて拡散が GAN を超えた。分類器自身も「U-Net のダウンサンプリング部＋8×8 アテンションプール」というこのアーキテクチャの部分を流用する。
 - [[latent-diffusion]]：Stable Diffusion の U-Net も ADM 系の改良 U-Net を踏襲し、cross-attention でテキスト条件を注入する。拡散をピクセル空間から潜在空間へ移すことで、同じアーキテクチャを高解像度に適用可能にした。その後継 SDXL は同じ改良 U-Net を 3× にスケールし transformer block 配分を最適化（[[summaries/2023-sdxl]]）、DiT は同じ VAE 潜在空間でバックボーンだけを Transformer 化したもの。U-Net スケール（SDXL）と Transformer 化（DiT）が 2023 年の 2 つの選択肢。
+- [[efficient-attention]]：DiT が引き受けた「計算量が系列長に二次」という代償への応答をまとめたページ。線形注意・疎注意・FlashAttention・トークン数削減の 4 方向がある。
 - [[diffusion-sampling]]：アーキテクチャ（モデルの中身）とサンプラー（生成手続き）は直交する設計軸。同じ ADM/DiT をどのサンプラー（DDPM/DDIM）で回すかは別問題。
 - [[classifier-free-guidance]]：DiT は CFG で高品質化し（cfg=1.5 で SOTA）、部分チャネル CFG の知見も示した。アーキテクチャと guidance は独立した改善軸。
 - [[low-rank-adaptation]]：LoRA はバックボーン本体を変えず、注意・線形層の重みに低ランク更新 $\Delta W=BA$ を後付けで施す適応手法。アーキテクチャ設計とは直交する。
@@ -241,4 +254,5 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2026-ernie-image]] — ERNIE-Image（8B の単一ストリーム DiT。FLUX.2 VAE と 3B の Ministral-3 を流用。ただし層数・次元等の構成は非公開）
 - [[summaries/2025-z-image]] — Z-Image（S3-DiT＝完全な単一ストリーム。3D Unified RoPE・Sandwich-Norm・低ランク条件射影で 6B に圧縮）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
+- [[summaries/2024-sana]] — Sana（Linear DiT＝ReLU 線形注意で $O(N)$ 化、Mix-FFN の 3×3 depthwise conv で補償、NoPE、Triton カーネル融合）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

@@ -22,10 +22,11 @@ related:
   - "[[prompt-enhancement]]"
   - "[[position-embedding]]"
   - "[[unified-multimodal-generation]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-hunyuanimage-3]]"
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Video Diffusion（動画拡散 / 動画生成）
@@ -191,5 +192,7 @@ FVD（Fréchet Video Distance）や FID は人間の知覚と乖離する、と�
 ## 参考文献（summaries）
 
 - [[summaries/2025-wan]] — Wan（3D causal VAE・cross-attention DiT・2D Context Parallel・Diffusion Cache・Streamer・7 種の下流応用。VBench 86.22% で Sora 超え、1.3B が 8.19 GB VRAM）
+
+> 系列長 100 万トークンという規模で注意が学習時間の 95% を占める以上、注意の計算量そのものへの対処は動画生成の中心的な論点である。線形注意・疎注意・FlashAttention の比較は [[efficient-attention]] を参照。
 
 > 未取り込みの主要原典：VDM（Ho ら 2022, 3D U-Net）、Sora（OpenAI 2024）、HunyuanVideo・Mochi・CogVideoX（オープンソース同世代）、VBench（Huang ら 2024）、VACE（Jiang ら 2025, Wan の統一編集の原典）、LCM / VideoLCM。今後の ingest で本ページへ追記する。

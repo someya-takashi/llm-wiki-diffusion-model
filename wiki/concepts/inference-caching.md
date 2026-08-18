@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Inference Caching, 推論キャッシュ, Diffusion Cache, 拡散キャッシュ, Attention Cache, CFG Cache, Feature Caching, Step Caching]
-tags: [inference-caching, diffusion-sampling, diffusion-distillation, classifier-free-guidance, video-diffusion, generative-models]
+tags: [inference-caching, diffusion-sampling, diffusion-distillation, classifier-free-guidance, video-diffusion, generative-models, efficient-attention]
 related:
   - "[[diffusion-sampling]]"
   - "[[diffusion-distillation]]"
@@ -9,9 +9,10 @@ related:
   - "[[video-diffusion]]"
   - "[[diffusion-model-architecture]]"
   - "[[large-scale-training-infrastructure]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2025-wan]]"
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Inference Caching（推論キャッシュ / Diffusion Cache）
@@ -84,5 +85,7 @@ Wan 14B の text-to-video で **1.62×** の高速化。同じ推論最適化の
 ## 参考文献（summaries）
 
 - [[summaries/2025-wan]] — Wan（注意キャッシュと CFG キャッシュで 1.62×。残差補償を併用、キャッシュ間隔は検証集合で選択）
+
+> 隣接する軸として、キャッシュではなく**注意演算そのものを安くする**方向がある（線形注意・疎注意・FlashAttention）。詳細は [[efficient-attention]] を参照。両者は併用でき、Wan は 8-bit FlashAttention とキャッシュを同時に積んでいる。
 
 > 未取り込みの主要原典：DiTFastAttn（Yuan ら 2024）、FasterCache（Lv ら 2024）、DeepCache（Ma ら 2024）。いずれもステップ間の冗長性を突く同系統の研究で、今後の ingest で本ページへ追記する。

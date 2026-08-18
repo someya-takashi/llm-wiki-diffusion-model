@@ -356,3 +356,20 @@
 - `methods/` `datasets/` を廃止し、landmark 手法・ベンチマークは概念ページ内に内包する方針に
 - ingest: appendix をデフォルトで翻訳対象に含めるよう変更（除外指示がある場合のみ外す）
 - 作成: `raw/{papers,articles,images,assets}/`, `wiki/{summaries,translations,concepts,questions}/`, `wiki/{index,log,overview}.md`
+
+## [2026-08-19] ingest | Sana: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformers
+
+- 取り込み: `raw/papers/Sana_ Efficient High-Resolution Image Synthesis with Linear Diffusion Transformers.md`（arXiv:2410.10629・NVIDIA / MIT / 清華大学・ICLR 2025）
+- 作成: [[translations/2024-sana]], [[summaries/2024-sana]], [[concepts/efficient-attention]]
+- 更新: [[concepts/image-tokenizer]], [[concepts/position-embedding]], [[concepts/diffusion-model-architecture]], [[concepts/diffusion-sampling]], [[concepts/noise-schedule]], [[concepts/flow-matching]], [[concepts/data-curation]], [[concepts/prompt-enhancement]], [[concepts/text-to-image-generation]], [[concepts/large-scale-training-infrastructure]], [[concepts/latent-diffusion]], [[concepts/inference-caching]], [[concepts/video-diffusion]], [[overview]], [[index]]
+- 翻訳範囲: 本文 §1–7 ＋ Appendix A/B/C の全訳（ユーザー選択：付録も全訳＝スキーマ既定）。表 1–14 を markdown 化。References・謝辞は除外。
+- 画像メモ: **ar5iv 由来の画像 16 枚がすべてプレースホルダ**（325×400 のグレースケール、MD5 `ded85833de1226c2b391743296455b30`）だったため、`arxiv.org/html/2410.10629v3` から全 16 枚を再取得し `raw/assets/2024-sana/fig1.png`〜`fig16.png` に保存（図番号と 1:1）。取得失敗ゼロ。
+- 原典の欠落と回収: ar5iv 版は **§6 Related Work と 表 2 / 表 3 / 表 4** を落としていたため arXiv HTML から回収。また ar5iv が **図 6 の画像に 表 2 のキャプションを誤って結合**していたので分離した。
+- 新概念の設置理由: [[concepts/efficient-attention]] を新設（ユーザー選択）。Wan の 8-bit FlashAttention（[[concepts/large-scale-training-infrastructure]]）と Sana の線形注意は「注意の $O(N^2)$ への応答」という同じ問題への別解だが、これまで受け皿がなかった。近似・疎化・実装最適化・トークン数削減の 4 方向で整理し、[[concepts/inference-caching]]（回数を減らす）と [[concepts/image-tokenizer]]（$N$ を減らす）への橋を張った。
+- 既存ページへの補完で特筆すべき点:
+  - [[concepts/image-tokenizer]] が抱えていた宿題——HunyuanImage 3.0 の「$f16$ 単体 > $f8$＋パッチ化」という**アブレーションなしの主張**——に、Sana の表 1（F8C16P4 / F16C32P2 / F32C32P1 を同一トークン数で比較）が 2 年前から答えを出していた。あわせて $C=64$ で再構成は改善するのに生成 FID は悪化する、という三者間トレードオフのチャネル軸での実証も追記。
+  - [[concepts/position-embedding]] に **(6) NoPE** を追加。Mix-FFN の 3×3 depthwise conv が局所性を供給するため PE を削れるが、**2K/4K の微調整では PE を再導入する**（付録 B）という限界も明記した。本文だけ読むと誤解しやすい箇所。
+  - [[concepts/diffusion-sampling]] に Flow-DPM-Solver と、Tweedie の公式に基づく「$t\approx T$ でノイズ予測は $x_t$ の線形関数に退化し、データ予測は定数に近づく」という分析を追加。サンプラー設計の軸が刻み方・次数だけでないことの記録。
+  - [[concepts/prompt-enhancement]] に **6 つ目の設計（CHI）** を追加。テキストを書き換えず、LLM テキストエンコーダに指示文を前置して**埋め込みの質だけ**を変える。既存 5 通りの「限界と注意点」の多く（意図の書き換え・評価が PE 込みか曖昧・実効パラメータ数の不透明さ）が構造的に発生しない代わり、能動的な推論はできない。
+  - [[concepts/flow-matching]] に、SD3 の 61 定式化比較を補う**同一条件（120K ステップ）での DDPM 対 flow matching の直接比較**（FID 19.5→16.9）を追記。
+- メモ: 本 wiki 直近 11 件のうち 10 件がテックレポートだったのに対し、本件は査読を経た学術論文（ICLR 2025）で、アブレーションの統制が明確に良い。既存ページの「アブレーションが示されない」という批判の多くに、後から答えを与える形になった。一方で**線形注意そのものは主流にならなかった**（2025–2026 の大規模モデルはフル注意＋FlashAttention＋トークナイザ圧縮）ため、Sana の遺産は深圧縮 AE と decoder-only LLM テキストエンコーダの 2 点にあると要約ページで評価した。

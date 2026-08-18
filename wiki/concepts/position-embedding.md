@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Position Embedding, 位置埋め込み, 位置符号化, Positional Encoding, RoPE, Rotary Position Embedding, MSRoPE, 3D RoPE, Generalized 2D RoPE, 仮想タイムステップ, Virtual Timestep]
-tags: [position-embedding, diffusion-model-architecture, unified-multimodal-generation, video-diffusion, instruction-based-image-editing, generative-models]
+tags: [position-embedding, diffusion-model-architecture, unified-multimodal-generation, video-diffusion, instruction-based-image-editing, generative-models, efficient-attention]
 related:
   - "[[diffusion-model-architecture]]"
   - "[[unified-multimodal-generation]]"
@@ -10,13 +10,15 @@ related:
   - "[[visual-text-rendering]]"
   - "[[image-tokenizer]]"
   - "[[pixel-space-diffusion]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2025-wan]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Position Embedding（位置埋め込み / 位置符号化）
@@ -98,6 +100,16 @@ $$[\cos(x\theta_{0}),\cos(y\theta_{1}),\dots,\sin(x\theta_{0}),\sin(y\theta_{1})
 
 面白いのは、**画像モデルが編集のために「仮想的な」時間軸を発明した**（FLUX.1 Kontext・Z-Image）のに対し、**動画モデルは実在の時間軸を持っている**ことである。多画像の区別という問題は、動画から見れば「フレームを区別する」という既に解かれた問題だった——Qwen-Image-2.0 の MSRoPE に追加された **frame 次元**は、まさにこの認識の移入にあたる。
 
+### (6) そもそも位置符号化を置かない — NoPE（Sana）
+
+**Sana**（[[summaries/2024-sana]]）は、上記の 5 つとは次元の違う答えを出す——**位置符号化を完全に取り除く**（NoPE, No Positional Encoding）。
+
+これが成立する理由は、Sana の FFN が **Mix-FFN**——3×3 depthwise convolution を内蔵した FFN（[[efficient-attention]]）——だからである。畳み込みは定義上**隣接するトークンだけを混ぜる**ので、「どのトークンが空間的に隣か」という情報が層を通るたびに暗黙に伝わる。位置を明示的な符号として与えなくても、ネットワークが位置関係を再構成できてしまう。原典は PE のありなしで性能差がないことを確認したうえで、単純さのために削っている。
+
+この設計は本ページの他の 5 つと**同じ問題を解いていない**点に注意が要る。MSRoPE も 3D Unified RoPE も「テキストと画像を同じ座標系にどう置くか」「複数画像をどう区別するか」を扱うが、Sana は単一画像の text-to-image しか扱わないので、そもそもこれらの問題が発生しない。**NoPE は「位置符号化は不要」という一般的な主張ではなく、「問題が単純なら畳み込みで代替できる」という限定的な報告**である。
+
+そして原典自身が限界を明示している——**2K・4K への微調整では位置符号化を再導入する**（付録 B）。4K では PixArt-$\Sigma$ の PE 補間戦略まで持ち出している。畳み込みが与える局所性は、学習時と同程度の解像度では十分でも、**解像度の外挿には足りない**。これは下の「限界と未解決問題」で挙げる**解像度の外挿**という論点に対する、数少ない直接の観測データでもある。
+
 ## 比較
 
 | 手法 | テキストの置き方 | 多画像の区別 | 設計基準 |
@@ -107,6 +119,7 @@ $$[\cos(x\theta_{0}),\cos(y\theta_{1}),\dots,\sin(x\theta_{0}),\sin(y\theta_{1})
 | **3D Unified RoPE**（Z-Image） | **時間次元に沿って増分** | 時間軸で単位区間ずらす＋時間条件値も変える | テキストと画像を同一座標系に |
 | **Generalized 2D RoPE**（HunyuanImage 3.0） | 2D の**対角線上** | （記述なし） | **1D RoPE への後方互換＝LLM を壊さない** |
 | **3D RoPE**（Wan・動画） | cross-attention で別経路 | 時間軸が実在のフレーム | 時空間の依存を素直に表現 |
+| **NoPE**（Sana） | （単一画像のみ・PE なし） | 対象外 | Mix-FFN の 3×3 畳み込みが局所性を暗黙に供給。ただし 2K/4K では PE を再導入 |
 
 **共通する発想**が 1 つ見える——**「余分な次元を用意して、そこで区別する」**。FLUX.1 Kontext は時間軸を、Z-Image も時間軸を、Qwen-Image-2.0 は frame 次元を使う。空間座標 $(h,w)$ は画像の中身を表すのに使い切っているので、**画像どうしの区別には別の軸が要る**という構造は共通している。
 
@@ -115,7 +128,7 @@ $$[\cos(x\theta_{0}),\cos(y\theta_{1}),\dots,\sin(x\theta_{0}),\sin(y\theta_{1})
 ## 限界と未解決問題
 
 - **アブレーションが乏しい**。どのレポートも自分の方式を説明するが、**他の方式との直接比較はまず示されない**。MSRoPE と Generalized 2D RoPE のどちらが良いのかを判断する材料が存在しない。
-- **解像度の外挿**。学習時より大きい画像を生成すると位置座標が学習範囲外に出る。RoPE は外挿に比較的強いとされるが、画像でどこまで効くかは体系的に検証されていない。FLUX.1 の**動的時間シフト**（解像度に応じてノイズ水準をスケールする・[[noise-schedule]]）は関連する対処だが、位置符号化そのものへの対処ではない。
+- **解像度の外挿**。学習時より大きい画像を生成すると位置座標が学習範囲外に出る。RoPE は外挿に比較的強いとされるが、画像でどこまで効くかは体系的に検証されていない。**Sana が 1K では NoPE で足りるのに 2K/4K では PE を再導入せざるを得なかった**ことは、位置情報の必要量が解像度に依存することを示す一例である。FLUX.1 の**動的時間シフト**（解像度に応じてノイズ水準をスケールする・[[noise-schedule]]）は関連する対処だが、位置符号化そのものへの対処ではない。
 - **系列長との相互作用**。動画では系列長が 100 万トークンに達する（[[video-diffusion]]）。この規模で位置符号化の設計がどう効くかは、[[large-scale-training-infrastructure]] の制約と絡んで未整理である。
 - **多画像の上限**。仮想タイムステップも frame 次元も、原理的には任意個の画像を扱えるはずだが、学習時に見た数を超えて汎化するかは検証されていない。
 - **アスペクト比の扱い**。HunyuanImage 3.0 の自動解像度（`<img_ratio_*>` を語彙に持つ）は形状を予測してから 2D RoPE を組むが、**任意のアスペクト比に対する位置座標の正規化**をどうすべきかは各実装で異なり、整理されていない。

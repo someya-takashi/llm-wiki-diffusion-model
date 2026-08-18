@@ -41,6 +41,7 @@
 - [[summaries/2025-wan]] — Wan（Wan Team / Alibaba 2025・arXiv:2503.20314）。本 wiki 初の**動画生成**。3D causal VAE（GroupNorm→RMSNorm＋特徴キャッシュ）、cross-attention 型 DiT、2D Context Parallel、Diffusion Cache、Streamer による無限長生成、I2V/VACE/personalization/カメラ制御/V2A の 7 応用。VBench 86.22% で Sora 超え、1.3B は 8.19GB VRAM
 - [[summaries/2025-hidream-i1]] — HiDream-I1（HiDream.ai 2025・arXiv:2505.22705）。17B オープンソース T2I。dual/single stream の FFN を疎な MoE に置換、Long-CLIP×2＋T5-XXL＋Llama 3.1 中間層の 4 系統ハイブリッド符号化、DMD＋敵対的損失の蒸留、HiDream-E1（潜在マップ横並び連結の編集）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（HiDream.ai 2026・arXiv:2605.11061）。VAE も外部テキストエンコーダも捨て、生ピクセル・テキスト・条件を共有トークン空間へ。decoder-only LLM バックボーン＋ハイブリッド注意、8B で GenEval 0.90・LongText-Bench 0.979/0.978、200B+ へスケール
+- [[summaries/2024-sana]] — Sana（NVIDIA / MIT / 清華大学 2024・arXiv:2410.10629・ICLR 2025）。0.6B で FLUX-12B に匹敵。**深圧縮 AE（F32C32P1）・ReLU 線形注意＋Mix-FFN・Gemma-2 テキストエンコーダ＋CHI・Flow-DPM-Solver** の 4 本柱で、4096px で 104× のスループット、16GB ラップトップ GPU でサブ秒生成。NoPE、マルチキャプション CLIP サンプラ、W8A8＋Triton 融合
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（Black Forest Labs 2025・arXiv:2506.15742）。コンテキスト画像をトークン列に連結するだけで T2I と編集を単一 rectified flow に統一。仮想タイムステップ・LADD で 1024² 3〜5 秒・KontextBench・bakeyness 批判
 
 ### article / 講義ノート
@@ -81,6 +82,7 @@
 - [[translations/2025-wan]] — Wan 全文翻訳（本文§1–6、表 1–8 markdown 化、図 29 枚、図 4・11・13・14 は HTML 側で画像が生成されず訳注で明示、References/§7 貢献者一覧を除外）
 - [[translations/2025-hidream-i1]] — HiDream-I1 全文翻訳（本文§1–9、表 1–4 markdown 化、図 5 枚、References/Appendix A 貢献者一覧を除外）
 - [[translations/2026-hidream-o1-image]] — HiDream-O1-Image 全文翻訳（本文§1–9、表 1–8 markdown 化、図 10 枚、References/Appendix A 貢献者一覧を除外）
+- [[translations/2024-sana]] — Sana 全文翻訳（本文§1–7＋Appendix A/B/C、表 1–14 markdown 化、図 16 枚、ar5iv の画像が全 16 枚プレースホルダだったため arXiv から回収、ar5iv が落とした §6 と表 2/3/4 も arXiv から回収、References/謝辞を除外）
 - [[translations/2025-flux-kontext]] — FLUX.1 Kontext 全文翻訳（本文§1–5＋Appendix A,B、図 12 枚、ar5iv 変換失敗の 3 図は訳注で明示、References/謝辞除外）
 
 ## Concepts
@@ -112,12 +114,13 @@
 - [[image-tokenizer]] — 画像トークナイザ／潜在空間を作るオートエンコーダ（圧縮率 f・チャネル C・拡散可能性の三者間トレードオフ、GSC、意味的整合、OmniDoc-TokenBench）
 - [[diffusion-distillation]] — 蒸留による少ステップ生成（DMD・consistency・progressive・ADD/LADD。ソルバー改良と違い「モデル自体」を作り替える）
 - [[unified-multimodal-generation]] — 統一マルチモーダル生成 / ネイティブ・マルチモーダルモデル（理解と生成を単一ネットワークで。全離散 AR／AR＋拡散ハイブリッド／単一トークン空間の 3 分類、Generalized Causal Attention）
-- [[position-embedding]] — 位置符号化（RoPE とその 2D/3D 拡張。MSRoPE・仮想タイムステップ・3D Unified RoPE・Generalized 2D RoPE の対比）
+- [[position-embedding]] — 位置符号化（RoPE とその 2D/3D 拡張。MSRoPE・仮想タイムステップ・3D Unified RoPE・Generalized 2D RoPE・NoPE の対比）
 - [[aesthetic-scoring]] — 美的スコアリング（データ選別と RLHF 報酬の両方を規定する信号。Likert のスコアドリフト・Elo・スイス式トーナメント、既存予測器のバイアス、ERIA-1K）
 - [[data-curation]] — データキュレーション / データ基盤（重複除去・品質フィルタ・再キャプション・世界知識グラフによる概念均衡・能動的精錬・編集ペアの構築）
 - [[prompt-enhancement]] — プロンプト拡張 / 書き換え（学習キャプションと実ユーザー入力の分布のずれ、推論連鎖、凍結するか RL するかの 4 通りの設計）
 - [[video-diffusion]] — 動画拡散 / 動画生成（時空間 VAE と時間的因果性、系列長爆発、full spatio-temporal attention、マスクによるタスク統一、Streamer の無限長生成、VBench）
 - [[inference-caching]] — 推論キャッシュ / Diffusion Cache（ステップ間の注意・CFG の類似性を突く。学習不要でサンプラー改良・蒸留と直交する第 3 の軸）
+- [[efficient-attention]] — 効率的注意（$O(N^2)$ への近似・疎化・実装最適化・トークン削減の 4 方向。ReLU 線形注意と Mix-FFN、FlashAttention との対比、解像度依存の効き方）
 - [[large-scale-training-infrastructure]] — 大規模な学習・推論インフラ（2D Context Parallel＝Ring×Ulysses、活性化オフロード、FP8 GEMM、8-bit FlashAttention、FSDP）
 - [[pixel-space-diffusion]] — ピクセル空間拡散（VAE を経由せず生画素で拡散。latent-diffusion の前提への異議、Unified Transformer、LLM バックボーン、ハイブリッド注意）
 - [[mixture-of-experts-diffusion]] — 拡散モデルの混合エキスパート（FFN を疎な MoE に。ルーター・共有エキスパート・活性化パラメータ、容量↑で計算量据え置き）
@@ -209,6 +212,12 @@
 - Automatic Resolution / 自動解像度 / img_size トークン / img_ratio トークン → [[unified-multimodal-generation]]
 - MixGRPO / SRPO / ReDA / Reward Distribution Alignment → [[reinforcement-learning-for-diffusion]]
 - SSAE / GSB / Good-Same-Bad / CLIP Score の限界 → [[text-to-image-generation]]
+- Sana / Linear DiT / 線形注意 / Linear Attention / ReLU Linear Attention / Mix-FFN / GLUMBConv / EfficientViT → [[efficient-attention]]
+- NoPE / No Positional Encoding / 位置符号化なし → [[position-embedding]]
+- CHI / Complex Human Instruction / 複雑な人間の指示 → [[prompt-enhancement]]
+- Flow-DPM-Solver / DPM-Solver++ / DPM-Solver / Tweedie の公式 → [[diffusion-sampling]]
+- AE-F32C32P1 / 深圧縮オートエンコーダ / Deep Compression Autoencoder / DC-AE → [[image-tokenizer]]
+- W8A8 / Triton カーネル融合 / CAME-8bit → [[large-scale-training-infrastructure]]
 - Anchor Loss / flow matching 上の DPO / 速度場の L2 報酬 → [[reinforcement-learning-for-diffusion]]
 
 ## Questions

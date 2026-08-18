@@ -13,6 +13,7 @@ related:
   - "[[image-tokenizer]]"
   - "[[pixel-space-diffusion]]"
   - "[[video-diffusion]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -24,7 +25,8 @@ summaries:
   - "[[summaries/2026-qwen-image-vae-2]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Latent Diffusion（潜在拡散）
@@ -137,3 +139,4 @@ $$
 - [[summaries/2024-sd3]] — Stable Diffusion 3（LDM の次世代：MM-DiT＋rectified flow・潜在 16 チャネル）
 - [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE の単一エンコーダ・二重デコーダ構成。デコーダのみのテキスト特化微調整で文字再現の上限を引き上げ）
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16/f32 の高圧縮トークナイザ。圧縮率・再構成・拡散可能性の三者間トレードオフを扱う。詳細は [[image-tokenizer]]）
+- [[summaries/2024-sana]] — Sana（$f32$ の深圧縮 AE。LDM 原典が最適とした $f4$〜$f8$ から大きく踏み出し、圧縮を patchify でなく AE に担わせる方が良いことを同一トークン数の統制下で示した）

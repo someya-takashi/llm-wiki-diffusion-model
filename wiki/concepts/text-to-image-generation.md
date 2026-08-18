@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Text-to-Image, T2I, テキストからの画像生成, text2img]
-tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation, prompt-enhancement, data-curation, aesthetic-scoring]
+tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation, prompt-enhancement, data-curation, aesthetic-scoring, efficient-attention]
 related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
@@ -19,6 +19,7 @@ related:
   - "[[data-curation]]"
   - "[[aesthetic-scoring]]"
   - "[[unified-multimodal-generation]]"
+  - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -35,7 +36,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Text-to-Image Generation（テキストからの画像生成）
@@ -73,6 +75,20 @@ Stable Diffusion の高解像度後継が **SDXL**（[[summaries/2023-sdxl]]）�
 LDM と同時期に、拡散ベースの **GLIDE**・**Imagen**（いずれも大規模テキストエンコーダ＋ピクセル空間カスケード拡散）や、unCLIP ベースの **DALL·E 2** が登場した。**Imagen**（Saharia ら 2022）は T5-XXL 言語モデルでテキストを埋め込み、64×64 のベース拡散モデル＋2 段の超解像（[[super-resolution]]）でカスケード生成する。これらは専用原典としては未取り込みだが、DreamBooth（[[summaries/2023-dreambooth]]）の土台モデルとして言及されている。専用の記述は今後の原典取り込み時に本ページへ追記する。
 
 なお、これら text-to-image 拡散モデルのバックボーンも U-Net 一択から変わりつつある。**DiT（Diffusion Transformer, [[diffusion-model-architecture]]）** の登場後、Stable Diffusion 3・Sora など後続の主要な text-to-image／動画モデルが Transformer バックボーンを採用している（DiT 自体はクラス条件付き生成だが、テキスト条件への drop-in を著者が予見していた）。**Stable Diffusion 3**（[[summaries/2024-sd3]]）はこれを **MM-DiT**（テキストと画像に別重み・attention で双方向結合）として実装し、3 テキストエンコーダ（CLIP×2＋T5）と組み合わせてテキスト理解・タイポグラフィを大きく改善、学習定式化も rectified flow（[[flow-matching]]）に切り替えた。
+
+### 大きくしない方へ振る — Sana（NVIDIA / MIT 2024）
+
+2024 年の text-to-image は「大きくすれば強くなる」路線にあった。PixArt-α の 0.6B から SD3 の 8B、FLUX の 12B、Playground v3 の 24B へ。**Sana**（[[summaries/2024-sana]]）はこの潮流に対する明確な反対提案で、**0.6B のまま FLUX-12B に匹敵する**ことを目指す。
+
+やり方は「拡散モデルの計算量＝トークン数 × トークンあたりのコスト × ステップ数」という分解に沿って、**3 つとも同時に削る**というものである。
+
+- **トークン数**：$f32$ の深圧縮オートエンコーダ（AE-F32C32P1）。同じトークン数でも「$f8$ VAE ＋ 4×4 パッチ化」より収束も品質も良いことをアブレーションで示した（[[image-tokenizer]]）。
+- **トークンあたりのコスト**：ReLU 線形注意で $O(N^2) \to O(N)$。劣化は Mix-FFN の 3×3 depthwise conv で補償（[[efficient-attention]]）。
+- **ステップ数**：Flow-DPM-Solver で 10–20 ステップ（[[diffusion-sampling]]）。
+
+結果は 4096×4096 で FLUX-dev 比 **104 倍**のスループット、GenEval 0.64（FLUX-dev 0.67）、**16GB のラップトップ GPU で 1024px を 1 秒未満**。ただし FLUX-schnell の 0.71 には届かず、「12B と同等」は総合スコアに限った話である。
+
+本ページの文脈で Sana が重要なのは、**同じ「効率で勝つ」という主張でも、Z-Image（[[summaries/2025-z-image]]）や ERNIE-Image（[[summaries/2026-ernie-image]]）とは削る場所が違う**ことである。後者はデータとポストトレーニングを磨いてパラメータ数を抑えるが、注意も VAE も標準的なままだ。Sana は逆に、**表現の粒度そのものを粗くする**方向で効率を稼ぐ。前者の路線は主流になり、後者の線形注意は主流にならなかった——ただし Sana のもう 1 つの提案、**デコーダのみの LLM をテキストエンコーダに使う**という点は、この直後に Qwen-Image・HunyuanImage 3.0・ERNIE-Image が全面採用する潮流の先駆けになっている。
 
 ### Qwen-Image（Qwen Team 2025）— MLLM をテキストエンコーダに据える
 
@@ -190,3 +206,4 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の�
 - [[summaries/2026-ernie-image]] — ERNIE-Image（8B。GenEval 0.89・Position 0.86、人間評価でオープンソース 1 位。PE ありなしを分離報告し、美的評価を主題化）
 - [[summaries/2025-z-image]] — Z-Image（6B・$628K で Elo 世界 4 位。S3-DiT＋データ基盤＋PE＋Decoupled DMD の総合。合成データ蒸留を明示的に拒否）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（8B で GenEval 0.90・Position 0.93。VAE も外部テキストエンコーダも持たない統一トークン空間）
+- [[summaries/2024-sana]] — Sana（0.6B で FLUX-12B に匹敵。深圧縮 AE・線形注意・Flow-DPM-Solver の 3 方向同時削減、4096px で 104×、16GB ラップトップ GPU で動作。decoder-only LLM テキストエンコーダの先駆け）

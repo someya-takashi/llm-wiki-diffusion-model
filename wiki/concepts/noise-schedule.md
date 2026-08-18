@@ -14,7 +14,8 @@ summaries:
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Noise Schedule（ノイズスケジュール）
@@ -80,6 +81,14 @@ $$
 
 実務的な含意は 2 つある。第一に、**「解像度に応じてシフト量を変える」という操作は「logit-normal のモードをずらす」ことに他ならない**——ノイズスケジュール設計の 2 つの語彙が 1 つに統合される。第二に、$\sigma$ も動かせる一般形が得られるため、学習時だけでなく**推論時の時刻の刻み方**にも同じ式を使える。実際 FLUX.1 Kontext は学習データの解像度に応じてモード $\mu$ を変えている。
 
+## 学習目標のパラメータ化とスケジュールは切り離せない
+
+もう 1 つ、本ページの守備範囲に隣接する論点がある——**同じスケジュールでも、モデルに何を予測させるか（$\epsilon$／$x_0$／$v$）で数値的な性質が変わる**。
+
+**Sana**（[[summaries/2024-sana]]）の付録は、Tweedie の公式を使ってこれを明示する。$t \approx T$（ほぼ純ノイズ）では $x_0$ と $x_t$ がほぼ独立になるため、**ノイズ予測モデルの最適解は $x_t$ の線形関数に退化し、データ予測モデルの最適解はほぼ定数 $\mathbb{E}[x_0]$ に近づく**。積分の離散化誤差は前者の方が大きく、しかも $t=T$ の誤差は以降の全ステップに伝播する。したがって**スケジュールの端点付近をどう扱うかは、予測対象の選択と一体で決まる**。Sana はこの分析から Flow-DPM-Solver を導いている（[[diffusion-sampling]]）。
+
+同じ論文は、**Flow Matching と DDPM を 120K ステップという同一条件で直接比較**した数少ない例でもある（FID 19.5 → 16.9、CLIP 24.6 → 25.7）。$\epsilon$ 予測から $v$／$x_0$ 予測へ移ることが収束の速さそのものを変える、という本節の主張と整合する結果である（[[flow-matching]]）。
+
 ## 事前学習と微調整でスケジュールを変える（2026）
 
 もう 1 つ、[[summaries/2026-hidream-o1-image]] が持ち込んだ実務的な知見がある。SFT（Supervised Fine-Tuning, 高品質データでの教師あり微調整）の段階で、**事前学習で使っていた logit-normal サンプリングを一様サンプリングに切り替える**。
@@ -95,6 +104,7 @@ $$
 - [[score-based-generative-models]]：VE/VP は連続時間 SDE としてのノイズスケジュール。Score-SDE がこれらを統一し、EDM が σ(t)/s(t) として整理した。
 - [[probability-flow-ode]]：σ(t)=t の選択は確率フロー ODE の軌道を直線化し、少 NFE の決定論サンプリングを可能にする。
 - [[flow-matching]]：SD3 の logit-normal/mode サンプラーは「時刻分布をどう選ぶか」という同じ問題で、EDM のノイズ分布思想を rectified flow へ移したもの。
+- [[diffusion-sampling]]：Sana の Flow-DPM-Solver はタイムステップのシフト係数 $s$ を $\tilde{\sigma}_t = s\sigma_t/(1+(s-1)\sigma_t)$ としてソルバー内部に組み込む。本ページのシフトと同じ式が推論側でも使われる例。
 
 ## 参考文献（summaries）
 

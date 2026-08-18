@@ -26,7 +26,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
-updated: 2026-08-18
+  - "[[summaries/2024-sana]]"
+updated: 2026-08-19
 ---
 
 # Flow Matching（フローマッチング）
@@ -101,6 +102,10 @@ $$
 
 **FLUX.1 Kontext**（[[summaries/2025-flux-kontext]]）も同じ rectified flow の速度回帰で学習されるが、条件に**コンテキスト画像**を加えた $v_\theta(z_t,t,y,c)$ を回帰する点が異なる（$y=\varnothing$ なら通常の T2I）。すなわち flow matching の枠組みを変えずに、条件の側だけを拡張して画像編集を取り込んでいる（[[instruction-based-image-editing]]）。同論文の Appendix A.2 は、**タイムステップの α シフトが logit-normal の $\mu=\log\alpha$ と等価である**ことを導出しており、[[noise-schedule]] の 2 つの語彙を橋渡しする。
 
+**同一条件での直接比較。** SD3 の 61 定式化の比較は大規模かつ包括的だが、比較対象が定式化の組合せなので「flow matching そのものがどれだけ効いたか」は読み取りにくい。**Sana**（[[summaries/2024-sana]]）は同じ 120K ステップ・同じアーキテクチャで DDPM と flow matching だけを差し替えた比較を示しており、**FID 19.5 → 16.9、CLIP 24.6 → 25.7** と一貫した改善を報告する。小規模ながら統制の効いた対照実験として補強材料になる。
+
+Sana はさらに、flow の速度予測モデルを**サンプリング時にデータ予測へ変換する**（$x_\theta = x_t - \tilde{\sigma}_t v_\theta$）ことで DPM-Solver++ を移植し、10–20 ステップで収束させている。**flow matching で学習したモデルを、拡散側で成熟した高次ソルバーの資産に接続する**という橋渡しであり、両系譜が実装レベルで融合しつつあることを示す（[[diffusion-sampling]]）。
+
 ## 既存知識との接続
 
 - [[probability-flow-ode]]：FM が学習する CNF は決定論的 ODE 生成。拡散の確率フロー ODE は FM の拡散パスの VF と一致し、FM はそれを「確率パスを直接指定する」視点へ一般化する。
@@ -117,6 +122,7 @@ FM・rectified flow をさらに一般化し、**flows（決定論 ODE）と dif
 
 - [[summaries/2023-flow-matching]] — Flow Matching for Generative Modeling（Lipman, Chen, Ben-Hamu, Nickel, Le, ICLR 2023）
 - [[summaries/2024-sd3]] — Scaling Rectified Flow Transformers（SD3。rectified flow＋改良サンプラーを大規模 text-to-image で確立）
+- [[summaries/2024-sana]] — Sana（DDPM と flow matching の同一条件比較：FID 19.5→16.9。Flow-DPM-Solver で速度予測をデータ予測に変換して 10–20 ステップ化）
 - [[summaries/2024-stochastic-interpolants]] — Stochastic Interpolants（flows と diffusions を統一する一般化枠組み）
 - [[summaries/2025-flow-matching-diffusion-intro]] — An Introduction to Flow Matching and Diffusion Models（MIT 6.S184 講義ノート。conditional→marginal の構成と CFM を ODE/SDE 統一の枠組みから教科書的に導く入門）
 - [[summaries/2025-qwen-image]] — Qwen-Image（rectified flow＋logit-normal で 20B MMDiT を学習し、その上に DPO / Flow-GRPO の事後学習を重ねる）
