@@ -13,6 +13,7 @@ related:
   - "[[inference-caching]]"
   - "[[video-diffusion]]"
   - "[[large-scale-training-infrastructure]]"
+  - "[[aesthetic-scoring]]"
 summaries:
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-flux-kontext]]"
@@ -20,6 +21,7 @@ summaries:
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
+  - "[[summaries/2026-ernie-image]]"
 updated: 2026-08-18
 ---
 
@@ -117,6 +119,34 @@ RL が人間の選好への整合を解き放ち、DM 項が報酬ハッキン�
 
 留保：Decoupled DMD と DMDR の技術的詳細は Z-Image のレポート本体には書かれておらず、それぞれ別の論文に委ねられている。**CA と DM をどう切り分けたか、再ノイズ付与スケジュールをどう変えたかは、本レポートからは分からない**。
 
+### 教師が 1 人では足りない — MT-DMD（2026）
+
+Decoupled DMD が「CA と DM は別の役割を持つ」と示したことには、もう 1 つ自然な帰結がある。**ERNIE-Image**（[[summaries/2026-ernie-image]]）はそれを **MT-DMD（Multi-Teacher DMD）** として展開する。
+
+まず既存手法の整理が有用である。
+
+| 手法 | 何を足したか |
+| --- | --- |
+| **DMD** | 分布マッチングによる少ステップ化 |
+| **DMD2** | 敵対的に似た地形を安定化させるため、**生成器 1 更新につきスコアモデルを 5 更新**する分離された比率更新 |
+| **Decoupled DMD** | 勾配の干渉を緩和するため CA と DM の 2 目的へ分岐 |
+| **DMDR** | RL の統合に加え、教師スコアモデルへの**ステップを意識した LoRA スケーリング**。実経路のガイダンス強度をコサインで変調：$\alpha_{real}(t)=\frac{\alpha_{init}}{2}[1+\cos(\pi\min(t,T_{dynamic})/T_{dynamic})]$ |
+
+> なお Z-Image は Decoupled DMD と DMDR の詳細を外部論文に投げていたが、**DMDR の中身はこの ERNIE-Image のレポートで読める**。
+
+その上で ERNIE-Image が指摘する未解決問題が **Capability Drift（能力の漂流）** である——**単独の教師は、動的な LoRA ガイダンスと報酬信号で増強されていてさえ、異種混合のデータに対してすべての意味的領域にわたって一様に最適な教師信号を提供できない**。結果として、判読可能なタイポグラフィのレンダリング（[[visual-text-rendering]]）や様式化された美しさの維持といった**専門化された部分空間で収束が最適でなくなる**。
+
+解は**専門家教師の委員会** $\mathcal{E}=\{E_1,\dots,E_K\}$（Text-Rendering Expert、Digital Art Expert、マクロ構図の専門家など）を動的ルーティングで束ねることである。
+
+$$\hat{x}_{0}=\sum_{k=1}^{K}\mathcal{W}_{k}(x_{t},\sigma,c,\mathcal{O})\cdot E_{k}(x_{t},\sigma,c)$$
+
+ゲーティング $\mathcal{W}_k$ の条件付けが要点で、ノイズ付き潜在 $x_t$・ノイズ尺度 $\sigma$・意味的条件 $c$ に加え、**最適化目的 $\mathcal{O}\in\{CA, DM\}$ でも切り替える**。ここから 2 つの帰結が出る。
+
+- **非対称な勾配トポロジー**：**同一の学習インスタンスの内部で**、DM 項は Digital Art Expert に問い合わせて大域的な様式の一貫性を強制し、CA 項は Text-Rendering Expert を介して局所的な綴りを独立に最適化する。上の Decoupled DMD の分離が、**教師割り当てのレベルまで貫かれた**形である。
+- **拡散軌道に沿った専門家の引き継ぎ**：高ノイズ域では Spatial Layout の専門家がマクロな構図を確立し、低ノイズ域では高周波のレンダリングの専門家（写実的な照明、材質のテクスチャ）へ移行する。[[diffusion-sampling]] でみた「タイムステップによって仕事の内容が違う」という理解が、教師の使い分けとして実装されている。
+
+留保も大きい。**MT-DMD にアブレーションがない**——専門家の数 $K$、ゲーティングの学習方法、単一教師の DMDR との比較のいずれも数値が示されず、§2.2.3 全体が定性的な記述に終始する。問題設定は説得的だが、**解決されたという証拠は提示されていない**。
+
 ## 代表事例：Qwen-Image-2.0 の 4-NFE 蒸留
 
 [[summaries/2026-qwen-image-2]] は 20B 級のマルチモーダル基盤モデルに DMD を適用した。著者らが強調する困難は、**既存の蒸留研究がほぼ ImageNet のクラス条件付き設定に限られていた**ことである。T2I 生成や画像編集のような開いた条件空間、しかも肖像・風景・**テキストレンダリング**（[[visual-text-rendering]]）まで含む多様なシナリオで、極端に少ない NFE のまま全能力を保てるかは未探求だった。
@@ -158,5 +188,7 @@ RL が人間の選好への整合を解き放ち、DM 項が報酬ハッキン�
 - [[summaries/2025-wan]] — Wan（LCM / VideoLCM で 4 ステップ化。滑動窓ストリーミングと組み合わせてリアルタイム動画生成を成立させる）
 
 - [[summaries/2025-z-image]] — Z-Image（**Decoupled DMD**＝DMD を CFG-Augmentation と Distribution Matching に分解、**DMDR**＝DM 項を RL の正則化子に転用。8 NFE で 100 ステップの教師を上回る）
+
+- [[summaries/2026-ernie-image]] — ERNIE-Image（**MT-DMD**＝多教師の動的ルーティング。Capability Drift の指摘、目的関数ごとの非対称な教師割当、軌道に沿った専門家の引き継ぎ。DMD2 / DMDR の整理も収録）
 
 > 未取り込みの主要原典：Progressive Distillation（Salimans & Ho 2022）、Consistency Models（Song ら 2023）、DMD 原典（Yin ら 2024）、ADD / LADD 原典（Sauer ら 2023・2024）。今後の ingest で本ページへ追記する。（ADD/LADD の実適用例は [[summaries/2025-flux-kontext]] で取り込み済み。）

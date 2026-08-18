@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Reinforcement Learning for Diffusion, 拡散モデルの強化学習, RLHF for Diffusion, DPO, Diffusion-DPO, GRPO, Flow-GRPO, 事後学習, Post-training]
-tags: [reinforcement-learning-for-diffusion, flow-matching, text-to-image-generation, generative-models, prompt-enhancement]
+tags: [reinforcement-learning-for-diffusion, flow-matching, text-to-image-generation, generative-models, prompt-enhancement, aesthetic-scoring]
 related:
   - "[[flow-matching]]"
   - "[[text-to-image-generation]]"
@@ -11,11 +11,13 @@ related:
   - "[[diffusion-distillation]]"
   - "[[prompt-enhancement]]"
   - "[[data-curation]]"
+  - "[[aesthetic-scoring]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-z-image]]"
+  - "[[summaries/2026-ernie-image]]"
 updated: 2026-08-18
 ---
 
@@ -105,6 +107,28 @@ Z-Image はもう 1 つ、実務的に再利用価値の高い切り分けを提
 
 なお報酬モデルのアノテーション設計も具体的である。指示追従については、プロンプトを (i) 中核となる主体、(ii) 属性、(iii) 動作・相互作用、(iv) 空間・構図の制約、(v) 様式・レンダリングの条件へ構文的・意味的に分解し、**人間の評価者は満たされていない要素をクリックするだけ**にする。満たされた要素の比率がそのままスコアになる——採点者の負担を下げつつ細粒度の信号を得る工夫である。
 
+## Flow Matching 上の DPO をどう書くか（2026）
+
+本ページは DPO を「選好ペアから直接方策を最適化する」と紹介したが、**拡散／flow モデルに適用する際の具体的な形**は書いてこなかった。**ERNIE-Image**（[[summaries/2026-ernie-image]]）がそれを係数付きで公開している。
+
+考え方は素直である。言語モデルの DPO が対数尤度を暗黙の報酬に使うのに対し、flow matching（[[flow-matching]]）では**速度場の L2 再構成誤差**を使う。プロンプトの隠れ状態 $h$、勝ち画像 $x_0^{win}$、負け画像 $x_0^{lose}$ について、方策モデルと凍結された参照モデルのそれぞれで「勝ち側の誤差 − 負け側の誤差」を取り、その相対ギャップを最大化する。
+
+$$\mathcal{L}_{\mathrm{DPO}}=-\mathbb{E}[\log\sigma(-\beta(\text{Diff}_{\mathrm{policy}}-\text{Diff}_{\mathrm{ref}}))]$$
+
+### 失敗モードが明快に記述されている
+
+素朴に適用すると何が起きるか——**L2 損失は非有界なので、モデルは拒否サンプルの誤差を際限なく膨らませるだけで報酬を稼げてしまう**。「良い方をより良くする」より「悪い方を無限に悪くする」方がはるかに簡単だからである。これはしばしば**表現の崩壊**に至る。本ページで繰り返し触れてきた reward hacking の、この設定における具体的な現れ方である。
+
+対処が **Anchor Loss**：勝ち側と負け側の**両方**に通常の flow matching 損失を足し、基礎的な生成能力に錨を下ろす。
+
+$$\mathcal{L}_{\mathrm{total}}=\mathcal{L}_{\mathrm{DPO}}+\lambda_{win}\mathbb{E}[\ell^{win}]+\lambda_{lose}\mathbb{E}[\ell^{lose}]$$
+
+係数まで公開されている（$\beta=0.05$、$\lambda_{win}=0.35$、$\lambda_{lose}=0.15$）。**負け側にも 0.15 の重みを残す**のが要点で、「拒否サンプルであっても、まともな画像であり続けよ」という制約になっている。誤差を膨らませる逃げ道が塞がれる。
+
+これは [[diffusion-distillation]] の DMDR（分布マッチング項を RL の正則化子に転用する）と**同じ問題への別の答え**である。DMDR は蒸留の項を流用し、Anchor Loss は元の学習目的そのものを流用する。どちらも「**RL の暴走は、元の目的関数に錨を下ろすことで防ぐ**」という構図を共有している。
+
+なお ERNIE-Image は「**ベースモデルと報酬モデルの双方が十分に強力であれば、望ましい状態に達するのに必要な DPO のステップはごくわずか**」とも述べる。報酬ハッキングは長く回すほど起きやすいので、**短く済ませること自体が対策になる**という実務的な指摘である。
+
 ## 効果と限界
 
 **効果**（Qwen-Image, GenEval）：SFT 版 0.87 → RL 版 **0.91**。とくに **Position 0.76→0.87**、**Attribute Binding 0.77→0.83**、Counting 0.89→0.93 と、**「指示どおりに配置・属性を割り当てる」という構成的な正確さ**が大きく伸びた。リーダーボードで唯一 0.9 を超える基盤モデルになった。
@@ -125,6 +149,8 @@ Z-Image はもう 1 つ、実務的に再利用価値の高い切り分けを提
 - [[diffusion-sampling]]：GRPO のサンプリング（Euler-Maruyama）はサンプラー設計と直結する。
 
 ## 参考文献（summaries）
+
+- [[summaries/2026-ernie-image]] — ERNIE-Image（flow matching 上の DPO を速度場の L2 誤差で定式化。非有界な L2 を悪用する報酬ハッキングと、その対処としての Anchor Loss を係数付きで公開）
 
 - [[summaries/2025-z-image]] — Z-Image（DMDR で蒸留の DM 項を RL の正則化子に転用。DPO を VLM 検証可能な客観次元に限定し主観次元は GRPO へ回す分担、要素分解によるクリック式の報酬アノテーション）
 

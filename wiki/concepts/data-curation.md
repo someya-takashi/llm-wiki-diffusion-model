@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Data Curation, データキュレーション, データ基盤, Data Infrastructure, 重複除去, Deduplication, データフィルタリング, Recaptioning, 再キャプション, Long-tail, 長尾問題, Knowledge Graph]
-tags: [data-curation, text-to-image-generation, video-diffusion, visual-text-rendering, prompt-enhancement, generative-models]
+tags: [data-curation, text-to-image-generation, video-diffusion, visual-text-rendering, prompt-enhancement, generative-models, aesthetic-scoring]
 related:
   - "[[text-to-image-generation]]"
   - "[[video-diffusion]]"
@@ -10,12 +10,14 @@ related:
   - "[[large-scale-training-infrastructure]]"
   - "[[instruction-based-image-editing]]"
   - "[[reinforcement-learning-for-diffusion]]"
+  - "[[aesthetic-scoring]]"
 summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-hidream-i1]]"
+  - "[[summaries/2026-ernie-image]]"
 updated: 2026-08-18
 ---
 
@@ -55,7 +57,7 @@ updated: 2026-08-18
 
 | 軸 | 手段 |
 | --- | --- |
-| 美的品質 | LAION の美的分類器、あるいは専門アノテータのラベルで学習した自社モデル |
+| 美的品質 | LAION の美的分類器、あるいは専門アノテータのラベルで学習した自社モデル（**この信号の信頼性そのものが問われている**——[[aesthetic-scoring]]） |
 | 安全性 | NSFW 分類器 |
 | 透かし・ロゴ | 専用検出器（Wan は検出して**学習時に切り取る**） |
 | ぼけ・ノイズ・色かぶり | 自社の劣化スコアリングモデル |
@@ -78,6 +80,12 @@ DALL-E 3 が示した知見——**高度に記述的な合成キャプション
 - **主観を排す**。Z-Image は「画像中で観察可能な事実情報に厳密に限定し、主観的な解釈と想像的な連想を抑制する」と明言する。理由は非本質的な情報を排してデータ効率を上げるため。
 - **カメラの言語**。Wan は MLLM が**カメラアングルと動きの予測に苦戦する**（GPT-4o や Gemini Pro でさえ）ことを見つけ、専用のアノテーションを作ってキャプションモデルを学習した。これが動画生成側のカメラ制御性を直接改善する。
 
+> **品質フィルタの足場について。** 上の表で最初に挙げた「美的品質」は、実は最も広く使われながら最も検討されてこなかった信号である。ERNIE-Image（[[summaries/2026-ernie-image]]）が測ったところ、**LAION-Aesthetic の人間ラベルとの順位相関（SRCC）は 0.29** ——「ほとんど一致しない」水準だった。しかも同予測器は**AI 生成画像に高い点を付ける**傾向を持つので、上の表の「AI 生成画像を除外する」フィルタと**逆方向に引き合う**。数十億枚規模の選別がこの 1 つのモデルに委ねられてきた以上、各社の「高品質データで学習した」という主張の足場は想定より弱い可能性がある。詳細は [[aesthetic-scoring]] を参照。
+
+### 美的スコアはフィルタでなくサンプリング確率にもなる
+
+閾値で足切りする以外の使い方もある。ERNIE-Image の**階層的サンプリング**が具体例で、**カテゴリ間**では各カテゴリの重みをコーパス規模と集約された美的品質の**両方**で決め、**カテゴリ内**では個々の画像を美的スコアに従ってサンプリングする。捨てるのではなく確率を傾ける設計で、情報を失いにくい。ただし分布を狭める効果は残る（下記「限界」参照）。
+
 ### (4) 構造化と概念の均衡
 
 ここが最も新しく、Z-Image の **World Knowledge Topological Graph** が最も踏み込んだ例である。
@@ -90,6 +98,8 @@ DALL-E 3 が示した知見——**高度に記述的な合成キャプション
 応用は**意味レベルの均衡サンプリング**である。学習キャプション中のタグをグラフのノードへ写像し、**BM25 スコアと親子関係**から各データ点のサンプリング重みを計算する。これで「どの概念をどの段階でどれだけ見せるか」を細粒度に制御できる。
 
 Wan の**動きの品質による 6 段階分類**（[[video-diffusion]]）も同じ発想の別の現れである。「静的な動画は品質が高くてもサンプリング比率を下げる」「カメラだけ動く映像は静止画扱いで優先度を大きく下げる」——**モデルが動きを学ばずに済ませてしまう**ことへの対策で、分布の形そのものを設計している。
+
+> **ボトムアップかトップダウンか。** Z-Image は自らの方式を「トップダウンの再サンプリング」と対置したが、ERNIE-Image はこの区別を**学習段階ごとに使い分ける**と明示する。**事前学習はボトムアップ**——膨大な生コーパスから始め、10,000 の細粒度カテゴリへの分類・キャプションの充実・美的スコアリング・階層的サンプリングを通じて漸進的に構造を課す。**事後学習（SFT）はトップダウン**——優先領域（ポスターデザイン、ゲーム画面、人物写真、物撮り、アニメ）を先に決めてからデータをキュレートする。広い被覆が要る段階と、狙った挙動に絞る段階で、データの作り方自体を変えるという整理である。
 
 ### (5) 能動的な精錬（active curation）
 
@@ -133,6 +143,7 @@ Wan の**動きの品質による 6 段階分類**（[[video-diffusion]]）も�
 - [[instruction-based-image-editing]]：編集ペアは自然界に存在しないので、構築手法そのものが研究対象になる。
 - [[prompt-enhancement]]：学習時のキャプション分布と推論時のユーザープロンプト分布のずれが、そもそもプロンプト書き換えを必要にしている。**模擬ユーザープロンプトを学習データに混ぜる**のは、同じ問題への逆側からの対処である。
 - [[large-scale-training-infrastructure]]：データ処理自体が大規模計算である（10 億件の k-NN に 8 台の H800 で 8 時間）。データ基盤とインフラは実務上ほぼ地続きになっている。
+- [[aesthetic-scoring]]：品質フィルタの中心的な信号そのもの。**その信号の信頼性を問う**のがあちらのページで、LAION-Aesthetic の SRCC 0.29 は本ページの「品質フィルタリング」の足場に直接関わる。
 - [[reinforcement-learning-for-diffusion]]：報酬モデルもまたデータで学習される。Z-Image の閉ループでは、キャプションモデルと報酬モデルが同じパイプラインの中で共進化する。
 
 ## 参考文献（summaries）
@@ -142,5 +153,7 @@ Wan の**動きの品質による 6 段階分類**（[[video-diffusion]]）も�
 - [[summaries/2025-qwen-image]] — Qwen-Image（視覚的テキストのための合成＋実データの 2 系統、非テキスト→テキストのカリキュラム）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（Qwen3-VL によるプロンプト構築、編集・IP データのタスク整合性を VLM で検証）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（SSCD＋k-means＋Faiss の 2 段階重複除去。ただしフィルタリング節は見出しのみで中身がない）
+
+- [[summaries/2026-ernie-image]] — ERNIE-Image（**事前学習はボトムアップ／SFT はトップダウン**という段階別の使い分け、10,000 カテゴリの細粒度分類、美的スコアをサンプリング確率に使う階層的サンプリング、既存美的予測器のバイアス検証）
 
 > 未取り込みの主要原典：DALL-E 3（Betker ら 2023, 再キャプションの原典）、LAION-5B（Schuhmann ら 2022）、SSCD（Pizzi ら 2022）、Imagen 3（AIGC 検出）。今後の ingest で本ページへ追記する。

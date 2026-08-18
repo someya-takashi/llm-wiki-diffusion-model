@@ -24,6 +24,7 @@ summaries:
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
+  - "[[summaries/2026-ernie-image]]"
 updated: 2026-08-18
 ---
 

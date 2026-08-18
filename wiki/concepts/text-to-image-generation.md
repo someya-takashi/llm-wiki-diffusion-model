@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Text-to-Image, T2I, テキストからの画像生成, text2img]
-tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation, prompt-enhancement, data-curation]
+tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation, prompt-enhancement, data-curation, aesthetic-scoring]
 related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
@@ -17,6 +17,7 @@ related:
   - "[[video-diffusion]]"
   - "[[prompt-enhancement]]"
   - "[[data-curation]]"
+  - "[[aesthetic-scoring]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -31,6 +32,7 @@ summaries:
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
+  - "[[summaries/2026-ernie-image]]"
 updated: 2026-08-18
 ---
 
@@ -111,6 +113,22 @@ Qwen-Image がとくに押し進めたのが **[[visual-text-rendering]]（画�
 
 弱点も明確である。**OneIG の Diversity が 0.194（Turbo は 0.139）** と低い——SFT で「多様性最大化から品質最大化へ移す」と明言している以上これは設計通りだが、蒸留がそれをさらに悪化させている点は説明されない。GenEval の Position も 0.62 と弱い。そして**アーキテクチャのアブレーションが 1 つもない**ため、6B での成功が S3-DiT のおかげなのかデータ基盤のおかげなのか PE のおかげなのかは切り分けられていない。
 
+### 8B で追う — ERNIE-Image（Baidu 2026）
+
+Z-Image の翌年、**ERNIE-Image**（[[summaries/2026-ernie-image]]）が同じ「効率志向」の路線を 8B で引き継ぐ。診断は Z-Image をそのまま名指しする——大規模化は限界収穫の逓減に直面するが、**6B の Z-Image は複雑な指示追従と中国語のテキストレンダリングで明確な限界を示す**。そこで 8B で両者の間を狙う。
+
+構成要素はいずれも**外から借りて小さくする**方向に振れている：VAE は FLUX.2 VAE を流用、テキストエンコーダは意図的に小さい **Ministral-3（3B）**、認知的なギャップは外付けの PE で埋める（[[prompt-enhancement]]）。
+
+結果は本ページの流れの中で見ると意味が明確になる。
+
+- **GenEval で 0.89（PE なし）と最高**。とくに **Position が 0.86** で、Qwen-Image 0.76、Z-Image 0.62 を大きく上回る。本ページで繰り返し弱点として現れてきた**空間関係の指示追従**が、ここで明確に前進した。
+- **人間評価で総合 2 位・オープンソース 1 位**（Nano Banana 2.0 に次ぐ）。8B が 20B の Qwen-Image 系を上回る。
+- **OneIG-EN で 0.575** とクローズドソースの Nano Banana 2.0（0.578）に肉薄。
+
+もっとも、本ページにとって最も価値があるのは順位ではなく **PE ありなしを分けて報告している**ことだろう。Z-Image の項で「評価が PE 込みか否かが曖昧」と書いたが、ERNIE-Image は両方を出し、しかも**方向が一様でない**——GenEval では PE なしの方が高く（0.89 対 0.87）、OneIG の Reasoning では PE ありが大幅に上（0.295 → 0.357）。**プロンプト追従の評価が「モデルの能力」を測っているのか「システムの能力」を測っているのか**という区別が、ここでようやく数字で扱えるようになった。
+
+ERNIE-Image はまた、美的評価そのものを主題化した点でも本 wiki に新しい（[[aesthetic-scoring]]）。**LAION-Aesthetic の人間ラベルとの順位相関が 0.29 しかない**という測定は、各社が「高品質データで学習した」と述べるときの足場に直接関わる。
+
 ### 評価が「AI っぽさ」に報いる問題 — bakeyness
 
 FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の論点も記しておく価値がある。T2I ベンチマークが「**どちらの画像を好むか**」という単一の問いに頼ると、**過飽和の色・中心被写体への過度な集中・強いボケ・均質なスタイル**という特徴的な「AI 的美学」が有利になってしまう。著者らはこれを **bakeyness** と名づけ、単一軸の選好評価が**モデルをその方向へ最適化させてしまう**危険を指摘する。
@@ -147,5 +165,6 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の�
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（T2I と編集を単一の rectified flow に統一。bakeyness 批判と 5 次元評価、1024² を 3〜5 秒）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（17B・疎な MoE と 4 系統のハイブリッドテキスト符号化。HPSv2.1 全カテゴリ 1 位、Position と Global に穴）
 - [[summaries/2025-wan]] — Wan（テキストエンコーダを直接アブレーション。umT5 の双方向注意が decoder-only LLM を上回る）
+- [[summaries/2026-ernie-image]] — ERNIE-Image（8B。GenEval 0.89・Position 0.86、人間評価でオープンソース 1 位。PE ありなしを分離報告し、美的評価を主題化）
 - [[summaries/2025-z-image]] — Z-Image（6B・$628K で Elo 世界 4 位。S3-DiT＋データ基盤＋PE＋Decoupled DMD の総合。合成データ蒸留を明示的に拒否）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（8B で GenEval 0.90・Position 0.93。VAE も外部テキストエンコーダも持たない統一トークン空間）

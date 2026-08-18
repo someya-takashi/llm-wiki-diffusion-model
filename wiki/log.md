@@ -3,6 +3,21 @@
 時系列の append-only ログ。`## [YYYY-MM-DD] ingest | <タイトル>` 形式で追記する（CLAUDE.md §5）。
 スキーマ変更は `## [YYYY-MM-DD] schema-update | <要点>` で記録する。
 
+## [2026-08-18] ingest | ERNIE-Image Technical Report
+
+- 取り込み: `raw/papers/ERNIE-Image Technical Report.md`（ar5iv 由来 markdown・ケース A, arXiv:2605.25347, 2026年。ERNIE Team / Baidu）。**直前に取り込んだ Z-Image を名指しで引き継ぐ論文**で、8B の単一ストリーム DiT（FLUX.2 VAE ＋ Ministral-3 3B のテキストエンコーダ）。
+- 作成: [[translations/2026-ernie-image]], [[summaries/2026-ernie-image]], [[concepts/aesthetic-scoring]]
+- **新規概念ページ 1 件**（ユーザー回答「aesthetic-scoring を新設」）:
+  - [[concepts/aesthetic-scoring]] — 美的スコアリング。**本 wiki が LAION の美的分類器を Wan・Z-Image・HiDream のデータパイプラインで繰り返し言及しながらページを持たなかった**領域。美的モデルが「データ選別」と「RLHF 報酬」の 2 箇所で働き、**モデルが何を見て育ち何を目指すかの両方を規定する**という位置づけから始め、Likert のスコアドリフト／Elo の比較回数／スイス式トーナメントという方法論の選択、既存予測器の名指しのバイアス（LAION-Aesthetic の SRCC 0.29、ArtiMuse・UniPercept の白黒偏重）、ベンチマーク自体の偏り（Flickr / DPChallenge 由来＝西洋の写真の伝統）、フィルタでなくサンプリング確率としての使い方、そして**自己循環的な評価**という限界までを整理した。
+- 更新（本文）: [[concepts/diffusion-distillation]]（**MT-DMD** の節を新設。DMD → DMD2 → Decoupled DMD → DMDR の系譜表、**Capability Drift** の指摘、$\mathcal{O}\in\{CA,DM\}$ でも切り替えるゲーティング、**同一学習インスタンス内での非対称な勾配トポロジー**と軌道に沿った専門家の引き継ぎ。アブレーションがないという留保も明記）, [[concepts/reinforcement-learning-for-diffusion]]（**flow matching 上の DPO** を係数付きで。**L2 が非有界なので拒否サンプルの誤差を膨らませるだけで報酬を稼げる**という失敗モードと Anchor Loss、DMDR との「元の目的関数に錨を下ろす」という共通構図）, [[concepts/data-curation]]（**品質フィルタの足場**への注意喚起＝LAION-Aesthetic の SRCC 0.29 と AIGC フィルタとの逆方向の引き合い、美的スコアをサンプリング確率に使う設計、**事前学習ボトムアップ／SFT トップダウン**の段階別使い分け）, [[concepts/prompt-enhancement]]（**PE ありなしを分離して測る**節を新設。GenEval では PE で下がり OneIG の Reasoning では大きく上がるという非一様性、Diversity がむしろ上がる観察、3B PE と大型 LM PE の規模比較）, [[concepts/text-to-image-generation]]（8B でオープンソース 1 位、**Position 0.86** という空間関係の前進）, [[concepts/visual-text-rendering]]（OCR 前置キャプションの独立した再確認、LongText-Bench 0.973、文字描画と複雑な指示追従の不可分性）, [[concepts/diffusion-model-architecture]]
+- 更新: [[overview]]（「『良い画像』の定義を問い直す」の項）, [[index]]（Summaries / Translations / Concepts＋略称リダイレクト 5 行）
+- 画像: ar5iv の原典には 11 枚しか埋め込まれていなかったが、**図 5・6・8・11 が ar5iv 側で分解されていた**ため arXiv HTML から構成画像を回収し、計 **29 枚**とした（プレースホルダなし、取得失敗なし）。内訳：
+  - **図 6（PE 比較の 3×3）は 9 枚中 1 枚しか残っていなかった**。残り 8 枚（aime / rpg / webpage × wo_pe / w_pe / w_llm_pe）を回収。本 ingest の主要な論点の 1 つを支える図なので価値が高い。
+  - **図 5（美的予測器のバイアス比較）は 9 パネル**（標本画像＋各 4 モデルのバープロット）だが、**4 種のバープロットが全パネルで同一 SVG ファイルとして重複参照される形に変換されており、パネルごとの予測スコアとマーカー位置は HTML からは復元不能**。本文が「image 6」「images 4 and 8」等と番号で参照しているため、標本画像 9 枚のみ**文書順で `fig5_img1..9` に連番化**して回収した（連番が本文の参照と一致することを image 6＝アニメ、image 5＝白黒で目視確認済み）。バープロットは訳注で欠落を明示。
+  - 図 8・図 11 は各 2 枚のうち 1 枚が欠落していたため回収。
+- 翻訳: 本文 §1–5 を全訳（556 行）。References と §6 著者一覧を除外。**付録は存在しない**。表 1–7 を markdown 化。
+- メモ: 本 ingest の要点は 3 つ。(1) **本 wiki が使ってきた道具（LAION-Aesthetic）への初めての正面からの検討**——SRCC 0.29 という数字は [[concepts/data-curation]] の「品質フィルタリング」の記述に直接跳ね返るため、あちらにも注意喚起を書き足した。(2) **Z-Image の Decoupled DMD が MT-DMD へ発展した**——CA と DM が別の役割を持つという分離が、教師の割り当てレベルまで貫かれる。副次的に、**Z-Image が外部論文に投げていた DMDR の中身がこの論文で読める**（Z-Image の要約で「本レポート単体では検証できない」と批判した点の一部が補われた）。(3) **PE ありなしの分離報告**——Z-Image の要約で「評価が PE 込みか否かが曖昧」と批判した論点に答える形になり、しかも方向が一様でないことが分かった。**批判的視点として記録した主要な点**: (i) MT-DMD にアブレーションがなく $K$ もゲーティングの学習法も単一教師との比較も示されない、(ii) 人間評価の看板指標「Total HP」の算出方法が説明されていない、(iii) テストセットが社内かつ非公開、(iv) **ERNIE-Image-Aes の評価が自己循環的**（同じチーム・同じプロトコル・同種のアノテータで作った ERIA-1K で評価し、既存データセットでの評価がない）、(v) アーキテクチャの記述が「8B の単一ストリーム DiT」以外ほぼ皆無で Z-Image の S3-DiT との異同が分からない、(vi) Ministral-3 を選んだ根拠となる実験が示されない（Wan の umT5 アブレーションとは水準が違う）、(vii) 学習コストが非公開で Z-Image の $628K と直接比較できない、(viii) 「一般大衆の選好」を掲げながらアノテータは中国の美術系機関の専門家であり、偏りを別の偏りで置き換えていないかは開かれた問い。
+
 ## [2026-08-18] ingest | Z-Image: An Efficient Image Generation Foundation Model with Single-Stream Diffusion Transformer
 
 - 取り込み: `raw/papers/Z-Image_ An Efficient Image Generation Foundation Model with Single-Stream Diffusion Transformer.md`（ar5iv 由来 markdown・ケース A, arXiv:2511.22699, 2025年11月。Z-Image Team / Alibaba Tongyi-MAI）。**6B・$628K で人間選好 Elo 世界 4 位**を主張し、「scale-at-all-costs」パラダイムと「プロプライエタリモデルからの合成データ蒸留」の双方を明示的に拒否する。

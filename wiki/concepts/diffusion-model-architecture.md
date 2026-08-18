@@ -28,6 +28,7 @@ summaries:
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
+  - "[[summaries/2026-ernie-image]]"
 updated: 2026-08-18
 ---
 
@@ -221,6 +222,7 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2025-hidream-i1]] — HiDream-I1（dual/single stream の FFN を疎な MoE に置換。テキスト符号化は 4 系統のハイブリッド）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（decoder-only LLM をバックボーンに転用。adaLN を捨ててタイムステップをトークン化、ハイブリッド注意）
 - [[summaries/2025-wan]] — Wan（動画 DiT。cross-attention 型を選択、full spatio-temporal attention、adaLN 共有のアブレーション、umT5 の双方向注意）
+- [[summaries/2026-ernie-image]] — ERNIE-Image（8B の単一ストリーム DiT。FLUX.2 VAE と 3B の Ministral-3 を流用。ただし層数・次元等の構成は非公開）
 - [[summaries/2025-z-image]] — Z-Image（S3-DiT＝完全な単一ストリーム。3D Unified RoPE・Sandwich-Norm・低ランク条件射影で 6B に圧縮）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）
