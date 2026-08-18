@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Text-to-Image, T2I, テキストからの画像生成, text2img]
-tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation]
+tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation, prompt-enhancement, data-curation]
 related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
@@ -15,6 +15,8 @@ related:
   - "[[pixel-space-diffusion]]"
   - "[[mixture-of-experts-diffusion]]"
   - "[[video-diffusion]]"
+  - "[[prompt-enhancement]]"
+  - "[[data-curation]]"
 summaries:
   - "[[summaries/2022-latent-diffusion]]"
   - "[[summaries/2023-controlnet]]"
@@ -28,6 +30,7 @@ summaries:
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-18
 ---
 
@@ -94,6 +97,20 @@ Qwen-Image がとくに押し進めたのが **[[visual-text-rendering]]（画�
 
 **「LLM の方が新しくて強いのだから条件エンコーダも LLM にすべき」という直観を、測って否定した数少ない事例**である。ただし動画・二言語という条件下での結果なので、そのまま画像へ一般化はできない——ここが決着したと見るのは早い。
 
+### 規模を増やさずに勝つ — Z-Image（Alibaba 2025）
+
+ここまで見た 2025–2026 年の基盤モデルはいずれもパラメータを増やす方向で進んだ。**Z-Image**（[[summaries/2025-z-image]]）はこれを「**scale-at-all-costs（あらゆる代償を払ってスケールする）**」と名指しして正面から挑戦する。
+
+看板の数字は **60 億パラメータで Alibaba AI Arena の Elo 1025・世界 4 位（オープンソース 1 位）** である。**20B の Qwen-Image（1008）**、GPT Image 1（986）、FLUX.1 Kontext Pro（950）を上回り、上位 3 つのクローズドソース（Imagen 4 Ultra 1048、gemini-2.5-flash-image 1046、Seedream 4.0 1039）に迫る。32B の FLUX.2 dev との直接ユーザースタディでも G+S Rate 87.4% を得ている。しかも **8 NFE・サブ秒・16GB VRAM 未満**で動く。
+
+手段は 4 つの柱の総合である——完全な単一ストリームの **S3-DiT**（[[diffusion-model-architecture]]）、作り込んだ**データ基盤**（[[data-curation]]）、**PE で認知的ギャップを外付けする**設計（[[prompt-enhancement]]）、そして **Decoupled DMD / DMDR** による蒸留と事後学習（[[diffusion-distillation]]）。
+
+本ページの文脈で最も重要なのは、**学習コストを金額で公開している**ことである。総計 **314K H800 GPU 時間 ≒ $628K**、内訳は低解像度事前学習 147.5K / omni 事前学習 142.5K / 事後学習 24K。基盤モデルのコストがここまで具体的に開示された例は少なく、「原理に基づく設計が力任せのスケーリングに匹敵しうる」という主張の検証可能な足場になっている（[[large-scale-training-infrastructure]]）。
+
+もう 1 つ、方法論上の拒否も記録に値する。資源に乏しい研究でよく取られる近道——**プロプライエタリなモデルから合成データを蒸留する**——について、著者らは「**閉じたフィードバックループを作り、誤差の蓄積とデータの均質化を招き、教師モデルに既に存在するものを超えた新しい視覚的能力の創発を妨げる**」と批判し、実世界データのみで学習したと明言する。
+
+弱点も明確である。**OneIG の Diversity が 0.194（Turbo は 0.139）** と低い——SFT で「多様性最大化から品質最大化へ移す」と明言している以上これは設計通りだが、蒸留がそれをさらに悪化させている点は説明されない。GenEval の Position も 0.62 と弱い。そして**アーキテクチャのアブレーションが 1 つもない**ため、6B での成功が S3-DiT のおかげなのかデータ基盤のおかげなのか PE のおかげなのかは切り分けられていない。
+
 ### 評価が「AI っぽさ」に報いる問題 — bakeyness
 
 FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の論点も記しておく価値がある。T2I ベンチマークが「**どちらの画像を好むか**」という単一の問いに頼ると、**過飽和の色・中心被写体への過度な集中・強いボケ・均質なスタイル**という特徴的な「AI 的美学」が有利になってしまう。著者らはこれを **bakeyness** と名づけ、単一軸の選好評価が**モデルをその方向へ最適化させてしまう**危険を指摘する。
@@ -130,4 +147,5 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の�
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（T2I と編集を単一の rectified flow に統一。bakeyness 批判と 5 次元評価、1024² を 3〜5 秒）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（17B・疎な MoE と 4 系統のハイブリッドテキスト符号化。HPSv2.1 全カテゴリ 1 位、Position と Global に穴）
 - [[summaries/2025-wan]] — Wan（テキストエンコーダを直接アブレーション。umT5 の双方向注意が decoder-only LLM を上回る）
+- [[summaries/2025-z-image]] — Z-Image（6B・$628K で Elo 世界 4 位。S3-DiT＋データ基盤＋PE＋Decoupled DMD の総合。合成データ蒸留を明示的に拒否）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（8B で GenEval 0.90・Position 0.93。VAE も外部テキストエンコーダも持たない統一トークン空間）

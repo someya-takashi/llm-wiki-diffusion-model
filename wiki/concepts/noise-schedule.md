@@ -13,6 +13,7 @@ summaries:
   - "[[summaries/2025-flux-kontext]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-18
 ---
 

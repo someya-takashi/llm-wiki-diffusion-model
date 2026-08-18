@@ -27,6 +27,7 @@ summaries:
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-18
 ---
 
@@ -170,6 +171,33 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 
 **同一パラメータ数で比べると、adaLN に割くより層を深くする方が良い**。しかも 1.7B が 1.5B に負けるのだから、単なるパラメータ効率ではなく**配分の問題**である。25% の削減になる。FLUX.1 が変調パラメータ数を半減させた（fused feed-forward）のと同じ方向の知見で、**条件付け機構は思ったより安く済ませてよい**ことを示唆する。
 
+### Z-Image の S3-DiT（Alibaba 2025）——二重ストリームを完全に畳む
+
+**Z-Image**（[[summaries/2025-z-image]]）で、本ページが追ってきたモダリティ融合の系譜が一周する。
+
+| 世代 | 構成 | 代表 |
+| --- | --- | --- |
+| 二重ストリーム | テキストと画像に別重み、attention でのみ混ぜる | SD3 の MM-DiT |
+| 二重 → 単一の二段 | 前半は別重み、後半は連結して 1 本 | FLUX.1・HiDream-I1 |
+| **完全な単一ストリーム** | **入口の 2 ブロックを除き最初から全部 1 本** | **Z-Image の S3-DiT** |
+
+**S3-DiT**（Scalable Single-Stream DiT）は、テキストトークン・VAE 画像トークン・視覚意味トークン（編集時の SigLIP-2）を系列レベルで連結し、以降は**すべて共有重み**で処理する。モダリティごとの処理は入口の軽量なプロセッサ（各 2 ブロック）だけである。動機は HiDream-O1-Image と同じ「decoder-only LLM のスケーラビリティに倣う」だが、**あちらが VAE ごと捨てた**（[[pixel-space-diffusion]]）のに対し Z-Image は Flux VAE を流用して潜在空間に留まる——**単一ストリーム化とピクセル空間化は独立した判断である**ことを示す好例になっている。6.15B・30 層・隠れ次元 3840 で、テキストエンコーダは Qwen3-4B。
+
+<figure>
+
+![](../../raw/assets/2025-z-image/architecture.png)
+
+<figcaption>図10（引用, [[summaries/2025-z-image]] より）: S3-DiT。左下の各プロセッサ（Semantic / Image / Text / Timestep）を通った異なるモダリティのトークンが 1 本の系列に連結される。右は Single-Stream ブロックの内部で、RMS Norm → Scale → 演算 → RMS Norm → ゼロ初期化ゲートという Sandwich-Norm 構造、Q-Norm/K-Norm、U-RoPE が見える。</figcaption>
+</figure>
+
+**位置符号化は 3D Unified RoPE**。画像トークンが空間 2 次元に展開する一方、**テキストトークンは時間次元に沿って増分する**——両者を同じ座標系に載せる工夫である。編集タスクでは参照画像と対象画像に**空間座標を揃えたまま時間次元で単位区間ずらし**、さらに参照には $t=1$（クリーン）、対象には $t\in[0,1]$（ノイズ付き）という異なる時間条件付けを与える。FLUX.1 Kontext の仮想タイムステップ（[[summaries/2025-flux-kontext]]）と同型の解に独立に到達している。
+
+安定化は **QK-Norm ＋ Sandwich-Norm**（ブロックの入力**と出力の両方**を正規化して信号振幅を抑える）＋ 全正規化を RMSNorm、という 3 点セット。図 10 では出力側に**ゼロ初期化ゲート**が置かれており、ControlNet の zero convolution（[[controllable-generation]]）と同じ発想が層内部に持ち込まれている。
+
+条件注入にも省パラメータの工夫がある。条件ベクトルからスケール／ゲートを作る射影を**低ランクの対に分解し、下方射影は全層で共有、上方射影だけ層ごと**にする。Wan が adaLN の MLP を全層共有した（[[summaries/2025-wan]]）のと同じ方向で、**条件付け機構は思ったより安く済ませてよい**という知見が別々のチームから重ねて出ていることになる。
+
+ただし本ページの観点で重要な留保がある：**Z-Image は単一ストリームと二重ストリームの直接比較（アブレーション）を提示していない**。「密なモダリティ横断の相互作用によりパラメータ効率が高い」は設計上の理屈であって測定結果ではない。6B で Elo 4 位という結果は強いが、それが S3-DiT のおかげだと分離する証拠はない。
+
 ## 既存知識との接続
 
 - [[denoising-diffusion]]：アーキテクチャはノイズ予測 $\epsilon_\theta$ の中身。DDPM の U-Net がこの系譜の起点。
@@ -193,5 +221,6 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2025-hidream-i1]] — HiDream-I1（dual/single stream の FFN を疎な MoE に置換。テキスト符号化は 4 系統のハイブリッド）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（decoder-only LLM をバックボーンに転用。adaLN を捨ててタイムステップをトークン化、ハイブリッド注意）
 - [[summaries/2025-wan]] — Wan（動画 DiT。cross-attention 型を選択、full spatio-temporal attention、adaLN 共有のアブレーション、umT5 の双方向注意）
+- [[summaries/2025-z-image]] — Z-Image（S3-DiT＝完全な単一ストリーム。3D Unified RoPE・Sandwich-Norm・低ランク条件射影で 6B に圧縮）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

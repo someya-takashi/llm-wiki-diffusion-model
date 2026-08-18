@@ -18,6 +18,8 @@ related:
   - "[[super-resolution]]"
   - "[[subject-driven-generation]]"
   - "[[image-inpainting]]"
+  - "[[data-curation]]"
+  - "[[prompt-enhancement]]"
 summaries:
   - "[[summaries/2025-wan]]"
 updated: 2026-08-18
@@ -170,6 +172,8 @@ FVD（Fréchet Video Distance）や FID は人間の知覚と乖離する、と�
 - [[controllable-generation]]：マスク機構とカメラ姿勢アダプタ（Plücker 座標＋ゼロ初期化畳み込み）。ControlNet の系譜が動画へ持ち込まれている。
 - [[subject-driven-generation]] / [[character-consistency]]：動画 personalization は「特徴抽出器を使わず同じ潜在空間に置く」という第 3 の答え。フレーム間の同一性維持は character-consistency のフレーム方向の対応物。
 - [[instruction-based-image-editing]]：VACE の概念分離は、編集タスクの「変える／保つ」を入力形式のレベルで分業させる設計。
+- [[data-curation]]：動画では**動きの品質**という選別軸が加わる。「静的な高品質動画をあえて減らす」といった判断は画像データセットに対応物がない。
+- [[prompt-enhancement]]：Wan の LLM 書き換えには「自然な動きの属性を組み込む」という動画固有の原則が入る。静止しがちな出力への対処である。
 - [[visual-text-rendering]]：Wan は**動画内に中国語と英語のテキストを描ける最初のモデル**を謳う。白背景に漢字をレンダリングした合成データ数億枚と、OCR＋Qwen2-VL で作った実データを併用する——画像側で Qwen-Image が採ったのと同型の処方箋。
 - [[super-resolution]]：初期の動画生成はカスケードで解像度を上げる設計が主流だったが、Wan は単一モデルで 720p まで到達する。
 

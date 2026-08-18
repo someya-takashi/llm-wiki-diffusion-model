@@ -35,6 +35,7 @@
 - [[summaries/2025-qwen-image]] — Qwen-Image（Qwen Team 2025・Alibaba）。凍結 Qwen2.5-VL を条件エンコーダに据えた 20B MMDiT＋MSRoPE。中国語テキスト描画で大差の SOTA、二重符号化の編集、DPO/Flow-GRPO の事後学習
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Qwen Team 2026）。生成と編集を単一モデルに統一する「全能型」。Qwen3-VL＋f16 トークナイザ＋MMDiT、Prompt Enhancer・5 報酬 RLHF・DMD 蒸留（4 NFE）。LMArena ELO 1168
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（Qwen Team 2026）。f16/f32 高圧縮トークナイザ。圧縮率・再構成・拡散可能性の三者間トレードオフ、GSC・DINOv2 中間層整合・KL/GAN 除去、OmniDoc-TokenBench
+- [[summaries/2025-z-image]] — Z-Image（Z-Image Team / Alibaba 2025・arXiv:2511.22699）。6B・$628K（314K H800 GPU 時間）で Elo 世界 4 位・オープンソース 1 位。完全な単一ストリームの S3-DiT、4 エンジンのデータ基盤、PE-aware SFT、Decoupled DMD と DMDR、8 NFE・16GB VRAM 未満
 - [[summaries/2025-wan]] — Wan（Wan Team / Alibaba 2025・arXiv:2503.20314）。本 wiki 初の**動画生成**。3D causal VAE（GroupNorm→RMSNorm＋特徴キャッシュ）、cross-attention 型 DiT、2D Context Parallel、Diffusion Cache、Streamer による無限長生成、I2V/VACE/personalization/カメラ制御/V2A の 7 応用。VBench 86.22% で Sora 超え、1.3B は 8.19GB VRAM
 - [[summaries/2025-hidream-i1]] — HiDream-I1（HiDream.ai 2025・arXiv:2505.22705）。17B オープンソース T2I。dual/single stream の FFN を疎な MoE に置換、Long-CLIP×2＋T5-XXL＋Llama 3.1 中間層の 4 系統ハイブリッド符号化、DMD＋敵対的損失の蒸留、HiDream-E1（潜在マップ横並び連結の編集）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（HiDream.ai 2026・arXiv:2605.11061）。VAE も外部テキストエンコーダも捨て、生ピクセル・テキスト・条件を共有トークン空間へ。decoder-only LLM バックボーン＋ハイブリッド注意、8B で GenEval 0.90・LongText-Bench 0.979/0.978、200B+ へスケール
@@ -72,6 +73,7 @@
 - [[translations/2025-qwen-image]] — Qwen-Image テクニカルレポート 全文翻訳（本文§1–6、表 1–14 markdown 化、§7 著者一覧/References 除外、PDF のため画像なし）
 - [[translations/2026-qwen-image-2]] — Qwen-Image-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–2 markdown 化、図 16 枚、Authors 章除外）
 - [[translations/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0 テクニカルレポート 全文翻訳（Abstract〜Conclusion、表 1–3 markdown 化、図 4 枚、Authors 章除外）
+- [[translations/2025-z-image]] — Z-Image 全文翻訳（本文§1–6、表 1–15 markdown 化（TIIF・PRISM の広表は列群で分割）、図 28 枚＋図 8 の構成画像 4 枚、図 7・11 は HTML 側で画像が生成されず訳注で明示、References/§7 著者一覧/付録 A のプロンプト集を除外）
 - [[translations/2025-wan]] — Wan 全文翻訳（本文§1–6、表 1–8 markdown 化、図 29 枚、図 4・11・13・14 は HTML 側で画像が生成されず訳注で明示、References/§7 貢献者一覧を除外）
 - [[translations/2025-hidream-i1]] — HiDream-I1 全文翻訳（本文§1–9、表 1–4 markdown 化、図 5 枚、References/Appendix A 貢献者一覧を除外）
 - [[translations/2026-hidream-o1-image]] — HiDream-O1-Image 全文翻訳（本文§1–9、表 1–8 markdown 化、図 10 枚、References/Appendix A 貢献者一覧を除外）
@@ -105,6 +107,8 @@
 - [[reinforcement-learning-for-diffusion]] — 拡散モデルの強化学習・事後学習（SFT→DPO→Flow-GRPO、タスク別報酬。flow の SDE 化で探索性を得る）
 - [[image-tokenizer]] — 画像トークナイザ／潜在空間を作るオートエンコーダ（圧縮率 f・チャネル C・拡散可能性の三者間トレードオフ、GSC、意味的整合、OmniDoc-TokenBench）
 - [[diffusion-distillation]] — 蒸留による少ステップ生成（DMD・consistency・progressive・ADD/LADD。ソルバー改良と違い「モデル自体」を作り替える）
+- [[data-curation]] — データキュレーション / データ基盤（重複除去・品質フィルタ・再キャプション・世界知識グラフによる概念均衡・能動的精錬・編集ペアの構築）
+- [[prompt-enhancement]] — プロンプト拡張 / 書き換え（学習キャプションと実ユーザー入力の分布のずれ、推論連鎖、凍結するか RL するかの 4 通りの設計）
 - [[video-diffusion]] — 動画拡散 / 動画生成（時空間 VAE と時間的因果性、系列長爆発、full spatio-temporal attention、マスクによるタスク統一、Streamer の無限長生成、VBench）
 - [[inference-caching]] — 推論キャッシュ / Diffusion Cache（ステップ間の注意・CFG の類似性を突く。学習不要でサンプラー改良・蒸留と直交する第 3 の軸）
 - [[large-scale-training-infrastructure]] — 大規模な学習・推論インフラ（2D Context Parallel＝Ring×Ulysses、活性化オフロード、FP8 GEMM、8-bit FlashAttention、FSDP）
@@ -183,6 +187,12 @@
 - Context Parallel / CP / Ring Attention / Ulysses / USP / FSDP / TP / SP / 活性化オフロード / 勾配チェックポインティング → [[large-scale-training-infrastructure]]
 - FP8 GEMM / 8-bit FlashAttention / SageAttention / TensorRT / int8 量子化 / MFU → [[large-scale-training-infrastructure]]
 - AdaLN-single / adaLN 共有 / PixArt → [[diffusion-model-architecture]]
+- Z-Image / S3-DiT / 単一ストリーム / Single-Stream DiT / Sandwich-Norm / 3D Unified RoPE → [[diffusion-model-architecture]]
+- Decoupled DMD / D-DMD / CFG-Augmentation / DMDR / 報酬ハッキング / reward hacking → [[diffusion-distillation]] ・ [[reinforcement-learning-for-diffusion]]
+- データ基盤 / 重複除去 / deduplication / SSCD / pHash / 再キャプション / recaptioning / 長尾 / 知識グラフ / PageRank / BM25 / AIGC 検出 → [[data-curation]]
+- Prompt Enhancer / PE / プロンプト書き換え / Prompt Agent / 推論連鎖 / PE-aware SFT → [[prompt-enhancement]]
+- model merging / モデルマージ / model soup / 重みの線形補間 → [[lora-merging]]
+- OneIG / CVTG-2K / TIIF / PRISM-Bench / Alibaba AI Arena / Elo → [[text-to-image-generation]] ・ [[visual-text-rendering]]
 
 ## Questions
 

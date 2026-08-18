@@ -8,8 +8,10 @@ related:
   - "[[inference-caching]]"
   - "[[image-tokenizer]]"
   - "[[diffusion-distillation]]"
+  - "[[data-curation]]"
 summaries:
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-18
 ---
 

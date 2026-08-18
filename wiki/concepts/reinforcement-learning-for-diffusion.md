@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Reinforcement Learning for Diffusion, 拡散モデルの強化学習, RLHF for Diffusion, DPO, Diffusion-DPO, GRPO, Flow-GRPO, 事後学習, Post-training]
-tags: [reinforcement-learning-for-diffusion, flow-matching, text-to-image-generation, generative-models]
+tags: [reinforcement-learning-for-diffusion, flow-matching, text-to-image-generation, generative-models, prompt-enhancement]
 related:
   - "[[flow-matching]]"
   - "[[text-to-image-generation]]"
@@ -9,11 +9,14 @@ related:
   - "[[classifier-free-guidance]]"
   - "[[diffusion-sampling]]"
   - "[[diffusion-distillation]]"
+  - "[[prompt-enhancement]]"
+  - "[[data-curation]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2025-z-image]]"
+updated: 2026-08-18
 ---
 
 # Reinforcement Learning for Diffusion（拡散モデルの強化学習・事後学習）
@@ -85,6 +88,23 @@ Qwen-Image は 2 手法を役割分担させる——**DPO で大規模に、GRP
 
 前処理（プロンプト）・生成本体・事後学習が別々の部品ではなく、**1 つの最適化ループに入る**という方向であり、本ページ冒頭の「事前学習の定式化競争から、パイプライン全体の設計へ」という流れをさらに一歩進めたものと位置づけられる。
 
+## 正則化子をどこから調達するか（2025）
+
+RL を生成モデルに掛けるときの最大の実務的リスクは **報酬ハッキング（reward hacking）** ——モデルが報酬関数を悪用し、スコアは高いが視覚的に意味をなさない画像を作る現象——である。通常はこれを防ぐために外から正則化（元モデルからの KL 制約など）を足す。
+
+**Z-Image**（[[summaries/2025-z-image]]）の **DMDR** は、この正則化子を**蒸留の側から調達する**。著者らは Decoupled DMD の分析で「DMD の Distribution Matching 項は実は正則化子として働いている」ことを突き止めており（[[diffusion-distillation]]）、ならばそれをそのまま RL の制約に流用できる、という筋である。RL が人間の選好への整合を解き放ち、DM 項が報酬ハッキングを押さえる。**事後学習と蒸留が別工程ではなく同じ損失の中で役割分担する**という点で、本ページの構図を一段組み替える発展になっている。
+
+### DPO と GRPO の分担を「検証可能性」で切る
+
+Z-Image はもう 1 つ、実務的に再利用価値の高い切り分けを提示する。本ページで DPO（オフライン・選好ペア）と GRPO（オンライン・報酬モデル）を 2 系統として並べたが、**どちらをどの次元に使うか**の基準を明示する。
+
+- **DPO は客観的で二値判定できる次元だけ**に限定する——テキストレンダリングの正誤、物体の個数。これらは **VLM が自動で正解・不正解を判定できる**ので、選好ペアをプログラム的に大量生成し、人間は検証だけすればよい。アノテーションのスループットが劇的に上がる。
+- **主観的な次元**（美しさ、様式）は、一貫して情報量のある選好ペアを集めるのが遅く専門家を要するため DPO では扱わず、**GRPO のオンライン精錬**に回す。
+
+「選好ペアを作るコスト」が次元によって桁違いに違う、という観察に基づく分担である。DPO 側にはさらにカリキュラム学習を入れ、**差異が中程度のペアから始めて徐々に大きい／微妙な差異へ**進む（DPO の収束が正例と負例の差の度合いに敏感だという観測に基づく）。
+
+なお報酬モデルのアノテーション設計も具体的である。指示追従については、プロンプトを (i) 中核となる主体、(ii) 属性、(iii) 動作・相互作用、(iv) 空間・構図の制約、(v) 様式・レンダリングの条件へ構文的・意味的に分解し、**人間の評価者は満たされていない要素をクリックするだけ**にする。満たされた要素の比率がそのままスコアになる——採点者の負担を下げつつ細粒度の信号を得る工夫である。
+
 ## 効果と限界
 
 **効果**（Qwen-Image, GenEval）：SFT 版 0.87 → RL 版 **0.91**。とくに **Position 0.76→0.87**、**Attribute Binding 0.77→0.83**、Counting 0.89→0.93 と、**「指示どおりに配置・属性を割り当てる」という構成的な正確さ**が大きく伸びた。リーダーボードで唯一 0.9 を超える基盤モデルになった。
@@ -105,6 +125,8 @@ Qwen-Image は 2 手法を役割分担させる——**DPO で大規模に、GRP
 - [[diffusion-sampling]]：GRPO のサンプリング（Euler-Maruyama）はサンプラー設計と直結する。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-z-image]] — Z-Image（DMDR で蒸留の DM 項を RL の正則化子に転用。DPO を VLM 検証可能な客観次元に限定し主観次元は GRPO へ回す分担、要素分解によるクリック式の報酬アノテーション）
 
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（OCR・美的・指示追従・推論品質の 4 報酬を集約した GRPO。推論エージェント自体も RL の対象）
 

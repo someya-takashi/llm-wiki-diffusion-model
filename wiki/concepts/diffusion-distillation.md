@@ -19,6 +19,7 @@ summaries:
   - "[[summaries/2025-hidream-i1]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-18
 ---
 
@@ -94,6 +95,28 @@ $$\mathcal{L}_{\text{total}}=\mathcal{L}_{\text{DMD}}+\lambda_{\text{diff}}\math
 
 理由は「学習の安定化と最適化の振動の緩和」。教師の分布に合わせる項（DMD）と本物らしさを押し上げる項（敵対的）はどちらも間接的な信号なので、**元の学習目的そのもの**を錨として残す、という発想である。これが [[pixel-space-diffusion]]（ピクセル空間で拡散する設計）で導入されている点は示唆的で、潜在空間より高次元で不安定になりやすい環境では錨が要る、と読める。
 
+### DMD の理解を書き換える — Decoupled DMD（2025）
+
+上で (2) 分布マッチングを「生徒の分布を教師の分布に一致させる」と説明したが、**Z-Image**（[[summaries/2025-z-image]]）はその理解に正面から異議を唱える。
+
+著者らが DMD を実際に使うと、**高周波の細部が失われ、色調がずれる**という持続的なアーティファクトに遭遇した（コミュニティでも記録されつつある現象）。原因を探った結論はこうである。
+
+> DMD の有効性は一枚岩の現象ではなく、**2 つの独立して協働する機構の結果**である。
+> - **CFG-Augmentation（CA）**：蒸留を実際に駆動する**主要なエンジン**。生徒の少ステップ生成能力を築き上げているのはこちら。**この要因は先行文献でほとんど見過ごされてきた**。
+> - **Distribution Matching（DM）**：主として**正則化子**として機能し、学習を安定させアーティファクトを除去する。
+
+つまり「分布マッチング蒸留」という名が示すものは主役ではなかった、という主張である。両者を切り離し、**CA 項と DM 項に別々の再ノイズ付与スケジュール**を適用したのが **Decoupled DMD** で、これで細部の喪失と色ずれが解消する。
+
+結果として、蒸留された 8 ステップの生徒は **100 ステップの教師に匹敵するだけでなく、写実性と視覚的インパクトで教師を上回る**。本ページ下段の「限界」で「蒸留は教師を超えられない（ただし敵対的蒸留は例外）」と書いたが、**分布マッチング系でも同じことが起きる**事例がこれで加わった。
+
+### DMDR — 正則化子を RL に転用する
+
+上の洞察の自然な帰結である。生成モデルへの RL（[[reinforcement-learning-for-diffusion]]）は **報酬ハッキング**——報酬関数を悪用して高スコアだが視覚的に意味をなさない画像を作る——のリスクを抱え、通常は外から正則化を足す必要がある。ところが Decoupled DMD が示したのは「**DM 項はもともと正則化子である**」ことだった。ならば外付けは要らず、RL の目的関数とそのまま組める——これが **DMDR（Distribution Matching Distillation meets Reinforcement Learning）** である。
+
+RL が人間の選好への整合を解き放ち、DM 項が報酬ハッキングを防ぐ制約として働く。**蒸留と RL が別々の工程ではなく、同じ損失の中で役割分担する**形になっており、本ページと [[reinforcement-learning-for-diffusion]] の境界を曖昧にする方向の発展である。
+
+留保：Decoupled DMD と DMDR の技術的詳細は Z-Image のレポート本体には書かれておらず、それぞれ別の論文に委ねられている。**CA と DM をどう切り分けたか、再ノイズ付与スケジュールをどう変えたかは、本レポートからは分からない**。
+
 ## 代表事例：Qwen-Image-2.0 の 4-NFE 蒸留
 
 [[summaries/2026-qwen-image-2]] は 20B 級のマルチモーダル基盤モデルに DMD を適用した。著者らが強調する困難は、**既存の蒸留研究がほぼ ImageNet のクラス条件付き設定に限られていた**ことである。T2I 生成や画像編集のような開いた条件空間、しかも肖像・風景・**テキストレンダリング**（[[visual-text-rendering]]）まで含む多様なシナリオで、極端に少ない NFE のまま全能力を保てるかは未探求だった。
@@ -133,5 +156,7 @@ $$\mathcal{L}_{\text{total}}=\mathcal{L}_{\text{DMD}}+\lambda_{\text{diff}}\math
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（さらに標準の拡散損失を安定化項として追加。50 → 28 ステップ）
 
 - [[summaries/2025-wan]] — Wan（LCM / VideoLCM で 4 ステップ化。滑動窓ストリーミングと組み合わせてリアルタイム動画生成を成立させる）
+
+- [[summaries/2025-z-image]] — Z-Image（**Decoupled DMD**＝DMD を CFG-Augmentation と Distribution Matching に分解、**DMDR**＝DM 項を RL の正則化子に転用。8 NFE で 100 ステップの教師を上回る）
 
 > 未取り込みの主要原典：Progressive Distillation（Salimans & Ho 2022）、Consistency Models（Song ら 2023）、DMD 原典（Yin ら 2024）、ADD / LADD 原典（Sauer ら 2023・2024）。今後の ingest で本ページへ追記する。（ADD/LADD の実適用例は [[summaries/2025-flux-kontext]] で取り込み済み。）

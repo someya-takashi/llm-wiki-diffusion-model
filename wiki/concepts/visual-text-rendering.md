@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Visual Text Rendering, Text Rendering, 画像内テキスト生成, 文字レンダリング, グリフ生成, Glyph Generation, Scene Text Generation]
-tags: [visual-text-rendering, text-to-image-generation, latent-diffusion, generative-models, pixel-space-diffusion]
+tags: [visual-text-rendering, text-to-image-generation, latent-diffusion, generative-models, pixel-space-diffusion, data-curation]
 related:
   - "[[text-to-image-generation]]"
   - "[[latent-diffusion]]"
@@ -11,6 +11,7 @@ related:
   - "[[image-tokenizer]]"
   - "[[pixel-space-diffusion]]"
   - "[[video-diffusion]]"
+  - "[[data-curation]]"
 summaries:
   - "[[summaries/2025-qwen-image]]"
   - "[[summaries/2024-sd3]]"
@@ -18,6 +19,7 @@ summaries:
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-18
 ---
 
@@ -95,6 +97,18 @@ Qwen 系の 2 手——デコーダを微調整する、圧縮率を上げつつ
 
 なお本ページの中心命題「**VAE がテキスト描画の上限を決める**」は動画でも生きている。Wan-VAE の定性評価（原典 図8）はテキストを含む場面を再構成の 4 つの検証シナリオの 1 つに挙げており、文字の歪みと欠落が VAE の主要な失敗モードであるという認識は共有されている。
 
+## キャプション側から効かせる — OCR を先に走らせる（2025）
+
+本ページはここまで、VAE の上限・データ合成・カリキュラム・位置符号化という**生成側**の対処を追ってきた。**Z-Image**（[[summaries/2025-z-image]]）が加えるのは**キャプション側**の一手である。
+
+主張は強い——「我々の実験によれば、**画像キャプションに明示的な OCR 情報を含めることは、生成画像における正確なテキストレンダリングと不可分に結びついている**」。実装は Chain-of-Thought と同じ精神で、**まず画像中の全文字を OCR で認識し、その結果に基づいてキャプションを書く**。すべてを包含するキャプションを一度に生成させるやり方と比べ、とくにテキストが長い／密な場合に**文字の欠落が実効的に減る**。
+
+さらに実務的に効く細部として、**OCR 結果を翻訳せず元の言語のまま保つ**ことを強制する。翻訳してしまうと、モデルが翻訳後の言語で文字をレンダリングしてしまうからである。二言語（中英）モデルでは避けて通れない罠で、[[data-curation]] の再キャプション設計がそのままテキスト描画性能に跳ね返る例になっている。
+
+結果は本ページの既存の数字と並べて見る価値がある。CVTG-2K で **Z-Image が平均 Word Accuracy 0.8671 の首位**（GPT Image 1 の 0.8569、Qwen-Image の 0.8288 を上回る）。OneIG の Text スコアは**英語 0.987・中国語 0.988**、8 ステップの Turbo に至っては英語 **0.994** である。LongText-Bench では英 0.935 / 中 0.936 で Qwen-Image（0.943 / 0.946）に次ぐ。
+
+**6B のモデルが 20B の Qwen-Image と文字描画で拮抗する**という事実は、この能力がパラメータ規模より**データとキャプションの設計**で決まる度合いが大きいことを示唆する。ただし Z-Image は Flux VAE をそのまま流用しており、本ページ冒頭の「VAE が上限を決める」という命題への直接の対処は行っていない——それでも高いスコアが出ている点は、上限がまだ飽和していなかったことを意味するのかもしれない。
+
 ## 評価をどうするか
 
 文字の正しさは FID（[[text-to-image-generation]] で使う画質指標）では測れないため、専用ベンチマークが使われる。
@@ -128,4 +142,5 @@ Qwen 系の 2 手——デコーダを微調整する、圧縮率を上げつつ
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（最大 1K トークンの超長文レンダリングと多言語対応を主張。ただし定性評価中心）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（VAE を外す。LongText-Bench-ZH で前作の 0.024 から 0.978 へ）
 - [[summaries/2025-wan]] — Wan（動画内に中国語・英語を描ける最初のモデルを謳う。白背景の合成データ＋OCR→Qwen2-VL の実データ。ただし定量評価なし）
+- [[summaries/2025-z-image]] — Z-Image（キャプションに OCR を先に走らせる CoT 方式、OCR 結果を翻訳しない。6B で CVTG-2K 首位・OneIG Text 0.987/0.988）
 - [[summaries/2025-hidream-i1]] — HiDream-I1（テキスト描画の評価を行わなかった世代。後年 LongText-Bench-ZH 0.024 と報告される）

@@ -18,6 +18,7 @@ summaries:
   - "[[summaries/2024-multi-lora-composition]]"
   - "[[summaries/2025-flow-matching-diffusion-intro]]"
   - "[[summaries/2025-wan]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-18
 ---
 

@@ -12,7 +12,8 @@ summaries:
   - "[[summaries/2023-custom-diffusion]]"
   - "[[summaries/2023-mix-of-show]]"
   - "[[summaries/2024-ziplora]]"
-updated: 2026-06-25
+  - "[[summaries/2025-z-image]]"
+updated: 2026-08-18
 ---
 
 # LoRA Merging / Fusion（複数 LoRA の重みマージ／融合）
@@ -82,6 +83,18 @@ hyperparameter-free・約 100 step・joint 学習比で 10× 高速。直和マ�
 
 LoRAHub は下流タスクに合わせて複数 LoRA の結合係数を（勾配フリー最適化で）学習する汎用的な重みベース融合。ZipLoRA の「係数を学習する」発想と同系統だが、画像の content×style 特化ではなくタスク適応寄り。
 
+## 隣接：基盤モデル自身のマージ（model merging）
+
+本ページは LoRA どうしのマージを扱ってきたが、**同じ発想が基盤モデルの全重みに対しても使われている**。**Z-Image**（[[summaries/2025-z-image]]）は SFT の最終段階で **モデルマージ** を採る。
+
+やり方は本ページ (1) の素朴な線形和そのものである：同じバックボーンから初期化した複数の SFT 変種を、それぞれ**異なる能力次元へわずかに偏らせて**微調整し（例：厳密な指示追従に寄せたもの、美的レンダリングに寄せたもの）、重みを線形補間する。
+
+$$\theta_{\text{final}}=\sum_{i}\alpha_{i}\theta_{i}$$
+
+動機が本ページの文脈と少し違う点が興味深い。LoRA マージの目的は「**別々の概念を 1 枚に共存させる**」ことだったが、こちらの目的は「**個々のバイアスを中和して頑健にする**」ことである。SFT を特定の高品質データセットで行うと写実性 対 様式の柔軟性といったトレードオフやバイアスが入るので、複数の偏りを平均して**パレート最適に近づける**。著者らは「損失地形を実効的に滑らかにする」と表現する。
+
+なぜ素朴な線形和で破綻しないのか——本ページ冒頭で見た通り、LoRA マージでは方向の干渉が deterioration を招いた。違いは**すべての変種が同じ初期点から短く離れただけ**である点にあるだろう。互いに独立に学習された LoRA と違い、共通の親から派生した近傍の点どうしなので、線形補間が意味を持つ領域に留まりやすい（LLM 側で model soup と呼ばれる現象と同じ構図）。**マージが成立する条件は「何を混ぜるか」より「どこから来たか」に依る**、という見方を補強する事例である。
+
 ## 「重みを混ぜない」系統との対比
 
 LoRA を 1 枚に合成する手法は、重みマージ（本ページ）以外に 2 系統ある（詳細は [[multi-concept-customization]]）：
@@ -100,6 +113,8 @@ LoRA を 1 枚に合成する手法は、重みマージ（本ページ）以外
 - [[latent-diffusion]]：Mix-of-Show は Stable Diffusion 系（実写 Chilloutmix・アニメ Anything-v4）、ZipLoRA は SDXL 上で動く。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-z-image]] — Z-Image（能力次元ごとに偏らせた複数の SFT 変種を線形補間するモデルマージ。目的は概念の共存ではなくバイアスの中和と頑健性）
 
 - [[summaries/2023-custom-diffusion]] — Custom Diffusion（cross-attention K/V の閉形式制約付き最小二乗マージ。重みマージ系の源流）
 - [[summaries/2023-mix-of-show]] — Mix-of-Show（ED-LoRA＋gradient fusion、分散型多概念カスタマイズ）
