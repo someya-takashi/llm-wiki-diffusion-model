@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Subject-Driven Generation, 被写体駆動生成, Personalization, パーソナライゼーション, DreamBooth, Textual Inversion]
-tags: [subject-driven-generation, text-to-image-generation, latent-diffusion, generative-models]
+tags: [subject-driven-generation, text-to-image-generation, latent-diffusion, generative-models, style-content-disentanglement]
 related:
   - "[[text-to-image-generation]]"
   - "[[latent-diffusion]]"
@@ -14,6 +14,7 @@ related:
   - "[[instruction-based-image-editing]]"
   - "[[character-consistency]]"
   - "[[video-diffusion]]"
+  - "[[style-content-disentanglement]]"
 summaries:
   - "[[summaries/2023-dreambooth]]"
   - "[[summaries/2022-textual-inversion]]"
@@ -23,7 +24,8 @@ summaries:
   - "[[summaries/2024-ziplora]]"
   - "[[summaries/2026-hidream-o1-image]]"
   - "[[summaries/2025-wan]]"
-updated: 2026-08-18
+  - "[[summaries/2024-b-lora]]"
+updated: 2026-08-19
 ---
 
 # Subject-Driven Generation / Personalization（被写体駆動生成 / 個人化）
@@ -76,6 +78,8 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 
 被写体だけでなく**画風（style）も別個に personalize し、両者を合成する**方向もある。**ZipLoRA**（[[summaries/2024-ziplora]]）は、DreamBooth で学んだ被写体（content）LoRA と、SDXL（[[summaries/2023-sdxl]]）の単一画像スタイル学習で得た style LoRA を、列ごとの学習係数で干渉なくマージし「任意の被写体を任意のスタイルで」描く。被写体 personalization と画風 personalization を分離して学習・再結合する点で、本ページの単一概念 fine-tune を [[lora-merging]] へつなぐ。
 
+この「被写体と画風を分けて学習する」路線に、**B-LoRA**（[[summaries/2024-b-lora]]）は別の答えを出す——**分けて学習する必要すらない**。SDXL の第 4 ブロックがコンテンツを、第 5 ブロックが色（スタイル）を支配していることを突き止め、**その 2 ブロックだけを 1 枚の画像から共同学習する**と、style と content が勝手に分離した 2 つの LoRA が得られる。本ページの文脈で特筆すべきは**単一画像で動く**ことで、DreamBooth の 3〜5 枚、Textual Inversion の数枚という前提すら外れている。しかも学習容量が構造的に絞られるため過学習が起きない——本ページ冒頭の「少数枚での過学習」という難所に、正則化ではなく**適用範囲の限定**で応じた形である。詳細は [[style-content-disentanglement]]。
+
 さらに極端な方向として、**そもそも被写体を学習しない**系統がある。FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）は、参照画像を**文脈トークンとして系列に連結するだけ**で同一性を保ったまま編集・再生成する。学習も埋め込みも要らず推論 1 回で済むが、代わりに「複数ターンにわたって同一性がどれだけ保たれるか」という新しい問題が前面に出る——これを扱うのが [[character-consistency]] である。DreamBooth 系が「被写体をモデルに焼き付ける」のに対し、こちらは「被写体を毎回入力として渡す」——**学習型 vs 文脈型**の対比になる。
 
 文脈型の到達点として **HiDream-O1-Image**（[[summaries/2026-hidream-o1-image]]）も挙げておく。参照被写体を SigLIP-2 で符号化した**条件トークン**として、テキスト・生成トークンと同じ 1 本の系列に並べるだけで個人化を行う——専用の経路も学習も持たない。注目すべきは**参照数へのスケーラビリティ**で、著者らが用意した UniSubject（1 人の人物＋1〜10 個の参照物体、300 ケース・1,800 被写体）では、参照が 9〜11 個になると Qwen-Image-Edit の総合スコアが 7.50 → 2.71 まで崩壊するのに対し、8B の HiDream-O1-Image は 7.95 → 7.65 を保つ。分断されたエンコーダ設計では**指示と複数の参照画像が互いに干渉する**が、共有トークン空間ではそれが緩和される、という主張である（[[multi-concept-customization]] の論点でもある）。ただしこのベンチマークは著者らの自作で、採点も VLM 依存である点は割り引いて読む必要がある。
@@ -90,6 +94,7 @@ DreamBooth の「重い全層 fine-tune」と Textual Inversion の「表現力�
 
 ## 既存知識との接続
 
+- [[style-content-disentanglement]]：同一性（content）と様式（style）を切り分ける問題。本ページが「同一性を捉える」なら、あちらは「同一性と様式を分ける」。ZipLoRA と B-LoRA が交差点にあたる。
 - [[text-to-image-generation]]：被写体駆動生成は T2I 拡散モデルの下流応用。汎用 T2I が苦手な「特定個体の同一性保持」を補う。
 - [[latent-diffusion]]：Stable Diffusion を personalize する場合、U-Net（と任意でテキストエンコーダ）を学習しデコーダは固定する。
 - [[denoising-diffusion]]：DreamBooth の PPL は標準の拡散損失（$\hat{x}$／ε 予測）の上に prior 保存項を足したもの。

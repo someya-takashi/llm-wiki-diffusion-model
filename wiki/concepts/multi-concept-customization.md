@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Multi-Concept Customization, 多概念カスタマイズ, Multi-LoRA Composition, LoRA Composition, LoRA Merge, LoRA Switch, LoRA Composite, ComposLoRA]
-tags: [multi-concept-customization, low-rank-adaptation, subject-driven-generation, controllable-generation, generative-models]
+tags: [multi-concept-customization, low-rank-adaptation, subject-driven-generation, controllable-generation, generative-models, style-content-disentanglement]
 related:
   - "[[low-rank-adaptation]]"
   - "[[lora-merging]]"
@@ -10,6 +10,7 @@ related:
   - "[[controllable-generation]]"
   - "[[classifier-free-guidance]]"
   - "[[character-consistency]]"
+  - "[[style-content-disentanglement]]"
 summaries:
   - "[[summaries/2023-custom-diffusion]]"
   - "[[summaries/2023-mix-of-show]]"
@@ -17,7 +18,8 @@ summaries:
   - "[[summaries/2024-lora-composer]]"
   - "[[summaries/2024-multi-lora-composition]]"
   - "[[summaries/2026-hidream-o1-image]]"
-updated: 2026-08-17
+  - "[[summaries/2024-orthogonal-adaptation]]"
+updated: 2026-08-19
 ---
 
 # Multi-Concept Customization / Multi-LoRA Composition（多概念カスタマイズ / 複数 LoRA 合成）
@@ -42,6 +44,12 @@ updated: 2026-08-17
 複数の fine-tune 済み概念の重みを 1 つにまとめてベースモデルに差す系統。この発想自体の起点が **Custom Diffusion**（[[summaries/2023-custom-diffusion]]）の **closed-form constrained-optimization merge**——各概念で別々に学習した cross-attention の $W^k,W^v$ を、「正則化キャプションでは元モデル出力を保ち（最小二乗）、対象概念の単語は fine-tune 済み value に一致させる（制約 $WC^\top=V$）」という制約付き最小二乗で **Lagrange 乗数法により閉形式に**結合する（約 2 秒、$\hat W=W_0+\mathbf v^\top\mathbf d$）。LoRA を対象にした後続もこの「重みを最小二乗で整合させて混ぜる」発想を引き継ぐ。最も素朴な **LoRA Merge**（線形和）$W'=W_0+\sum_i w_i B_iA_i$ は identity loss（各概念が $\frac1n$ に薄まる）と signal interference（列の cosine 類似度が高いと干渉）で破綻する。これを克服する代表が、推論挙動を最小二乗で整合させる **Mix-of-Show** の gradient fusion（[[summaries/2023-mix-of-show]]）と、content+style の列単位の干渉を学習係数で最小化する **ZipLoRA**（[[summaries/2024-ziplora]]）。詳しい系統整理（LoRA Merge / gradient fusion / 学習係数マージ / LoRAHub・ED-LoRA）は **[[lora-merging]]** に委譲する。
 
 - 利点：1 度融合すれば追加推論コストがない（推論は 1 モデル）。欠点：LoRA 数が増えると不安定化し detail が崩れやすい。Mix-of-Show は高品質生成にスケッチ／ポーズなどの**画像条件**（regionally controllable sampling）を併用し、後者の領域注入は [[summaries/2024-lora-composer]] の源流になった。ZipLoRA は被写体（content）×画風（style）の 2 LoRA 合成に特化。
+
+**この系統には「事後に混ぜる」という共通の前提がある**が、**Orthogonal Adaptation**（[[summaries/2024-orthogonal-adaptation]]）はそこを外し、**そもそも干渉しない LoRA を学習させる**。LoRA の $\Delta\theta_i = A_i B_i^\top$ のうち $B_i$ を凍結し、全ユーザーが共有する直交行列からランダムに列を取ることで $B_i^\top B_j \approx 0$ を保証する——マージは素朴な線形和のままでよく、**1 秒未満**で済む。詳細は [[lora-merging]] の系統 (5) を参照。
+
+同論文はこのタスクを **modular customization（モジュラー・カスタマイゼーション）** として定式化した点でも本ページに寄与する。(i) 独立したカスタマイゼーション（他人のデータに一切アクセスしない）、(ii) モジュラーな組合せ（推論時に任意の部分集合を追加学習なしに結合）、(iii) 共同合成、の 3 段階からなる。**$n$ 概念の組合せは指数的に増える**ので、Mix-of-Show のように組合せごとに融合を最適化する方式は原理的にスケールしない——という指摘が、本ページ冒頭の「LoRA の数が増えるほど不安定になる」という経験則に、計算量の側からの根拠を与えている。
+
+ただし本手法にも上限がある。$B_i$ を $n$ 次元空間から $r$ 列取る以上、**厳密に直交できる概念数は高々 $\lfloor n/r \rfloor$**（SD v1.5 の最小次元 320・$r=20$ なら 16）。原典はこの点を定量化していない。
 
 ### (b) 訓練不要の注意制御（training-free, attention control）
 
@@ -85,6 +93,7 @@ Qwen-Image-Edit の崩壊の仕方が示唆的である。本ページ冒頭で�
 
 - [[low-rank-adaptation]]：合成対象の単一概念が LoRA で表される。LoRA がプラグ&プレイで共有可能だからこそ「複数を合成する」課題が成立する。
 - [[lora-merging]]：重みマージ／融合系統（Mix-of-Show・ZipLoRA）を細粒度に扱う子ページ。本ページの (a) を詳説する。
+- [[style-content-disentanglement]]：概念が「被写体 × 画風」の 2 成分に限られる特殊ケース。任意個の被写体へ広げると本ページになる。複数スタイルの合成は両ページの未解決の交差点。
 - [[subject-driven-generation]]：単一概念 personalization の多概念版。
 - [[classifier-free-guidance]]：LoRA Composite は CFG のスコア平均を多 LoRA に拡張したもの。
 - [[controllable-generation]]：LoRA-Composer のレイアウト＋注意制御、Multi-LoRA の復号制御は、いずれも推論時の制御。
@@ -100,3 +109,4 @@ Qwen-Image-Edit の崩壊の仕方が示唆的である。本ページ冒頭で�
 - [[summaries/2024-ziplora]] — ZipLoRA（content+style の学習係数マージ）
 - [[summaries/2024-lora-composer]] — LoRA-Composer（訓練不要・注意制御による多概念合成）
 - [[summaries/2024-multi-lora-composition]] — Multi-LoRA Composition（LoRA Switch / Composite、decoding-centric）
+- [[summaries/2024-orthogonal-adaptation]] — Orthogonal Adaptation（modular customization の定式化、crosstalk、$B$ 凍結＋共有直交基底で素朴な線形和を安全にする）

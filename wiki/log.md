@@ -373,3 +373,45 @@
   - [[concepts/prompt-enhancement]] に **6 つ目の設計（CHI）** を追加。テキストを書き換えず、LLM テキストエンコーダに指示文を前置して**埋め込みの質だけ**を変える。既存 5 通りの「限界と注意点」の多く（意図の書き換え・評価が PE 込みか曖昧・実効パラメータ数の不透明さ）が構造的に発生しない代わり、能動的な推論はできない。
   - [[concepts/flow-matching]] に、SD3 の 61 定式化比較を補う**同一条件（120K ステップ）での DDPM 対 flow matching の直接比較**（FID 19.5→16.9）を追記。
 - メモ: 本 wiki 直近 11 件のうち 10 件がテックレポートだったのに対し、本件は査読を経た学術論文（ICLR 2025）で、アブレーションの統制が明確に良い。既存ページの「アブレーションが示されない」という批判の多くに、後から答えを与える形になった。一方で**線形注意そのものは主流にならなかった**（2025–2026 の大規模モデルはフル注意＋FlashAttention＋トークナイザ圧縮）ため、Sana の遺産は深圧縮 AE と decoder-only LLM テキストエンコーダの 2 点にあると要約ページで評価した。
+
+## [2026-08-19] ingest | Orthogonal Adaptation for Modular Customization of Diffusion Models
+
+- 取り込み: `raw/papers/Orthogonal Adaptation for Modular Customization of Diffusion Models.md`（arXiv:2312.02432・Po ら / Stanford・Snap Research・CVPR 2024）
+- 作成: [[translations/2024-orthogonal-adaptation]], [[summaries/2024-orthogonal-adaptation]]
+- 更新: [[concepts/lora-merging]]（系統 (5) を新設）, [[concepts/multi-concept-customization]], [[concepts/low-rank-adaptation]], [[overview]], [[index]]
+- 翻訳範囲: 本文 §1–6 ＋ 補足 §8–11 の全訳（ユーザー選択：付録も全訳）。表 1–2 を markdown 化（表 2 は HTML テーブルから変換）。References・謝辞は除外。
+- 画像メモ: ar5iv 由来の 12 枚をすべて取得し `raw/assets/2024-orthogonal-adaptation/fig1.png`〜`fig12.png` に保存（図番号と 1:1）。プレースホルダ・取得失敗ともにゼロ。
+- 位置づけ: [[concepts/lora-merging]] の系統 (0)〜(4) が**すべて事後型**（独立に学習された LoRA を後から混ぜる）だったところに、**干渉を学習時に構造的に排除する**系統 (5) が加わった。$\Delta\theta=AB^\top$ の $B$ を凍結し共有直交基底からランダムに $k$ 列を配ることで $B_i^\top B_j \approx 0$ を保証する。
+- 記録すべき指摘:
+  - **crosstalk $\|\Delta\theta_j X_i\|$ の定式化**。本 wiki が identity loss と signal interference と別々に呼んできた 2 つの破綻が 1 つの測れる量にまとまった。
+  - **DB-LoRA ＋ 素朴な線形和の同一性整合が .683 → .098** と崩壊する数値は、[[concepts/lora-merging]] の「素朴な線形和は使い物にならない」という主張の最も明快な裏づけ。
+  - **Mix-of-Show の ED-LoRA だけでも FedAvg の崩壊はかなり防げる**（-.022）。gradient fusion の 15 分はそこから -.011 へ改善するために払われており、費用対効果には厳しい見方ができる。
+- 批判として要約に記録した点:
+  - **既存 LoRA には適用できない**（原典も明記）。事後型の手法が依然として必要な理由。
+  - **直交できる概念数の上限 $\lfloor n/r \rfloor$（SD v1.5・$r$=20 なら 16）を原典が論じていない**。ランダム抽出のため誕生日問題で遥か手前から列が重複するが、概念数増加に伴う劣化が定量化されていない。「無数の概念」というスケーラビリティ主張の中で最も検証が薄い。
+  - **表 2 に内部矛盾**（本手法のテキスト整合が .624 → .644 なのに Δ が -.010）。
+  - 評価が人物の顔にほぼ限定、12 概念、データセット非公開、ベースが ChilloutMix。
+
+## [2026-08-19] ingest | Implicit Style-Content Separation using B-LoRA
+
+- 取り込み: `raw/papers/Implicit Style-Content Separation using B-LoRA.md`（arXiv:2403.14572・Frenkel ら / テルアビブ大・ライヒマン大・ECCV 2024）
+- 作成: [[translations/2024-b-lora]], [[summaries/2024-b-lora]], [[concepts/style-content-disentanglement]]
+- 更新: [[concepts/lora-merging]], [[concepts/low-rank-adaptation]], [[concepts/subject-driven-generation]], [[concepts/diffusion-model-architecture]], [[concepts/character-consistency]], [[concepts/instruction-based-image-editing]], [[concepts/multi-concept-customization]], [[overview]], [[index]]
+- 翻訳範囲: 本文 §1–6 ＋ Appendix A–E の全訳（ユーザー選択：付録も全訳）。表 1–2 を markdown 化。References・謝辞は除外。
+- 画像メモ: **ar5iv 版は図の取り込みが大きく壊れていた**（複合図の 1 枚目だけを抜き出す、図 7・15 が欠落）ため、`arxiv.org/html/2403.14572v2` から回収した。回収の内訳:
+  - 単一画像の図 8 枚（図 2・3・4・5・6・9・10・22）はそのまま保存。
+  - **図 8（代替手法との比較、5 行 × 7 列 = 35 枚）と図 19（ブロック全組合せのアブレーション、上三角 8×8 = 36 枚）はグリッド構造がファイル名から復元できたため、markdown の表として再構成**した。図 17（5 枚）も同様。計 84 枚を `raw/assets/2024-b-lora/` に保存。
+  - **図 1・7・25–30 は ar5iv・arXiv のいずれでも画像が生成されない**。原因は原典が LaTeX の `nicematrix` パッケージ（`NiceTabular`）で組んだ図表であるためで、HTML 中に `nicematrix-placeholder` が残っていることから特定した。訳注で明示。
+  - 図 11–16・18・20・21・23・24・31 は 21〜49 枚の大きな比較グリッドで、構成画像に分解されて配置が失われている。構成画像は回収せず訳注でキャプションのみ訳出した。
+- 新概念の設置理由: [[concepts/style-content-disentanglement]] を新設（ユーザー選択）。ZipLoRA が [[concepts/lora-merging]] の系統 (3) として既に入っていたが、**「スタイルとコンテンツを分離する」という問題設定そのもの**の受け皿がなかった。(a) 別々に学習してマージ / (b) 内在する分離を見つける / (c) 注意特徴の共有 / (d) エンコーダ注入、の 4 系統で整理。
+- 記録すべき指摘:
+  - **「共同で学習する」が本質**。$\{\Delta W^4, \Delta W^5\}$ を独立に学習しても分離しない。付録 C の上三角 8×8 アブレーションで $(2,5)$ が「再構成は良いが分離は弱い」ことが示され、**再構成品質と分離品質は別物**という指針が得られた。
+  - **同時期の InstantStyle も独立に同じ第 5 ブロックをスタイル用に選んでいる**。現象の実在の強い傍証。
+  - **図 3 から、$W_0^4$ と $W_0^5$ はどちらも Up Block 0（デコーダ側の隣接ブロック）**であることを確認した。分離は UNet の遠い場所にあるのではなく隣り合う 2 ブロックの間に走っている。
+- 批判として要約に記録した点:
+  - **「スタイル」の実体は「色」**。原典は CLIP の性質上、色をスタイルの代理として使ったと明記しており、そのツケが「物体固有の色までスタイル側に取られて同一性が壊れる」という限界として返っている（付録 B の $\alpha \in [0.4,0.5]$ は対症療法）。
+  - **SDXL のブロック番号への強い依存**。[[concepts/diffusion-model-architecture]] の潮流は DiT / MM-DiT / 単一ストリームへ進んでおり、均質な Transformer 積層で同じ分離が現れる保証はない。本知見の賞味期限に関わる最大の論点として概念ページにも記録した。
+  - **評価指標の交絡**——コンテンツ類似度が高いモデルは単に過学習しているだけかもしれない。原典は参照 1 枚に絞る追加実験でこれを検証しており（全手法でスタイル↓コンテンツ↑）、指標そのものを疑う姿勢は [[concepts/aesthetic-scoring]] と同型。この論点を新概念ページの中心に据えた。
+  - ブロック対アブレーションが 2 物体のみ、比較実装の多くが非公式、本文の「単一画像」と付録 D（複数画像で personalization）の齟齬。
+- メモ: この 2 本は「LoRA 合成で他に読むべき論文は？」というユーザーの問いに対して推薦した #1 と #3 にあたる。読み合わせると、2023 年末〜2024 年に**マージ機構そのものを不要にする**という共通の転換が起きていたことが見える——Orthogonal Adaptation は「どう学習するか」を、B-LoRA は「どこを学習するか」を変えた。[[concepts/lora-merging]] に「第三の道」の節を設けて両者を並置した。
+- 付随修正: 既存の [[translations/2025-qwen-image]] に残っていたキリル文字の混入（「過小представされた」×3）を「過小表現された」に修正。

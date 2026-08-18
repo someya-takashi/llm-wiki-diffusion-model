@@ -17,6 +17,7 @@ related:
   - "[[unified-multimodal-generation]]"
   - "[[position-embedding]]"
   - "[[efficient-attention]]"
+  - "[[style-content-disentanglement]]"
 summaries:
   - "[[summaries/2021-adm]]"
   - "[[summaries/2020-ddpm]]"
@@ -34,6 +35,7 @@ summaries:
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
+  - "[[summaries/2024-b-lora]]"
 updated: 2026-08-19
 ---
 
@@ -232,6 +234,7 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[classifier-guidance]]：ADM は guidance と同時にこのアーキテクチャ改良を提案。両者あわせて拡散が GAN を超えた。分類器自身も「U-Net のダウンサンプリング部＋8×8 アテンションプール」というこのアーキテクチャの部分を流用する。
 - [[latent-diffusion]]：Stable Diffusion の U-Net も ADM 系の改良 U-Net を踏襲し、cross-attention でテキスト条件を注入する。拡散をピクセル空間から潜在空間へ移すことで、同じアーキテクチャを高解像度に適用可能にした。その後継 SDXL は同じ改良 U-Net を 3× にスケールし transformer block 配分を最適化（[[summaries/2023-sdxl]]）、DiT は同じ VAE 潜在空間でバックボーンだけを Transformer 化したもの。U-Net スケール（SDXL）と Transformer 化（DiT）が 2023 年の 2 つの選択肢。
 - [[efficient-attention]]：DiT が引き受けた「計算量が系列長に二次」という代償への応答をまとめたページ。線形注意・疎注意・FlashAttention・トークン数削減の 4 方向がある。
+- [[style-content-disentanglement]]：**層は等価ではない**。B-LoRA（[[summaries/2024-b-lora]]）は SDXL の 11 transformer ブロックにプロンプト注入解析をかけ、第 4 ブロックがコンテンツを、第 5 ブロックが色を支配することを同定した（どちらも Up Block 0、すなわちデコーダ側の隣接ブロック）。**誰も設計していない役割分化が事前学習の副産物として存在する**という観察であり、アーキテクチャ設計へのフィードバックになりうる。ただしこれは UNet のダウン／ミドル／アップという非対称構造に固有の可能性があり、**DiT・MM-DiT のような均質な Transformer 積層で同じ分離が現れるかは未検証**である。
 - [[diffusion-sampling]]：アーキテクチャ（モデルの中身）とサンプラー（生成手続き）は直交する設計軸。同じ ADM/DiT をどのサンプラー（DDPM/DDIM）で回すかは別問題。
 - [[classifier-free-guidance]]：DiT は CFG で高品質化し（cfg=1.5 で SOTA）、部分チャネル CFG の知見も示した。アーキテクチャと guidance は独立した改善軸。
 - [[low-rank-adaptation]]：LoRA はバックボーン本体を変えず、注意・線形層の重みに低ランク更新 $\Delta W=BA$ を後付けで施す適応手法。アーキテクチャ設計とは直交する。
@@ -255,4 +258,5 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2025-z-image]] — Z-Image（S3-DiT＝完全な単一ストリーム。3D Unified RoPE・Sandwich-Norm・低ランク条件射影で 6B に圧縮）
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2024-sana]] — Sana（Linear DiT＝ReLU 線形注意で $O(N)$ 化、Mix-FFN の 3×3 depthwise conv で補償、NoPE、Triton カーネル融合）
+- [[summaries/2024-b-lora]] — B-LoRA（SDXL の transformer ブロックごとの役割をプロンプト注入で同定。ブロック 4=コンテンツ / 5=色。アーキテクチャ内の創発的な役割分化の実証）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

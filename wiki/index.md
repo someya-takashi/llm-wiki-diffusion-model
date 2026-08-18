@@ -41,6 +41,8 @@
 - [[summaries/2025-wan]] — Wan（Wan Team / Alibaba 2025・arXiv:2503.20314）。本 wiki 初の**動画生成**。3D causal VAE（GroupNorm→RMSNorm＋特徴キャッシュ）、cross-attention 型 DiT、2D Context Parallel、Diffusion Cache、Streamer による無限長生成、I2V/VACE/personalization/カメラ制御/V2A の 7 応用。VBench 86.22% で Sora 超え、1.3B は 8.19GB VRAM
 - [[summaries/2025-hidream-i1]] — HiDream-I1（HiDream.ai 2025・arXiv:2505.22705）。17B オープンソース T2I。dual/single stream の FFN を疎な MoE に置換、Long-CLIP×2＋T5-XXL＋Llama 3.1 中間層の 4 系統ハイブリッド符号化、DMD＋敵対的損失の蒸留、HiDream-E1（潜在マップ横並び連結の編集）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（HiDream.ai 2026・arXiv:2605.11061）。VAE も外部テキストエンコーダも捨て、生ピクセル・テキスト・条件を共有トークン空間へ。decoder-only LLM バックボーン＋ハイブリッド注意、8B で GenEval 0.90・LongText-Bench 0.979/0.978、200B+ へスケール
+- [[summaries/2024-orthogonal-adaptation]] — Orthogonal Adaptation（Po ら / Stanford・Snap 2024・CVPR 2024・arXiv:2312.02432）。**干渉を事後に直すのではなく事前に防ぐ** LoRA マージ。$B$ を凍結し共有直交基底からランダムに列を配って $B_i^\top B_j \approx 0$ を保証、素朴な線形和で 1 秒未満・唯一同一性が劣化しない。crosstalk の定式化、modular customization の問題設定
+- [[summaries/2024-b-lora]] — B-LoRA（Frenkel ら / テルアビブ大・ライヒマン大 2024・ECCV 2024・arXiv:2403.14572）。SDXL の**ブロック 4=コンテンツ / ブロック 5=色**をプロンプト注入解析で同定し、その 2 つだけを単一画像から共同学習して style/content を暗黙分離。マージ機構も組合せごとの再最適化も不要、保存量 70% 減、過学習しない
 - [[summaries/2024-sana]] — Sana（NVIDIA / MIT / 清華大学 2024・arXiv:2410.10629・ICLR 2025）。0.6B で FLUX-12B に匹敵。**深圧縮 AE（F32C32P1）・ReLU 線形注意＋Mix-FFN・Gemma-2 テキストエンコーダ＋CHI・Flow-DPM-Solver** の 4 本柱で、4096px で 104× のスループット、16GB ラップトップ GPU でサブ秒生成。NoPE、マルチキャプション CLIP サンプラ、W8A8＋Triton 融合
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（Black Forest Labs 2025・arXiv:2506.15742）。コンテキスト画像をトークン列に連結するだけで T2I と編集を単一 rectified flow に統一。仮想タイムステップ・LADD で 1024² 3〜5 秒・KontextBench・bakeyness 批判
 
@@ -82,6 +84,8 @@
 - [[translations/2025-wan]] — Wan 全文翻訳（本文§1–6、表 1–8 markdown 化、図 29 枚、図 4・11・13・14 は HTML 側で画像が生成されず訳注で明示、References/§7 貢献者一覧を除外）
 - [[translations/2025-hidream-i1]] — HiDream-I1 全文翻訳（本文§1–9、表 1–4 markdown 化、図 5 枚、References/Appendix A 貢献者一覧を除外）
 - [[translations/2026-hidream-o1-image]] — HiDream-O1-Image 全文翻訳（本文§1–9、表 1–8 markdown 化、図 10 枚、References/Appendix A 貢献者一覧を除外）
+- [[translations/2024-orthogonal-adaptation]] — Orthogonal Adaptation 全文翻訳（本文§1–6 ＋ 補足§8–11、表 1–2 markdown 化、図 12 枚、References/謝辞を除外）
+- [[translations/2024-b-lora]] — B-LoRA 全文翻訳（本文§1–6 ＋ Appendix A–E、表 1–2 markdown 化、単一画像の図 8 枚＋グリッド図 2 点を表として再構成（図 8 の 5×7、図 19 の上三角 8×8）。図 1・7・25–30 は原典が `nicematrix` で組まれており HTML 変換で画像が生成されないため訳注で明示、図 11–16・18・20・21・23・24・31 は大きな比較グリッドのため構成画像を回収せず訳注で明示。References/謝辞を除外）
 - [[translations/2024-sana]] — Sana 全文翻訳（本文§1–7＋Appendix A/B/C、表 1–14 markdown 化、図 16 枚、ar5iv の画像が全 16 枚プレースホルダだったため arXiv から回収、ar5iv が落とした §6 と表 2/3/4 も arXiv から回収、References/謝辞を除外）
 - [[translations/2025-flux-kontext]] — FLUX.1 Kontext 全文翻訳（本文§1–5＋Appendix A,B、図 12 枚、ar5iv 変換失敗の 3 図は訳注で明示、References/謝辞除外）
 
@@ -120,6 +124,7 @@
 - [[prompt-enhancement]] — プロンプト拡張 / 書き換え（学習キャプションと実ユーザー入力の分布のずれ、推論連鎖、凍結するか RL するかの 4 通りの設計）
 - [[video-diffusion]] — 動画拡散 / 動画生成（時空間 VAE と時間的因果性、系列長爆発、full spatio-temporal attention、マスクによるタスク統一、Streamer の無限長生成、VBench）
 - [[inference-caching]] — 推論キャッシュ / Diffusion Cache（ステップ間の注意・CFG の類似性を突く。学習不要でサンプラー改良・蒸留と直交する第 3 の軸）
+- [[style-content-disentanglement]] — スタイル-コンテンツ分離（スタイル転送 / 画像スタイライゼーション。分離を作り込む(ZipLoRA)か見つける(B-LoRA)か、「スタイル≒色」問題、指標の交絡）
 - [[efficient-attention]] — 効率的注意（$O(N^2)$ への近似・疎化・実装最適化・トークン削減の 4 方向。ReLU 線形注意と Mix-FFN、FlashAttention との対比、解像度依存の効き方）
 - [[large-scale-training-infrastructure]] — 大規模な学習・推論インフラ（2D Context Parallel＝Ring×Ulysses、活性化オフロード、FP8 GEMM、8-bit FlashAttention、FSDP）
 - [[pixel-space-diffusion]] — ピクセル空間拡散（VAE を経由せず生画素で拡散。latent-diffusion の前提への異議、Unified Transformer、LLM バックボーン、ハイブリッド注意）
@@ -212,6 +217,8 @@
 - Automatic Resolution / 自動解像度 / img_size トークン / img_ratio トークン → [[unified-multimodal-generation]]
 - MixGRPO / SRPO / ReDA / Reward Distribution Alignment → [[reinforcement-learning-for-diffusion]]
 - SSAE / GSB / Good-Same-Bad / CLIP Score の限界 → [[text-to-image-generation]]
+- Orthogonal Adaptation / 直交適応 / crosstalk / クロストーク / Modular Customization / モジュラー・カスタマイゼーション / FedAvg → [[lora-merging]]
+- B-LoRA / スタイル-コンテンツ分離 / Style Transfer / スタイル転送 / 画像スタイライゼーション / StyleDrop / StyleAligned / InstantStyle / IP-Adapter / Neural Style Transfer / NST → [[style-content-disentanglement]]
 - Sana / Linear DiT / 線形注意 / Linear Attention / ReLU Linear Attention / Mix-FFN / GLUMBConv / EfficientViT → [[efficient-attention]]
 - NoPE / No Positional Encoding / 位置符号化なし → [[position-embedding]]
 - CHI / Complex Human Instruction / 複雑な人間の指示 → [[prompt-enhancement]]
