@@ -241,4 +241,5 @@
 
 <!-- query で得た比較表・分析等 -->
 - [[questions/diffusion-theory-ddpm-to-flow-matching]] — 拡散モデル理論の直感ガイド（DDPM → Flow Matching を数式なし・例え話で。コア理論＋応用編 guidance/latent diffusion）
+- [[questions/z-image-architecture-and-lora-placement]] — Z-Image のアーキテクチャ図解と LoRA の当てどころ（S3-DiT の構造、単一ストリームゆえ cross-attn K/V と B-LoRA のブロック選択が使えない、条件注入の共有/層ごと射影という Z-Image 固有の標的、PE 分布への整合）
 - [[questions/lora-foreground-background-composition]] — 前景物体 LoRA × 背景スタイル LoRA の合成（**融合手法は配置を解かない**という切り分け、K-LoRA と NP-LoRA の鏡像、$\mu$ の使い方、逐次パイプラインという代替、工業製品固有の注意点）

@@ -462,3 +462,26 @@
   - **[[summaries/2024-b-lora]] の「色がスタイル側に取られる」限界が、工業製品の色（同一性の一部）に直撃する**という接続。B-LoRA の $\alpha\in[0.4,0.5]$ の手当てが転用できる。
   - **[[concepts/visual-text-rendering]] との接続**——ロゴや画面内 UI 文字は LoRA 融合では守れず、後段 inpainting 前提の設計が要る。
 - メモ: 回答末尾に限界を明記した——**K-LoRA / NP-LoRA の評価は「DreamBooth の被写体 × StyleDrop の画風」であって「工業製品 × 背景シーン」ではない**。前景／背景という空間的に分かれた構成はこれらの手法の想定外で、問題設定への当てはまりは LoRA-Composer と逐次パイプラインの方が良い、と率直に述べた。
+
+## [2026-08-21] query | Z-Image のアーキテクチャ図解と LoRA の当てどころ
+
+- 質問: Z-Image のモデルアーキテクチャの図解と、LoRA でファインチューニングする場合どこに LoRA を付けるべきか
+- 作成: [[questions/z-image-architecture-and-lora-placement]]
+- 更新: [[index]]
+- 参照: [[summaries/2025-z-image]], [[translations/2025-z-image]]（表 2・§4.1）, [[summaries/2024-b-lora]], [[summaries/2023-custom-diffusion]], [[summaries/2024-orthogonal-adaptation]], [[summaries/2025-k-lora]], [[summaries/2025-np-lora]], [[summaries/2026-hidream-o1-image]], [[summaries/2025-wan]] ／ [[concepts/diffusion-model-architecture]], [[concepts/low-rank-adaptation]], [[concepts/style-content-disentanglement]], [[concepts/prompt-enhancement]], [[concepts/noise-schedule]], [[concepts/diffusion-distillation]]
+- 図解: 原典の図 10 を引用したうえで、**LoRA の貼り付け候補（★A–★G）を注記した ASCII のデータフロー図とブロック内部図**を新規に作成した。原典の図は構造を示すが「どこに LoRA を当てられるか」の視点では読み取りにくいため。
+- 回答の骨子——**Z-Image で「使えなくなる」定番レシピ 2 つ**を軸にした:
+  - **cross-attention の K/V だけ**（Custom Diffusion）が成立しない。S3-DiT には cross-attention がなく、連結系列への self-attention のみ。$W_k,W_v$ はテキストも画像も同じ重みで処理するので、**テキスト条件の入口だけを触ることが原理的にできない**。
+  - **ブロック 4/5 だけ**（B-LoRA）が使えない。[[concepts/style-content-disentanglement]] に記録した留保——**B-LoRA の発見は SDXL の UNet の非対称構造に固有で、均質な Transformer 積層では未検証**——が S3-DiT に直撃する。30 層が完全に同型。
+  - 結論として **★A（全 30 層の Attention の Wq/Wk/Wv/Wo）を第一選択**とし、層を選ぶ根拠が存在しない以上は全層に薄く当てるのが安全、とした。
+- 新しく引き出した接続:
+  - **★C（入口の Image Processor 2 ブロック）が唯一モダリティを分離できる場所**。単一ストリームの裏返しとして、バックボーンの LoRA は必ずテキストトークンの表現も動かす。「被写体だけ教えてプロンプト追従は触りたくない」という要求には構造的にここが正しい。
+  - **★D/★E＝条件注入の低ランク分解が Z-Image 固有の標的**。下方射影は全 30 層共有なので、1 箇所いじると全層の変調が変わる（レバーが長すぎる）。上方射影は層ごとで「計算内容を変えず寄与量だけ変える」という珍しい介入になる。標準的な LoRA レシピに対応物がない。
+  - **Sandwich-Norm ＋ Zero-init Gate が振幅を握る**という含意。ブロック出力は RMSNorm 後にゲートで倍率が決まるので、**LoRA は出力の「向き」を変えるが「大きさ」はゲートが決める**。効きが弱いとき rank/lr を上げる前にゲート側を疑う、という手順を導いた。
+  - **層選択を自分で測る 2 手順**を提示: (a) B-LoRA §4.1 のプロンプト注入解析を Z-Image へ移植（均質な積層でも役割分化が起きるかという未解決の問いにも答えが出る）、(b) 学習済みゲートのノルムを層ごとに見る（実装コストほぼゼロ）。**どちらも本 wiki に実施例がなく、やれば新規の知見になる**と明記した。
+  - **キャプションを PE の出力分布に合わせる**必要性。Z-Image は SFT で全入力を PE に通し拡散側を PE 出力分布へ合わせている（[[concepts/prompt-enhancement]]）ため、短いユーザー風キャプションで LoRA を学習すると分布がずれる。
+  - **[[summaries/2026-hidream-o1-image]] の「SFT では logit-normal を一様サンプリングに切り替える」が LoRA に直接効く**——細部は $t$ が小さい後期で決まるため。
+  - **Turbo ではなくベース版で学習する**根拠として、Diversity がベース 0.194 → Turbo 0.139 と落ちる点（原典が議論していない悪化）を挙げた。
+  - **K-LoRA / NP-LoRA は FLUX でも検証済み**なので、SDXL 固有だった B-LoRA より Z-Image（同じ DiT 系）への移植の見込みが高い、という [[questions/lora-foreground-background-composition]] への接続。
+- 表記の注意として記録: 原典 表 2 の値をそのまま取ると head_dim $=3840/32=120$ だが U-RoPE の次元配分 $(32,48,48)$ は 128 に足し合わさる。**LoRA を当てる分には影響しないが RoPE を触るなら実チェックポイントで要確認**と明記した。
+- メモ: 冒頭に「**本 wiki は Z-Image に LoRA を当てた実験の原典を持っていない。以下は S3-DiT の構造と他モデルの知見からの演繹である**」と明示した。断定できる構造的事実（cross-attention がない、単一ストリーム、条件射影の共有）と、他モデルからの外挿（層選択、時刻分布）を書き分けている。
