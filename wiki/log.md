@@ -485,3 +485,23 @@
   - **K-LoRA / NP-LoRA は FLUX でも検証済み**なので、SDXL 固有だった B-LoRA より Z-Image（同じ DiT 系）への移植の見込みが高い、という [[questions/lora-foreground-background-composition]] への接続。
 - 表記の注意として記録: 原典 表 2 の値をそのまま取ると head_dim $=3840/32=120$ だが U-RoPE の次元配分 $(32,48,48)$ は 128 に足し合わさる。**LoRA を当てる分には影響しないが RoPE を触るなら実チェックポイントで要確認**と明記した。
 - メモ: 冒頭に「**本 wiki は Z-Image に LoRA を当てた実験の原典を持っていない。以下は S3-DiT の構造と他モデルの知見からの演繹である**」と明示した。断定できる構造的事実（cross-attention がない、単一ストリーム、条件射影の共有）と、他モデルからの外挿（層選択、時刻分布）を書き分けている。
+
+## [2026-08-21] query | LoRA merging 実験のベースモデル選定（Z-Image / ERNIE-Image / FLUX.2 klein 4B）
+
+- 質問: LoRA merging の実験用ベースモデルとして 3 候補を、(1) LoRA 学習可能か (2) 学習の容易性 (3) [[concepts/lora-merging]] の手法の適用可能性 で評価してほしい
+- 作成: [[questions/lora-merging-base-model-selection]]
+- 更新: [[index]]
+- 参照（wiki）: [[summaries/2025-z-image]], [[summaries/2026-ernie-image]], [[summaries/2025-k-lora]], [[summaries/2025-np-lora]], [[summaries/2026-ssr-merge]], [[summaries/2024-orthogonal-adaptation]], [[summaries/2024-b-lora]], [[summaries/2024-ziplora]], [[summaries/2023-custom-diffusion]], [[summaries/2023-mix-of-show]] ／ [[concepts/lora-merging]], [[concepts/model-merging]], [[concepts/style-content-disentanglement]], [[concepts/diffusion-distillation]]
+- **Web 調査を併用**（FLUX.2 [klein] は本 wiki 未収録のため）。モデルカード・BFL 公式 docs／blog・HF blog・DeepWiki・GitHub issue を参照し、URL を回答末尾に列挙した。
+- 結論: **FLUX.2 [klein] 4B Base を第一推奨**、Z-Image Base が第二、ERNIE-Image が第三。
+- 判断の骨子:
+  - **決定的な差 1**——[[concepts/lora-merging]] の主要 3 手法（K-LoRA・NP-LoRA・SSR-Merge）が**いずれも FLUX 系で検証済み**。NP-LoRA は「K-LoRA のみが FLUX の公式実装を提供」と明記し、SSR-Merge の主要実験は FLUX.1-dev。klein は FLUX.1 の直系（8 DoubleStream ＋ 24 SingleStream）なので、公開ハイパーパラメータと実装がそのまま通る見込みが最も高い。
+  - **決定的な差 2**——**完全単一ストリームでは Custom Diffusion 系（cross-attention の K/V だけ）が原理的に使えない**。Z-Image / ERNIE-Image は該当。klein は DoubleStreamBlock でテキストと画像が別重みを持つため対応物が存在し、「画像ストリームだけに当てる」選択肢も残る。
+  - **決定的な差 3**——B-LoRA のブロック選択は 3 モデルとも使えない（DiT のため）が、klein には「二相構成」という探索の起点がある。逆に **Z-Image の 30 層完全同型は交絡がないので「層の位置がマージ結果に影響するか」を統制して測れる唯一の候補**、という両面の評価をした。
+- **本 wiki の記述を更新する価値のある発見**:
+  - [[summaries/2024-orthogonal-adaptation]] の要約で**最大の弱点として挙げた「直交できる概念数の上限 $\lfloor n/r \rfloor$」が、広い DiT では桁で緩む**。SD v1.5 は最小次元 320 で $r=20$ なら 16 概念だが、**Z-Image は隠れ次元 3840 で統一されており 192 概念**、共有直交基底として保存すべき正方行列も 4 個 → **実質 2 個**に減る。「スケーラビリティ主張の中で最も検証が薄い」という批判は、現代の DiT ではあまり効かない。
+  - **必要な LoRA の本数が手法によって桁で違う**（ZipLoRA/K-LoRA/NP-LoRA は 2 本、SSR-Merge は最大 21 本）ため、**1 本あたりの学習コストが実験計画を規定する**。4B と 8B の差が積み上がる。
+  - Z-Image と FLUX.2 klein 4B が**同じ Qwen3-4B をテキストエンコーダに使う**（musubi-tuner #886 でも同一ファイルが参照される）。2 モデルを比較する実験でテキストエンコーダを統制変数にできる。
+- ERNIE-Image を 3 位にした理由: [[summaries/2026-ernie-image]] に批判として記録済みの**アーキテクチャ非公開**（層数・隠れ次元・注意機構・位置符号化の記述が一切ない）が、merging 研究では三重に効く——(a) どの行列に当てたかを報告できない、(b) NP-LoRA の主方向数・SSR の $Kr$・OA の $\lfloor n/r \rfloor$ を仕様から見積もれない、(c) 8B と最大で反復が遅い。
+- 実験設計として 3 フェーズを提案（klein で再現 → klein でスケール → Z-Image へ移植）。**Phase 3 が学術的に最も価値がある**——SSR-Merge が FLUX.1 で 90〜98%・Qwen-Image で 97〜99% という 7 ポイント差を「特徴空間の特性が違う」としか説明していない空白（要約に批判として記録済み）に、二相構成 対 完全単一ストリームという統制された対比で切り込める。
+- メモ: 回答末尾に限界を 3 点明記——**本 wiki は FLUX.2 klein の原典を持たない**（Web 調査ベース、隠れ次元は非公開）、**3 モデルいずれについても LoRA merging の実験報告は wiki にも公開文献にも見当たらない**（適用可能性は構造からの演繹）、**ERNIE-Image の「cross-attention なし」は「単一ストリーム DiT」からの推定**で原典に明示がない。
