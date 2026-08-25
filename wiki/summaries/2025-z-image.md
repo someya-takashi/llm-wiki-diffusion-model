@@ -2,12 +2,15 @@
 type: summary
 source_path: raw/papers/Z-Image_ An Efficient Image Generation Foundation Model with Single-Stream Diffusion Transformer.md
 source_kind: paper
+code_source_path: code_analysis/Z-Image/
+code_commit: 26f23ed
+code_verified: 2026-08-26
 title: "Z-Image: An Efficient Image Generation Foundation Model with Single-Stream Diffusion Transformer"
 authors: [Z-Image Team (Alibaba Group / Tongyi-MAI)]
 year: 2025
 venue: arXiv:2511.22699（テクニカルレポート）
 ingested: 2026-08-18
-tags: [diffusion-model-architecture, diffusion-distillation, reinforcement-learning-for-diffusion, data-curation, prompt-enhancement, text-to-image-generation, visual-text-rendering, instruction-based-image-editing, large-scale-training-infrastructure, flow-matching]
+tags: [diffusion-model-architecture, diffusion-distillation, reinforcement-learning-for-diffusion, data-curation, prompt-enhancement, text-to-image-generation, visual-text-rendering, instruction-based-image-editing, large-scale-training-infrastructure, flow-matching, position-embedding, classifier-free-guidance, efficient-attention]
 translation: "[[translations/2025-z-image]]"
 ---
 
@@ -128,6 +131,98 @@ RLHF は 2 段階だが、**分担が明確**である。**DPO は客観的で V
 - **編集**: ImgEdit 総合 4.30 で 3 位（Qwen-Image-Edit [2509] の 4.35 に僅差）、GEdit で 3 位。
 - **効率**: 8 NFE、H800 でサブ秒、**16GB VRAM 未満**で動作。蒸留前の SFT モデルは CFG 込みで約 100 NFE を要していた。
 
+## コードから確認できたこと（2026-08-26 追記）
+
+公式のリファレンス実装（`code_analysis/Z-Image/`・コミット `26f23ed`・Apache-2.0）を読み、本ページの記述を検証した。**本 wiki で「報告書がある原典をコードで裏取りした」初めての例**である（[[summaries/2025-flux2]] は報告書が存在しないケース、[[summaries/2026-ai-toolkit]] はツールのケース）。以下、ファイル名と行番号を添える。
+
+### 訂正の記録：注意ヘッド数は 32 ではなく 30
+
+**本ページと [[questions/z-image-architecture-and-lora-placement]] が原典 表2 から引いていた「注意ヘッド数 32」は、公開チェックポイントの構成と一致しない。**
+
+| | 原典 表2（[[translations/2025-z-image]]） | **リファレンス実装** |
+| --- | --- | --- |
+| 隠れ次元 | 3840 | 3840 ✅ |
+| 層数 | 30 | 30 ✅（ただし下記の 34 ブロック） |
+| **注意ヘッド数** | **32** | **30** ❌ |
+| head_dim | （記載なし。32 なら 120） | **128** |
+
+根拠は 2 つある。第一に `src/config/model.py` L28–32 が `DIM=3840` / `N_HEADS=30` / `N_KV_HEADS=30` を既定とし、`src/zimage/transformer.py` L338–339 が
+
+```python
+head_dim = dim // n_heads
+assert head_dim == sum(axes_dims)      # 128 == 32 + 48 + 48
+```
+
+を**実行時に強制する**。ヘッド数が 32 なら head_dim は 120 になり、この assert が落ちる。U-RoPE の次元配分 $(d_t,d_h,d_w)=(32,48,48)$ が表 2 に載っている以上、**表 2 は自分自身と整合していない**。
+
+第二に、**パラメータ数の算術が 30 ヘッド構成を支持する**。1 ブロックは attention $4\times3840^2=58.98\text{M}$ ＋ FFN $3\times3840\times10240=117.96\text{M}$ ＋ 変調 $3.95\text{M}$ ≈ 180.9M。変調ありブロック 32 個（統一 30 ＋ 画像側リファイナ 2）＋ 変調なし 2 個 ＋ `cap_embedder` 9.83M ＝ **6.153B** で、報告書の 6.15B にぴったり乗る。
+
+**結論への影響**：head_dim が 120 か 128 かは LoRA を当てるだけなら影響しない（LoRA は $W_q$ 等の行列全体に当たり、ヘッドへの分割はその後で起きる）。影響するのは**独自に RoPE を実装する場合**だけである。[[questions/z-image-architecture-and-lora-placement]] の訳注が「実チェックポイントで確認したほうがよい」と留保していた点が、これで決着した。**訳文（[[translations/2025-z-image]]）は直さない**——原典に忠実であることが翻訳ページの役割であり、食い違いは原典の側にある。
+
+### 確定した構成値
+
+**「30 層」は統一バックボーンだけを指しており、総ブロック数は 34 である。**
+
+| モジュール | 個数 | タイムステップ変調 | 処理する対象 |
+| --- | --- | --- | --- |
+| `noise_refiner` | 2 | **あり** | 画像トークンのみ |
+| `context_refiner` | 2 | **なし**（`modulation=False`） | テキストトークンのみ |
+| `layers` | 30 | あり | 連結された統一系列 |
+
+本文で「入口の 2 ブロック」と書いたのは**モダリティごとに 2 ブロックずつ、合計 4 ブロック**の意味だった（`transformer.py` L308–320）。そして**テキスト側のリファイナはタイムステップ変調を一切受けない**（L317, L544–545）——テキストはノイズ除去の進行度に依存しないのだから自然だが、**報告書はこの非対称に触れていない**。
+
+**「共有され層に依存しない下方射影」の正体は 256 次元である。** `ADALN_EMBED_DIM = 256`（`config/model.py` L3）で、`t_embedder` が 256 次元のベクトルを 1 つ出し（L322）、各ブロックが `adaLN_modulation = Linear(256 \to 4\cdot\text{dim})` で上方射影する（L169）。
+
+$$\underbrace{t \to \mathbb{R}^{256}}_{\text{全層で 1 回}} \;\longrightarrow\; \underbrace{\mathbb{R}^{256} \to \mathbb{R}^{4\times3840}}_{\text{層ごと}}$$
+
+節約量を計算できる。素朴に $\text{dim}\to4\cdot\text{dim}$ とすると 30 層で **17.70 億パラメータ**、実際の構成では **1.18 億**。**約 16.5 億パラメータの差**で、素朴実装なら 6.15B のモデルが約 7.8B に膨らむ計算になる。「パラメータのオーバーヘッドを減らすため」という報告書の一文が、**モデル全体の 2 割強**を意味していたことになる。
+
+**変調は 4 分割で、shift 項がない。** `scale_msa, gate_msa, scale_mlp, gate_mlp` の 4 つだけで、標準的な adaLN-Zero（[[summaries/2023-dit]]）が持つ shift ／ scale ／ gate の 6 分割から**シフトが落とされている**（L180–184）。そしてゲートは
+
+```python
+gate_msa, gate_mlp = gate_msa.tanh(), gate_mlp.tanh()
+scale_msa, scale_mlp = 1.0 + scale_msa, 1.0 + scale_mlp
+```
+
+——本ページで図から読み取って「ゼロ初期化ゲート」と書いたものは、**厳密には tanh で $(-1,1)$ に有界化されたゲート**である。初期値が 0 付近なら実効的にゼロ初期化として働くが、機構としては「ゲートが暴れないことを恒等的に保証する」ものになっている。Sandwich-Norm はコードでも確認できた——`attention_norm1`（前）と `attention_norm2`（**attention 出力側**）、`ffn_norm1` / `ffn_norm2` の 4 つの RMSNorm が実在する（L163–166, L186–192）。
+
+### 報告書に書かれていない実装事実
+
+| 事実 | 場所 | なぜ重要か |
+| --- | --- | --- |
+| **トークン順は `[画像, テキスト]`**（画像が先） | `transformer.py` L552 | FLUX 系の `[テキスト, 画像]` と逆。単一ストリームでは順序が RoPE の座標割り当てを決める |
+| RoPE の `theta = 256.0` | `config/model.py` L6 | 標準の 10000、FLUX.2 の 2000 と比べ**極端に小さい**（[[position-embedding]]） |
+| 軸配分 `[32,48,48]`・軸長 `[1536,512,512]` | 同 L7–8 | **空間軸に厚く配分**。テキスト最大 1536 位置、画像は 1 辺 512 トークン＝8192px 相当 |
+| テキストは第 1 軸を **1 から**増分、画像は全トークンが同一の第 1 軸値、**位置 0 はパディング専用** | `transformer.py` L391–443 | 報告書の「テキストは時間次元に沿って増分する」の具体形 |
+| テキスト埋め込みは **`hidden_states[-2]`**（最終層の 1 つ手前） | `pipeline.py` L134 | 報告書は「Qwen3-4B」としか書かない。**どの層を取るか**が設計変数（[[summaries/2025-flux2]] は中間 3 層を連結） |
+| プロンプトは **Qwen の chat template ＋ `enable_thinking=True`** で整形してから符号化（生成はしない） | `pipeline.py` L110–116 | LLM を「対話モデルとして」呼び出す形のまま埋め込みだけ取る（[[prompt-enhancement]]） |
+| 系列を **32 の倍数にパディング**し、**学習済みの `x_pad_token` / `cap_pad_token`** を差し込む。パッドも attention に参加する | L328–329, L390, L427, L508 | 可変長の効率を捨ててカーネル整列を取る設計（[[efficient-attention]]） |
+| モデルへは `(1000-t)/1000` を渡し、**出力を符号反転**して標準スケジューラに載せる | `pipeline.py` L223, L274 | 「Z-Image は時刻の向きが逆」という本 wiki の記述の**実装上の帳尻合わせ**が確認できた |
+| `calculate_shift` で $\mu$ を計算するが `use_dynamic_shifting=False` のため**捨てられる**。静的 `shift=3.0` | `pipeline.py` L194–202 / `scheduler.py` L85–88 | SD3・FLUX と同じ定数（base 0.5 / max 1.15）を計算しておきながら使わない（[[noise-schedule]]） |
+| `cfg_truncation`（終盤で CFG を切る）と `cfg_normalization`（guided 予測のノルム上限）という 2 つのつまみ | `pipeline.py` L227–268 | 報告書に記述なし（[[classifier-free-guidance]]） |
+| **`0 < guidance_scale ≤ 1.0` は黙って無効**（`> 1.0` で初めて有効化） | `pipeline.py` L105 | 「弱い CFG を掛けたつもり」が何もしない罠 |
+| FFN は SwiGLU・`hidden = dim/3*8 = 10240`・全線形層 bias なし。`n_kv_heads == n_heads` で **GQA は使っていない** | `transformer.py` L70–75, L161 | 報告書の 10240 が導出値であることが分かる |
+| attention backend は FA2 / FA3 / varlen / **`mps_flash`（Apple Silicon）** / SDPA / math。デバイスは cuda → TPU → mps → cpu | `utils/attention.py`, `inference.py` L32–49 | 「コンシューマ級ハードウェア」という主張が実装で裏づけられる |
+
+**独立確認**: [[summaries/2026-ai-toolkit]] の Z-Image 実装も学習用スケジューラに**同じ `use_dynamic_shifting: False, shift: 3.0`** を使っている（`extensions_built_in/diffusion_models/z_image/z_image.py` L42–45）。静的シフトであることが 2 つの独立した実装で支持される。
+
+### 実装されていないもの
+
+**このリポジトリは T2I 推論専用であり、編集経路が丸ごと存在しない。** 参照画像の入力、SigLIP-2 の意味エンコーダ、図 10 左下の semantic processor / image processor の 2 経路は**コードに一切現れない**。本ページ「1. S3-DiT」で説明した編集時の構成（参照画像に $t=1$、対象に $t\in[0,1]$）は、**報告書のみを根拠とする記述のままである**——[[questions/z-image-figure10-architecture-walkthrough]] でも同じ書き分けをした。
+
+`README.md` の Model Zoo が公開状況を整理している（**報告書には無い情報**）。
+
+| モデル | 事前学習 | SFT | RL | ステップ | CFG | 多様性 | **微調整のしやすさ** | 公開 |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | --- |
+| Z-Image-Omni-Base | ✅ | ❌ | ❌ | 50 | ✅ | High | Easy | 未公開 |
+| **Z-Image** | ✅ | ✅ | ❌ | 50 | ✅ | Medium | **Easy** | 2026-01-27 |
+| **Z-Image-Turbo** | ✅ | ✅ | ✅ | 8 | ❌ | Low | **N/A** | 2025-11-26 |
+| Z-Image-Edit | ✅ | ✅ | ❌ | 50 | ✅ | Medium | Easy | 未公開 |
+
+**Turbo の Fine-Tunability が「N/A」と明示されている**点は、[[questions/lora-merging-base-model-selection]] と [[questions/z-image-architecture-and-lora-placement]] が「ベース版で学習せよ」と述べた根拠を公式の表で裏づける。非蒸留の Z-Image は推奨 28–50 ステップ・CFG 3.0–5.0・`cfg_normalization` は写実で True / 画風で False。
+
+**学習コード・データ・蒸留の実装は一切ない。** Decoupled DMD も DMDR も、データ基盤の 4 エンジンも、コードからは何一つ検証できない。本ページの「限界・批判的視点」で挙げた未検証の主張は、**リファレンス実装の公開によっても解消していない**。
+
 ## 限界・批判的視点
 
 - **アブレーションが 1 つもない**。S3-DiT（単一ストリーム）が二重ストリームに対して本当に優れているのか、直接比較が提示されていない。「パラメータ効率が高い」は設計上の理屈であって測定結果ではなく、**本論文の中心的な主張が未検証のまま**である。Sandwich-Norm・低ランク条件射影・3D Unified RoPE についても同様。
@@ -138,6 +233,7 @@ RLHF は 2 段階だが、**分担が明確**である。**DPO は客観的で V
 - **GenEval の Position が 0.62** と低い（GPT Image 1 の 0.75、Janus-Pro-7B の 0.79）。空間関係の指示追従は弱点として残る。
 - **合成データ蒸留を批判しながら、自身も VLM への依存が深い**。プロプライエタリなモデルからの蒸留は拒否するが、キャプション生成・DPO の選好ペア生成・知識グラフのノード命名・視覚的生成可能性の判定はすべて VLM が担う。「閉じたフィードバックループ」の批判は、**キャプションモデルと報酬モデルを自身の出力で再学習する** Active Curation Engine 自体にも一定程度当てはまりうる。
 - **PE 込みの評価と PE なしの評価が混在している**。付録は「PE を無効にすれば図 1–3 を再現できる」と述べるが、ベンチマーク数値が PE ありなのか無しなのかは明示されない。6B の性能の何割が PE によるものかを切り分けられない。
+- **報告書の構成表が公開チェックポイントと食い違う**（上記「訂正の記録」）。表 2 の注意ヘッド数 32 は、同じ表に載る U-RoPE の次元配分 $(32,48,48)$ と整合しない。**表 2 は自己完結的に検算できたはずの誤りを含んでいる**——アブレーションの欠如とは別種の、記述の精度そのものに関わる問題である。一次資料としてこの報告書を引く際は、構成値は実装で確認したほうがよい。
 - **図が 3 枚欠落している**（図 7・8・11）。ar5iv・arXiv HTML のどちらでも生成されておらず、編集データ構築の図解（図 7）と学習パイプライン全体図（図 11）は本文の記述からしか追えない。
 
 ## 用語と略称
@@ -179,3 +275,12 @@ RLHF は 2 段階だが、**分担が明確**である。**DPO は客観的で V
 - [[summaries/2025-qwen-image]] / [[summaries/2026-qwen-image-2]] — 20B の同門。PE の扱いが正反対
 - [[summaries/2025-flux-kontext]] — 編集における時間軸オフセットの同型の解
 - [[summaries/2025-wan]] — 条件付け機構の省パラメータ化で同じ方向の知見
+- [[summaries/2025-flux2]] — 同じく共有変調を採る対照例。コードを一次資料とする方法論の先例
+- [[summaries/2026-ai-toolkit]] — Z-Image の LoRA 学習を実装するツール。静的シフトの独立確認元
+- [[concepts/position-embedding]] — 3D Unified RoPE の実装値（theta=256・軸配分・パディング位置）
+- [[concepts/classifier-free-guidance]] — `cfg_truncation` / `cfg_normalization`
+- [[concepts/efficient-attention]] — 32 の倍数パディングと学習済みパッドトークン
+- [[concepts/noise-schedule]] — 計算されて捨てられる $\mu$
+- [[concepts/flow-matching]] — 時刻の向きの帳尻合わせ
+- [[questions/z-image-architecture-and-lora-placement]] — 実モジュール名での LoRA 標的
+- [[questions/z-image-figure10-architecture-walkthrough]] — 図 10 の読み解き（編集経路は報告書のみが根拠）

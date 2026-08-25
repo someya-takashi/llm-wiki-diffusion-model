@@ -37,7 +37,7 @@
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（Qwen Team 2026）。f16/f32 高圧縮トークナイザ。圧縮率・再構成・拡散可能性の三者間トレードオフ、GSC・DINOv2 中間層整合・KL/GAN 除去、OmniDoc-TokenBench
 - [[summaries/2025-hunyuanimage-3]] — HunyuanImage 3.0（Tencent Hunyuan 2025・arXiv:2509.23951）。総 80B / 活性 13B の MoE LLM に拡散を接ぎ木したネイティブ・マルチモーダルモデル。**テキストは自己回帰・画像は拡散**、Generalized Causal Attention と「穴」、Generalized 2D RoPE、自動解像度、ネイティブ CoT、5 段階の事後学習、**エキスパートのモダリティ専門化を初めて実測**
 - [[summaries/2026-ernie-image]] — ERNIE-Image（ERNIE Team / Baidu 2026・arXiv:2605.25347）。8B の単一ストリーム DiT。**美的スコアリングを主題化**（ERNIE-Image-Aes・ERIA-1K・既存予測器のバイアス）、MT-DMD による多教師蒸留、flow matching 上の DPO と Anchor Loss、PE ありなしの分離報告。GenEval 0.89、人間評価でオープンソース 1 位
-- [[summaries/2025-z-image]] — Z-Image（Z-Image Team / Alibaba 2025・arXiv:2511.22699）。6B・$628K（314K H800 GPU 時間）で Elo 世界 4 位・オープンソース 1 位。完全な単一ストリームの S3-DiT、4 エンジンのデータ基盤、PE-aware SFT、Decoupled DMD と DMDR、8 NFE・16GB VRAM 未満
+- [[summaries/2025-z-image]] — Z-Image（Z-Image Team / Alibaba 2025・arXiv:2511.22699）。6B・$628K（314K H800 GPU 時間）で Elo 世界 4 位・オープンソース 1 位。完全な単一ストリームの S3-DiT、4 エンジンのデータ基盤、PE-aware SFT、Decoupled DMD と DMDR、8 NFE・16GB VRAM 未満 **［2026-08-26 コード検証済み］** 公式実装（`code_analysis/Z-Image/` コミット `26f23ed`）と突き合わせ、**原典 表2 の「注意ヘッド 32」が誤りで実際は 30・head_dim 128** であることを確認。総 34 ブロック（統一 30 ＋ 入口 2×2、テキスト側は変調なし）、共有下方射影は **256 次元**（素朴実装比で約 16.5 億パラメータの節約）、shift 項なしの tanh ゲート、RoPE theta=256、連結順は `[画像, テキスト]`、静的シフト $s=3.0$、`cfg_truncation` / `cfg_normalization`、**編集経路と SigLIP-2 は未実装**
 - [[summaries/2025-wan]] — Wan（Wan Team / Alibaba 2025・arXiv:2503.20314）。本 wiki 初の**動画生成**。3D causal VAE（GroupNorm→RMSNorm＋特徴キャッシュ）、cross-attention 型 DiT、2D Context Parallel、Diffusion Cache、Streamer による無限長生成、I2V/VACE/personalization/カメラ制御/V2A の 7 応用。VBench 86.22% で Sora 超え、1.3B は 8.19GB VRAM
 - [[summaries/2025-hidream-i1]] — HiDream-I1（HiDream.ai 2025・arXiv:2505.22705）。17B オープンソース T2I。dual/single stream の FFN を疎な MoE に置換、Long-CLIP×2＋T5-XXL＋Llama 3.1 中間層の 4 系統ハイブリッド符号化、DMD＋敵対的損失の蒸留、HiDream-E1（潜在マップ横並び連結の編集）
 - [[summaries/2026-hidream-o1-image]] — HiDream-O1-Image（HiDream.ai 2026・arXiv:2605.11061）。VAE も外部テキストエンコーダも捨て、生ピクセル・テキスト・条件を共有トークン空間へ。decoder-only LLM バックボーン＋ハイブリッド注意、8B で GenEval 0.90・LongText-Bench 0.979/0.978、200B+ へスケール
@@ -234,6 +234,11 @@
 - B-LoRA / スタイル-コンテンツ分離 / Style Transfer / スタイル転送 / 画像スタイライゼーション / StyleDrop / StyleAligned / InstantStyle / IP-Adapter / Neural Style Transfer / NST → [[style-content-disentanglement]]
 - FLUX.2 / FLUX.2 dev / FLUX.2 klein / DoubleStreamBlock / SingleStreamBlock / 変調の全ブロック共有 → [[summaries/2025-flux2]] ・ [[diffusion-model-architecture]]
 - ai-toolkit / ostris / `get_transformer_block_names` / `transformer_only` / `only_if_contains` / `peft_format` / `timestep_type` → [[ai-toolkit]] ・ [[summaries/2026-ai-toolkit]]
+- S3-DiT / noise_refiner / context_refiner / 入口プロセッサ / Sandwich-Norm → [[diffusion-model-architecture]] ・ [[summaries/2025-z-image]]
+- ADALN_EMBED_DIM / 共有下方射影 / 層ごと上方射影 / tanh ゲート → [[diffusion-model-architecture]]
+- cfg_truncation / cfg_normalization / guidance interval / CFG rescale → [[classifier-free-guidance]]
+- SEQ_MULTI_OF / 学習済みパッドトークン / 系列パディング → [[efficient-attention]]
+- use_dynamic_shifting / calculate_shift / 静的シフト → [[noise-schedule]]
 - assistant LoRA / de-distillation adapter / 蒸留打ち消しアダプタ → [[diffusion-distillation]] ・ [[ai-toolkit]]
 - ARA / Accuracy Recovery Adapter / ブロック単位量子化 / レイヤオフロード / パラメータスワップ → [[large-scale-training-infrastructure]] ・ [[ai-toolkit]]
 - LoKr / LoHa / DoRA → [[low-rank-adaptation]]

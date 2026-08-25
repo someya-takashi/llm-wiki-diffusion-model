@@ -22,6 +22,7 @@ summaries:
   - "[[summaries/2026-ssr-merge]]"
   - "[[summaries/2025-flux2]]"
   - "[[summaries/2026-ai-toolkit]]"
+  - "[[summaries/2025-z-image]]"
 updated: 2026-08-26
 ---
 
@@ -69,6 +70,41 @@ LLM で生まれた LoRA は、拡散モデルでは **U-Net（とテキスト�
 $$\Delta W x \cdot \frac{\alpha}{r} \quad\longrightarrow\quad \alpha := r \;\Rightarrow\; \text{scale} = 1.0$$
 
 設定ファイルに書けるのに効果がないという実装の癖で、**論文が報告する alpha の値をそのまま移植しても再現しない**可能性がある点は実務上重要である。
+
+## Z-Image の標的名と、ツールの既定（2026-08-26 追記）
+
+前節では FLUX.2 について「標的はモデル側が宣言する 1 つのメソッドでほぼ決まる」ことを記録した。**同じメソッドが、モデルによって変調機構を含めたり外したりする**——Z-Image のリファレンス実装（[[summaries/2025-z-image]]）を読むと、その具体例が見える。
+
+Z-Image の実モジュール名は次のとおり（`src/zimage/transformer.py`）。
+
+| 位置 | モジュール名 | 形状 |
+| --- | --- | --- |
+| 統一バックボーンの attention | `layers.{0..29}.attention.{to_q,to_k,to_v,to_out.0}` | 3840×3840 |
+| 同 FFN（SwiGLU） | `layers.{0..29}.feed_forward.{w1,w2,w3}` | 3840↔10240 |
+| 同 変調（層ごとの上方射影） | `layers.{i}.adaLN_modulation.0` | **256→15360** |
+| 画像側の入口プロセッサ | `noise_refiner.{0,1}.*` | 同上の構成 ×2 |
+| テキスト側の入口プロセッサ | `context_refiner.{0,1}.*` | 同上（変調なし）×2 |
+| 共有の下方射影＝時刻埋め込み器 | `t_embedder.mlp.{0,2}` | 256→1024→256 |
+| テキスト特徴の射影 | `cap_embedder.1` | 2560→3840 |
+| 潜在の入出力 | `all_x_embedder.2-1` / `all_final_layer.2-1.linear` | 64↔3840 |
+
+そして [[concepts/ai-toolkit]] の Z-Image 実装は
+
+```python
+def get_transformer_block_names(self) -> Optional[List[str]]:
+    return ["layers"]
+```
+
+と宣言する。**FLUX.2 との比較が示唆的である。**
+
+| | 宣言 | 変調は標的に入るか |
+| --- | --- | --- |
+| FLUX.2 | `["double_blocks", "single_blocks"]` | ❌ 共有変調 4 行列は**ブロックの外**にあるので除外 |
+| **Z-Image** | `["layers"]` | ✅ `adaLN_modulation` は**ブロックの内側**にあるので**巻き込まれる** |
+
+**同じツールの同じ既定が、アーキテクチャの都合で逆の結果になる。** 変調を LoRA で動かすことの是非は本 wiki に測定がないが、少なくとも「既定に任せれば同じことが起きる」という期待は成り立たない。変調を含めたくないなら Z-Image 側で `ignore_if_contains` に `adaLN` を足す、逆に FLUX.2 で含めたいなら `only_if_contains` を書き足す——**モデルごとに逆向きの操作が要る。**
+
+もう 1 点、Z-Image では **入口の 2 ブロック（`noise_refiner`）が既定で標的から外れる**。単一ストリームのモデルで**唯一モダリティを分離できる場所**がここなので（[[questions/z-image-architecture-and-lora-placement]]）、試すには明示的な設定が要る。
 
 ## 既存知識との接続
 

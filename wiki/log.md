@@ -646,3 +646,28 @@ DeepWiki は**変種を 1 つずらして**記述していた——「8 + 24」�
   - `ignore_if_contains` は `clean_name` のみ照合するのに `only_if_contains` は両方照合するという**非対称**（除外パターンが黙って無効になりうる）。
   - **登録されている klein チェックポイントは `-base-` のみ**——学習は非蒸留版で行う、というツール側の判断が [[questions/flux2-klein-lora-training-and-composition]] の Q1 の結論を裏づける。
 - **コードからは分からないこと**（要約に明記）: 各設定の品質への影響は測定されていない。量子化 qtype ごとの劣化、`timestep_type` の比較、ARA の有効性、いずれもアブレーションが公開されていない。
+
+## [2026-08-26] ingest | Z-Image リファレンス実装（コードによる既存ページの検証）
+
+- 取り込み: `code_analysis/Z-Image/`（Tongyi-MAI/Z-Image・コミット `26f23ed`・Apache-2.0・2,906 行）
+- 作成: **なし**
+- 更新: [[summaries/2025-z-image]], [[questions/z-image-architecture-and-lora-placement]], [[questions/z-image-figure10-architecture-walkthrough]], [[concepts/diffusion-model-architecture]], [[concepts/position-embedding]], [[concepts/classifier-free-guidance]], [[concepts/prompt-enhancement]], [[concepts/efficient-attention]], [[concepts/noise-schedule]], [[concepts/flow-matching]], [[concepts/low-rank-adaptation]], [[concepts/diffusion-distillation]], [[overview]], [[index]]
+- ユーザーの依頼: 「既存のページにコードからわかった情報を追記してください」。**新規 summary / translation ページは作らない**という選択（AskUserQuestion で確認）。
+- **標準フローからの逸脱**: `source_kind: code` の原典でありながら**専用の summary ページを作っていない**。Z-Image には既に技術報告書ベースの [[summaries/2025-z-image]]（arXiv:2511.22699、ingested 2026-08-18）があり、同一モデルの情報が 2 ページに割れるのを避けたため。代わりに既存 summary の frontmatter に `code_source_path` / `code_commit` / `code_verified` を追加し、本文に「コードから確認できたこと」節を新設した。**コードを読む 3 件目だが、報告書がある原典を実装で裏取りするのは初めて**（[[summaries/2025-flux2]]＝報告書なし、[[summaries/2026-ai-toolkit]]＝ツール）。
+- **翻訳は作らない・既存翻訳も書き換えない**。[[translations/2025-z-image]] 表 2 の「注意ヘッド数 32」は原典に忠実な訳であり、食い違いは原典側にある。訂正は summary と questions 側に置いた。
+- 読解方法: 2,906 行と小さいため subagent を使わず全ファイルを直接読解。構成値はすべて `grep` / `sed` で自分で裏取り。
+- **訂正 1 件（重要）**: **原典 表2 の「注意ヘッド数 32」は誤りで、実装は 30 ヘッド・head_dim 128**。根拠は 2 つ——(a) `src/zimage/transformer.py` L338–339 の `assert head_dim == sum(axes_dims)`（32 ヘッドなら head_dim=120 で落ちる）、(b) パラメータ算術が 6.153B に着地し報告書の 6.15B と一致する。**表 2 は同じ表に載る U-RoPE の次元配分 $(32,48,48)$ と整合しておらず、自己完結的に検算できたはずの誤り**である。[[questions/z-image-architecture-and-lora-placement]] が訳注で留保していた 2 択が決着した。LoRA を当てるだけなら結論は変わらない（影響するのは RoPE を自作する場合のみ）。
+- **新しく引き出せた接続**:
+  - **[[concepts/diffusion-model-architecture]] の「条件付けは安く済ませてよい」に初めて金額がついた**。共有下方射影の出力は **256 次元**（`ADALN_EMBED_DIM`）で、素朴に $3840\to4\times3840$ とするより **約 16.5 億パラメータ安い**（素朴実装なら 6.15B → 約 7.8B）。報告書の「パラメータのオーバーヘッドを減らすため」の一文が**モデル全体の 2 割強**を意味していた。
+  - 変調は **4 分割（shift 項なし）**、ゲートは **`tanh()` で有界化**。wiki が図から読んだ「ゼロ初期化ゲート」は厳密には別物で、**adaLN-Zero が「初期値を 0 に置く」のに対し Z-Image は「値域を縛る」**——同じ安定性を別の機構で買っている。
+  - 構造の精密化：「30 層」は統一バックボーンのみで**総 34 ブロック**、**テキスト側入口プロセッサだけ変調なし**、連結順は FLUX 系と逆の **`[画像, テキスト]`**。
+  - **[[concepts/position-embedding]]**：**RoPE の $\theta$ が 256**（標準 10000、FLUX.2 は 2000）。LLM が長文脈のため $\theta$ を上げてきたのと**逆向き**で、**位置符号化のハイパーパラメータがモダリティによって逆に動く**という新しい観点。軸配分 $(32,48,48)$ は空間に厚く、**位置 0 はパディング専用に予約**されている。
+  - **[[concepts/efficient-attention]] に 4 方向のどれでもない工夫**：系列を **32 の倍数にパディングして $N$ をあえて増やし**、カーネル整列で定数項を削る。詰めるのは**学習済みパッドトークン**で、マスクを正確に扱う代わりにパラメータで解いている。GQA は設定項目があるのに未使用（拡散は KV キャッシュを持ち越さないので旨味がない）。
+  - **[[concepts/classifier-free-guidance]]**：報告書に無い 2 つのつまみ——`cfg_truncation`（終盤で誘導を切る＝guidance interval）、`cfg_normalization`（guided 予測のノルム上限＝CFG rescale 系）。加えて **`0 < guidance_scale ≤ 1.0` が黙って無効**という罠。
+  - **[[concepts/flow-matching]]**：「Z-Image は時刻の向きが逆」という既知の事実に**実装上の解**が付いた。**引数を `(1000-t)/1000` に反転し、出力の符号を反転する**だけで diffusers 標準のスケジューラを流用している。**定式化の向きはエコシステム互換性のために犠牲にしなくてよい**が、代償として符号の誤りが静かに壊れる。
+  - **[[concepts/noise-schedule]]**：実装は**静的シフト $s=3.0$**（$\mu=\log 3\approx1.10$ 相当）。SD3・FLUX と同じ定数（base 0.5 / max 1.15）から解像度依存の $\mu$ を計算しておきながら `use_dynamic_shifting=False` のため**捨てている**。**報告書は「FLUX 由来の動的な時間シフト」と述べており、報告書と実装が一致しない。** ただし ai-toolkit の学習側も同じ静的値なので、FLUX.2 が抱える「学習と推論でスケジュールが違う」問題は Z-Image には存在しない。
+  - **[[concepts/low-rank-adaptation]]**：ai-toolkit の宣言が Z-Image では `["layers"]`。**変調（`adaLN_modulation`）はブロックの内側にあるので巻き込まれ、入口プロセッサ（`noise_refiner`）は外れる**。FLUX.2 では逆に共有変調が外れる——**同じツールの同じ既定が、アーキテクチャの都合で逆の結果になる**。
+  - **[[concepts/prompt-enhancement]] に 7 つ目の設計**：プロンプトを **Qwen の chat template ＋ `enable_thinking=True`** で整形してから符号化し、**生成はしない**。取り出すのは `hidden_states[-2]`（最終層の 1 つ手前）で、FLUX.2 の中間 3 層連結と並ぶ「**どの層を取るか**」の 2 例目。
+  - **[[concepts/diffusion-distillation]]**：`README.md` の Model Zoo が **Turbo の Fine-Tunability を `N/A`** と明示。Omni-Base → Z-Image → Turbo と進むにつれ**多様性も微調整のしやすさも単調に下がる**。にもかかわらず ai-toolkit には Z-Image 用 assistant LoRA があり、**公式の推奨と現場の運用が食い違っている**。
+- **独立確認**: ai-toolkit の Z-Image 実装が同じ `use_dynamic_shifting: False, shift: 3.0` を学習用スケジューラに使う（`extensions_built_in/diffusion_models/z_image/z_image.py` L42–45）。静的シフトが 2 実装で支持される。
+- **境界の明示**: 公開実装は **T2I 経路のみ**。参照画像の入力・SigLIP-2 意味エンコーダ・図 10 左下の 2 経路は**コードに存在しない**（Z-Image-Edit と Z-Image-Omni-Base は 2026-08-26 時点で未公開、非蒸留の Z-Image は 2026-01-27 公開）。学習コード・データ・蒸留の実装も皆無で、**要約の「限界・批判的視点」で挙げた未検証の主張は実装公開によっても解消していない**。[[questions/z-image-figure10-architecture-walkthrough]] は節ごとに検証状態を書き分ける形に改めた。

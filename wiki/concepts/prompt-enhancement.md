@@ -19,7 +19,7 @@ summaries:
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
   - "[[summaries/2025-flux2]]"
-updated: 2026-08-25
+updated: 2026-08-26
 ---
 
 # Prompt Enhancement（プロンプト拡張 / プロンプト書き換え）
@@ -181,6 +181,35 @@ ERNIE-Image は **3B の PE** と**より大きな LM の PE** も比較する�
 「変えるべき所だけ変える」という編集の中心課題を、**モデルに推論させるのではなく指示文で明示化する**方針である。
 
 **構成上の注意点が 1 つある。** 書き換えには API 経由（OpenRouter）とローカルの 2 経路があるが、**ローカル書き換えは dev のテキストエンコーダ（Mistral-Small-3.2-24B）でしか動かない**。klein の `Qwen3Embedder` は `upsample_prompt` に `NotImplementedError` を投げる。つまり **klein は PE をモデル内に持たない**——本ページの分類でいえば「外付け必須」であり、Z-Image のように拡散側を PE 出力分布へ合わせる（PE-aware SFT）こともしていない。**軽量化のために PE を切り離した**とも読めるが、その分だけ推論時の分布のずれは利用者側の責任になる。
+
+## 実装から読める「符号化の作法」（Z-Image, 2026-08-26 追記）
+
+本ページは前節で FLUX.2 の system message（書き換えの中身）を読んだ。Z-Image のリファレンス実装（[[summaries/2025-z-image]]）を読むと、**書き換えの前段——LLM をどう呼び出して埋め込みを取るか——にも設計変数がある**ことが分かる。
+
+```python
+# src/zimage/pipeline.py L110–116
+messages = [{"role": "user", "content": p}]
+formatted_prompt = tokenizer.apply_chat_template(
+    messages, tokenize=False, add_generation_prompt=True, enable_thinking=True,
+)
+```
+
+**プロンプトは Qwen の chat template で整形され、`add_generation_prompt=True` と `enable_thinking=True` まで付く。** つまりテキストエンコーダは「これから応答を生成する直前の対話状態」として符号化される——にもかかわらず、**生成は一切行われない**。取り出すのは隠れ状態だけである。
+
+なぜこうするのか。報告書には記述がないが、合理的な読みは 2 つある。第一に、**Qwen3-4B は chat 形式で事後学習されている**ので、生の平文よりも chat template を通したほうが「指示を理解しようとしている」状態の表現が得られる。第二に、`enable_thinking=True` は思考プロンプトを挿入するので、**モデルが「これから推論する」構えの表現を作る**。本ページが「推論連鎖は何を足しているのか」で論じた効果を、**生成コストを払わずに埋め込み側だけで拾おうとしている**、と解釈できる。効果の有無は測定されていない（コードからは分からない）。
+
+**どの層を取るかも設計変数である。**
+
+```python
+# 同 L134
+prompt_embeds = text_encoder(...).hidden_states[-2]
+```
+
+**最終層ではなく 1 つ手前**を取る。[[summaries/2025-flux2]] が中間 3 層（Mistral なら 10/20/30、Qwen3 なら 9/18/27）を連結するのと同じ問題意識——**最終層は次トークン予測に特化しすぎており、条件付けに使う意味表現としては手前のほうが良い**——に、より軽い答えを出したことになる。CLIP の penultimate layer を使う Stable Diffusion 以来の作法とも連続している。
+
+本ページの整理に **7 つ目の設計**を加えるなら、こうなる——**書き換えもせず、埋め込みの内容も変えず、「LLM をどのモードで呼ぶか」だけを変える**。CHI（[[summaries/2024-sana]]）が指示文を前置して埋め込みの質を変えたのに対し、こちらは**呼び出しの作法（chat template・thinking フラグ・取り出す層）**というさらに下の層での介入である。
+
+なお Z-Image の立場そのもの——**PE を凍結し拡散側を PE の出力分布に合わせる**——は変わらない。上記は PE の下流にある符号化器側の話であり、[[questions/z-image-architecture-and-lora-placement]] が指摘した「学習キャプションを PE の出力分布に合わせよ」という実務上の注意もそのまま有効である。
 
 ## 限界と注意点
 

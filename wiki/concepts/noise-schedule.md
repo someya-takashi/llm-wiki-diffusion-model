@@ -144,6 +144,43 @@ $\sigma=1$ ならこれは標準のシフト $t'=st/(1+(s-1)t)$ と代数的に�
 
 **flow matching モデルなら似た重み付けでよい、という経験則で使い回されている。** 本ページが積み上げてきた「どの時刻に予算を配るかが品質を決める」という主張に対し、実務側はモデル横断の経験則に落ち着いている。どちらが妥当かを判定する材料は本 wiki にはないが、**論文の設定をそのまま再現しようとしても、ツールの既定は別のことをしている**という点は把握しておく価値がある。
 
+## 計算して捨てられる $\mu$ — Z-Image（2026-08-26 追記）
+
+前節では FLUX.2 について「**推論は解像度依存シフト、学習は一様＋別モデル由来の重み表**」という不一致を記録した。Z-Image のリファレンス実装（[[summaries/2025-z-image]]）は、**同じ不一致を逆向きに持っている**。
+
+パイプラインは SD3・FLUX と**同じ定数**で $\mu$ を計算する。
+
+```python
+# src/zimage/pipeline.py L23–33, L194–200
+BASE_IMAGE_SEQ_LEN, MAX_IMAGE_SEQ_LEN = 256, 4096
+BASE_SHIFT, MAX_SHIFT = 0.5, 1.15
+mu = calculate_shift(image_seq_len, 256, 4096, 0.5, 1.15)
+scheduler_kwargs = {"mu": mu}
+```
+
+ところが受け取る側は
+
+```python
+# src/zimage/scheduler.py L85–88
+if self.use_dynamic_shifting:
+    sigmas = self.time_shift(mu, 1.0, sigmas)   # ← ここに入らない
+else:
+    sigmas = self.shift * sigmas / (1 + (self.shift - 1) * sigmas)
+```
+
+で、**既定は `use_dynamic_shifting = False`・`shift = 3.0`**（`src/config/model.py` L39–40）。**$\mu$ は毎回計算されて、毎回捨てられている。** diffusers のスケジューラをほぼそのまま流用した結果、呼び出し側だけが SD3/FLUX の作法を引きずっている——実装の由来が読み取れる残骸である。
+
+**代わりに使われるのは静的な $\text{shift}=3.0$** である。本ページの記法に直すと、$\sigma \mapsto \dfrac{s\sigma}{1+(s-1)\sigma}$ に $s=3$ を入れた形で、$\mu = \log 3 \approx 1.10$ の logit-normal に相当する。参考までに、捨てられているほうの $\mu$ は 1024×1024（4096 トークン）で $1.15$、256 トークンで $0.5$ ——**1024px 付近では偶然ほぼ同じ値**になり、差が出るのは低解像度側である。
+
+**注目すべきは、こちらでは学習と推論が揃っていること。** [[concepts/ai-toolkit]]（[[summaries/2026-ai-toolkit]]）の Z-Image 実装も学習用スケジューラに**同じ `use_dynamic_shifting: False, shift: 3.0`** を使う（`extensions_built_in/diffusion_models/z_image/z_image.py` L42–45）。
+
+| | 学習時のシフト | 推論時のシフト | 一致 |
+| --- | --- | --- | --- |
+| FLUX.2 | 一様（`weighted`）＋ flex.1-alpha 由来の損失重み | 解像度・ステップ数依存の動的シフト | ❌ |
+| **Z-Image** | **静的 $s=3.0$** | **静的 $s=3.0$** | ✅ |
+
+**2 つの独立した実装が同じ値を使っている**ので、これは片方の設定漏れではない。本ページが積み上げてきた「解像度によって SNR が変わるからシフトが要る」という議論に対し、**推奨解像度域を 512–2048px に限れば静的シフトで足りる**という実務上の答えが提示されていることになる。ただし**それを支持する測定は公開されていない**——Z-Image の報告書は「FLUX 由来の動的な時間シフト」を使うと述べており、**報告書と実装が食い違っている**（[[questions/z-image-figure10-architecture-walkthrough]] の §4 に同じ食い違いを記録した）。報告書の記述が学習の話で実装が推論の話だとしても、上記のとおり学習側も静的である。
+
 ## 既存知識との接続
 
 - [[diffusion-sampling]]：推論時の時間離散化（$\{\sigma_i\}$）はサンプラーの一部。EDM の ρ スケジュールは Heun サンプラーと一体で少ステップ化を実現する。
