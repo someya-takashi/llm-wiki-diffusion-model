@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Noise Schedule, ノイズスケジュール, noise schedule, sigma schedule, σ schedule, time discretization, noise distribution]
-tags: [noise-schedule, diffusion-sampling, denoising-diffusion, score-based-generative-models, generative-models]
+tags: [noise-schedule, diffusion-sampling, denoising-diffusion, score-based-generative-models, generative-models, flux2]
 related:
   - "[[diffusion-sampling]]"
   - "[[denoising-diffusion]]"
@@ -15,7 +15,8 @@ summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2024-sana]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Noise Schedule（ノイズスケジュール）
@@ -88,6 +89,28 @@ $$
 **Sana**（[[summaries/2024-sana]]）の付録は、Tweedie の公式を使ってこれを明示する。$t \approx T$（ほぼ純ノイズ）では $x_0$ と $x_t$ がほぼ独立になるため、**ノイズ予測モデルの最適解は $x_t$ の線形関数に退化し、データ予測モデルの最適解はほぼ定数 $\mathbb{E}[x_0]$ に近づく**。積分の離散化誤差は前者の方が大きく、しかも $t=T$ の誤差は以降の全ステップに伝播する。したがって**スケジュールの端点付近をどう扱うかは、予測対象の選択と一体で決まる**。Sana はこの分析から Flow-DPM-Solver を導いている（[[diffusion-sampling]]）。
 
 同じ論文は、**Flow Matching と DDPM を 120K ステップという同一条件で直接比較**した数少ない例でもある（FID 19.5 → 16.9、CLIP 24.6 → 25.7）。$\epsilon$ 予測から $v$／$x_0$ 予測へ移ることが収束の速さそのものを変える、という本節の主張と整合する結果である（[[flow-matching]]）。
+
+## シフト量をステップ数にも依存させる（FLUX.2）
+
+上で導出した「$\alpha$ シフト ≡ $\mu=\log\alpha$ の logit-normal」という等価性は、**FLUX.2 の実装にそのまま $\mu$ という変数名で現れる**（[[summaries/2025-flux2]]）。
+
+```python
+def generalized_time_snr_shift(t, mu, sigma):
+    return math.exp(mu) / (math.exp(mu) + (1 / t - 1) ** sigma)
+```
+
+$\sigma=1$ ならこれは標準のシフト $t'=st/(1+(s-1)t)$ と代数的に等価で、**シフト係数は $s=e^{\mu}$** である。理論的な同定が実装の設計変数として定着していることの確認になる。
+
+**新しいのは $\mu$ の決め方である。** FLUX.1 の `base_shift` / `max_shift` の線形補間は廃止され、$\mu$ は **`(image_seq_len, num_steps)` の 2 次元の経験フィット**になった。系列長について 2 本の直線（10 ステップ用と 200 ステップ用）を引き、それを**ステップ数で線形補間する**。
+
+本ページはこれまでシフトを**解像度への対処**として扱ってきた（多解像度で SNR が変わるため）。FLUX.2 はそこに**ステップ数という第 2 の軸**を加える。1360×768（4080 トークン）で計算すると：
+
+| ステップ数 | シフト係数 $s=e^\mu$ |
+| --- | --- |
+| 50 | ≈ 7.6 |
+| **4** | **≈ 9.9** |
+
+**少ステップほどシフトを大きくする**——つまり高ノイズ域に時間予算を厚く配る。少ステップ生成では大域的な構図を決める初期段階に十分な刻みを割かないと破綻するので、**スケジュール側から蒸留を補完している**と読める（[[concepts/diffusion-distillation]]）。蒸留が「モデルを作り替える」のに対し、こちらは「同じモデルでも刻み方を変える」ぶんだけ直交した対処である。
 
 ## 事前学習と微調整でスケジュールを変える（2026）
 

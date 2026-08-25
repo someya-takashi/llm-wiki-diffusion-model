@@ -164,6 +164,8 @@ $$t=0 \;\Rightarrow\; \text{純ノイズ},\qquad t=1 \;\Rightarrow\; \text{ク�
 
 [[concepts/flow-matching]] に記録した SD3 の流儀（$z_t=(1-t)x_0+t\epsilon$、$t=0$ がデータ）とは**逆向き**なので、実装時に混同しやすい。図10 で参照画像が $t=1$ とされているのは「クリーン」の意味である。
 
+**FLUX.2 のコードでも SD3 側の規約が確認できる**（[[summaries/2025-flux2]]）——`get_schedule` は `torch.linspace(1, 0, ...)` で降順に刻み、更新式 `img = img + (t_prev - t_curr) * pred` の係数は負である。つまり **$t=1$ がノイズ・$t=0$ がクリーン**で、Z-Image だけが逆を向いている。2 つのモデルの実装を並べて触るときは特に注意が要る。
+
 ### 学習目標
 
 速度 $v_t = x_1 - x_0$（ノイズから画像へ向かうベクトル）を回帰する。

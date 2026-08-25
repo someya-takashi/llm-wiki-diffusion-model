@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Instruction-Based Image Editing, 指示ベース画像編集, TI2I, Text-Image-to-Image, Instructional Editing, InstructPix2Pix]
-tags: [instruction-based-image-editing, text-to-image-generation, controllable-generation, latent-diffusion, generative-models]
+tags: [instruction-based-image-editing, text-to-image-generation, controllable-generation, latent-diffusion, generative-models, flux2]
 related:
   - "[[text-to-image-generation]]"
   - "[[image-inpainting]]"
@@ -27,7 +27,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2026-ssr-merge]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Instruction-Based Image Editing（指示ベース画像編集）
@@ -175,6 +176,8 @@ $$F_c = F\times M \quad(\text{変えるべき画素}),\qquad F_k = F\times(1-M)\
 > **位置符号化で参照と対象を区別する、という共通解。** 上で見た FLUX.1 Kontext の仮想タイムステップ、Z-Image の時間軸オフセット、Qwen-Image-2.0 の frame 次元は、いずれも「**空間座標は画像の中身を表すのに使い切っているので、画像どうしの区別には別の軸が要る**」という同じ構造から出ている。この系譜は [[position-embedding]] に集約した。HunyuanImage 3.0（[[summaries/2025-hunyuanimage-3]]）は逆に**注意マスクの側**で区別する——学習系列に複数の生成画像がある場合、文脈中の生成画像を後続トークンから見えなくする「穴」を空ける。位置で分けるか注意で分けるかという選択がある。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux2]] — FLUX.2（参照画像を系列連結し、4 軸 RoPE の第 1 軸を 10 刻みでずらして分離。参照は対象と解像度が一致する必要がない。klein-9B-kv では参照トークンの K/V を厳密にキャッシュできる）
 
 - [[summaries/2025-hidream-i1]] — HiDream-E1（潜在マップを空間的に横並び連結＋差分領域を重く取る空間重み付き損失。EmuEdit 6.40 / ReasonEdit 7.54）
 - [[summaries/2025-wan]] — Wan / VACE（Video Condition Unit で編集入力を統一。概念分離で「変える画素」と「保つ画素」を別系列に分ける）

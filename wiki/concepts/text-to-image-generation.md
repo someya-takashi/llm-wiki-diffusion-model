@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Text-to-Image, T2I, テキストからの画像生成, text2img]
-tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation, prompt-enhancement, data-curation, aesthetic-scoring, efficient-attention]
+tags: [text-to-image-generation, latent-diffusion, generative-models, conditional-generation, prompt-enhancement, data-curation, aesthetic-scoring, efficient-attention, flux2]
 related:
   - "[[latent-diffusion]]"
   - "[[denoising-diffusion]]"
@@ -37,7 +37,8 @@ summaries:
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Text-to-Image Generation（テキストからの画像生成）
@@ -190,6 +191,8 @@ FLUX.1 Kontext（[[summaries/2025-flux-kontext]]）が提起した評価上の�
 - [[diffusion-distillation]]：蒸留で NFE を 1〜4 まで落とし、対話的な創作ワークフローを可能にする。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux2]] — FLUX.2（dev 32B / klein 9B / klein 4B。本 wiki で**唯一コードが一次資料**の原典。技術報告書がなく学習の詳細は不明だが、構成・条件付け・推論は実装から確定できる。klein 4B は Apache-2.0）
 
 - [[summaries/2022-latent-diffusion]] — Latent Diffusion Models（cross-attention によるテキスト条件付き拡散の確立、Stable Diffusion の基盤）
 - [[summaries/2023-controlnet]] — Adding Conditional Control to Text-to-Image Diffusion Models（空間条件による text-to-image の制御）

@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Position Embedding, 位置埋め込み, 位置符号化, Positional Encoding, RoPE, Rotary Position Embedding, MSRoPE, 3D RoPE, Generalized 2D RoPE, 仮想タイムステップ, Virtual Timestep]
-tags: [position-embedding, diffusion-model-architecture, unified-multimodal-generation, video-diffusion, instruction-based-image-editing, generative-models, efficient-attention]
+tags: [position-embedding, diffusion-model-architecture, unified-multimodal-generation, video-diffusion, instruction-based-image-editing, generative-models, efficient-attention, flux2]
 related:
   - "[[diffusion-model-architecture]]"
   - "[[unified-multimodal-generation]]"
@@ -18,7 +18,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2024-sana]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Position Embedding（位置埋め込み / 位置符号化）
@@ -110,6 +111,24 @@ $$[\cos(x\theta_{0}),\cos(y\theta_{1}),\dots,\sin(x\theta_{0}),\sin(y\theta_{1})
 
 そして原典自身が限界を明示している——**2K・4K への微調整では位置符号化を再導入する**（付録 B）。4K では PixArt-$\Sigma$ の PE 補間戦略まで持ち出している。畳み込みが与える局所性は、学習時と同程度の解像度では十分でも、**解像度の外挿には足りない**。これは下の「限界と未解決問題」で挙げる**解像度の外挿**という論点に対する、数少ない直接の観測データでもある。
 
+### (7) 4 軸 RoPE の第 1 軸で参照を離す — FLUX.2（コードで確認）
+
+**FLUX.2**（[[summaries/2025-flux2]]）はリファレンス実装なので、**本ページの他の手法と違って設計が推測でなく確認できる**。
+
+位置 id は 4 軸 `(t, h, w, l)`、`axes_dim = [32,32,32,32]`（和が head_dim = 128）、`theta = 2000`（一般的な 10000 ではない）。
+
+| トークン | t | h | w | l |
+| --- | --- | --- | --- | --- |
+| テキスト | 0 | 0 | 0 | **トークン索引** |
+| 対象画像 | 0 | 0.. | 0.. | 0 |
+| **参照画像 $i$** | **10·(i+1)** | 0.. | 0.. | 0 |
+
+```python
+t_off = [scale + scale * t for t in torch.arange(0, len(encoded_refs))]   # scale = 10
+```
+
+**テキストは専用の第 4 軸 `l` に置かれる**——本ページの (1) MSRoPE（対角線）や (3) 3D Unified RoPE（時間軸に沿って増分）とは別の答えで、「テキストを画像と同じ座標系に載せない」という選択である。そして**参照画像は空間座標を対象と重ねたまま、第 1 軸だけを 10 刻みでずらす**。FLUX.1 Kontext の仮想タイムステップ（(2)）と同型で、**刻み幅 10 という具体値まで含めてコードで確認できた**のは本 wiki で初めてである。
+
 ## 比較
 
 | 手法 | テキストの置き方 | 多画像の区別 | 設計基準 |
@@ -120,6 +139,7 @@ $$[\cos(x\theta_{0}),\cos(y\theta_{1}),\dots,\sin(x\theta_{0}),\sin(y\theta_{1})
 | **Generalized 2D RoPE**（HunyuanImage 3.0） | 2D の**対角線上** | （記述なし） | **1D RoPE への後方互換＝LLM を壊さない** |
 | **3D RoPE**（Wan・動画） | cross-attention で別経路 | 時間軸が実在のフレーム | 時空間の依存を素直に表現 |
 | **NoPE**（Sana） | （単一画像のみ・PE なし） | 対象外 | Mix-FFN の 3×3 畳み込みが局所性を暗黙に供給。ただし 2K/4K では PE を再導入 |
+| **4 軸 RoPE**（FLUX.2） | **専用の第 4 軸 `l`** | **第 1 軸を 10 刻みでずらす** | 空間座標は重ねたまま位相だけで分離。theta=2000 |
 
 **共通する発想**が 1 つ見える——**「余分な次元を用意して、そこで区別する」**。FLUX.1 Kontext は時間軸を、Z-Image も時間軸を、Qwen-Image-2.0 は frame 次元を使う。空間座標 $(h,w)$ は画像の中身を表すのに使い切っているので、**画像どうしの区別には別の軸が要る**という構造は共通している。
 

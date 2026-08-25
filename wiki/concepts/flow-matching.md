@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Flow Matching, FM, フローマッチング, Conditional Flow Matching, CFM, CNF, Continuous Normalizing Flow]
-tags: [flow-matching, probability-flow-ode, score-based-generative-models, generative-models, optimal-transport]
+tags: [flow-matching, probability-flow-ode, score-based-generative-models, generative-models, optimal-transport, flux2]
 related:
   - "[[probability-flow-ode]]"
   - "[[score-based-generative-models]]"
@@ -27,7 +27,8 @@ summaries:
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Flow Matching（フローマッチング）
@@ -119,6 +120,8 @@ Sana はさらに、flow の速度予測モデルを**サンプリング時に�
 FM・rectified flow をさらに一般化し、**flows（決定論 ODE）と diffusions（確率 SDE）を 1 つの枠組みに統一**するのが [[stochastic-interpolants]]（Albergo–Boffi–Vanden-Eijnden）である。有限時間で 2 分布を結ぶ補間 $x_t=\alpha_t x_0+\beta_t x_1(+\gamma_t z)$ を定義し、速度場 $b$ とスコア $s$ を二乗損失で学習する。FM の条件付きパス・rectified flow はこの枠組みの特別な場合で、潜在変数 $\gamma_t z$ と拡散係数 $\epsilon$ を足すと SDE 生成（拡散）に、外すと ODE 生成（フロー）になる。OT パスの「条件付き最適」を周辺レベルへ近づける mini-batch OT も関連する一般化。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux2]] — FLUX.2（rectified flow の速度予測。$t=1$ がノイズ・$t=0$ がクリーンで `linspace(1,0,...)`、更新は `img + (t_prev - t_curr) * pred` の 1 次オイラーのみ。**Z-Image は逆向き**なので実装時に注意）
 
 - [[summaries/2023-flow-matching]] — Flow Matching for Generative Modeling（Lipman, Chen, Ben-Hamu, Nickel, Le, ICLR 2023）
 - [[summaries/2024-sd3]] — Scaling Rectified Flow Transformers（SD3。rectified flow＋改良サンプラーを大規模 text-to-image で確立）

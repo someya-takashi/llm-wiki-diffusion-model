@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Prompt Enhancement, プロンプト拡張, プロンプト書き換え, Prompt Rewriting, Prompt Enhancer, PE, Prompt Agent, Reasoning Chain, プロンプトエンジニアリングの自動化]
-tags: [prompt-enhancement, text-to-image-generation, data-curation, reinforcement-learning-for-diffusion, generative-models]
+tags: [prompt-enhancement, text-to-image-generation, data-curation, reinforcement-learning-for-diffusion, generative-models, flux2]
 related:
   - "[[text-to-image-generation]]"
   - "[[data-curation]]"
@@ -18,7 +18,8 @@ summaries:
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Prompt Enhancement（プロンプト拡張 / プロンプト書き換え）
@@ -161,6 +162,26 @@ ERNIE-Image は **3B の PE** と**より大きな LM の PE** も比較する�
 
 **CHI の弱点は測定が間接的なこと**。原典は「LLM の出力とテキスト埋め込みの品質の間に強い正の相関が存在すると考える」と述べるが、これは仮説であって検証されていない。CHI 文自体の設計もアドホックで、なぜその文面が良いのかの分析はない。
 
+## 実装から読める「書き換えの中身」（FLUX.2）
+
+本ページはこれまで各社の**設計**（何を凍結し何を学習するか）を比較してきたが、**書き換えの指示文そのもの**を見られる例は少なかった。FLUX.2 のリファレンス実装（[[summaries/2025-flux2]]）は `system_messages.py` にそれを平文で持っている。
+
+**T2I 用**の指示は 3 項目で、うち 1 つが本 wiki の別の論点に直結する。
+
+> **Text in Images**: Put ALL text in quotation marks, matching the prompt's language. Always provide explicit quoted text for objects that would contain text in reality (signs, labels, screens, etc.) — **without it, the model generates gibberish.**
+
+**「引用符で囲まないと文字が意味のない記号列になる」**——これは [[concepts/visual-text-rendering]] の問題を、モデル側ではなく**プロンプト側の規約**で回避している。Qwen-Image が VAE デコーダの微調整やデータ合成で解いた問題（[[summaries/2025-qwen-image]]）に対し、FLUX.2 は「書き換え器に必ず引用符を付けさせる」という運用で当てている。**PE がモデルの弱点を隠す層としても働いている**例である。
+
+**I2I（編集）用**の指示はさらに具体的で、[[concepts/instruction-based-image-editing]] の要請がそのまま規則になっている。
+
+- **Specify what changes AND what stays the same**（顔・照明・構図）
+- **Turn negatives into positives**（"don't change X" → "keep X"）
+- Make abstractions concrete（"futuristic" → "glowing cyan neon, metallic panels"）
+
+「変えるべき所だけ変える」という編集の中心課題を、**モデルに推論させるのではなく指示文で明示化する**方針である。
+
+**構成上の注意点が 1 つある。** 書き換えには API 経由（OpenRouter）とローカルの 2 経路があるが、**ローカル書き換えは dev のテキストエンコーダ（Mistral-Small-3.2-24B）でしか動かない**。klein の `Qwen3Embedder` は `upsample_prompt` に `NotImplementedError` を投げる。つまり **klein は PE をモデル内に持たない**——本ページの分類でいえば「外付け必須」であり、Z-Image のように拡散側を PE 出力分布へ合わせる（PE-aware SFT）こともしていない。**軽量化のために PE を切り離した**とも読めるが、その分だけ推論時の分布のずれは利用者側の責任になる。
+
 ## 限界と注意点
 
 - **評価が PE 込みか否かが曖昧**。これが最も深刻な問題である。ベンチマークのスコアが PE ありで測られたのか無しなのか、明示しないレポートが多い。Z-Image は付録で「PE を無効にすれば図 1–3 を再現できる」と述べるが、本文のベンチマーク数値がどちらかは書かれていない。**6B の性能の何割が VLM 由来なのかを切り分けられない**。
@@ -180,6 +201,8 @@ ERNIE-Image は **3B の PE** と**より大きな LM の PE** も比較する�
 - [[diffusion-model-architecture]]：テキストエンコーダを decoder-only LLM に替える潮流（Sana → Qwen-Image → HunyuanImage 3.0 → ERNIE-Image）が、CHI のような「埋め込みの質を整える」層の PE を可能にした。エンコーダの選択が PE の設計余地を決めている。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux2]] — FLUX.2（書き換えの system message を平文で公開。**「画像内の文字は必ず引用符で囲め、さもないと gibberish になる」**、編集では「変える所と保つ所を両方明示」「否定を肯定に変換」。klein はローカル書き換えを持たない）
 
 - [[summaries/2025-z-image]] — Z-Image（**VLM を凍結し拡散側を PE 出力に合わせて SFT**。構造化された推論連鎖で座標→場所の演繹。6B の認知的ギャップを外付けで埋める設計）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（Prompt Enhancer を下流の画像品質で RL 最適化）

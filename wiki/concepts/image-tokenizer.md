@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Image Tokenizer, 画像トークナイザ, VAE, Visual Tokenizer, Autoencoder, diffusability, 拡散可能性, 高圧縮VAE, High-Compression VAE]
-tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models, pixel-space-diffusion, video-diffusion, efficient-attention]
+tags: [image-tokenizer, latent-diffusion, diffusion-model-architecture, visual-text-rendering, generative-models, pixel-space-diffusion, video-diffusion, efficient-attention, flux2]
 related:
   - "[[latent-diffusion]]"
   - "[[diffusion-model-architecture]]"
@@ -26,7 +26,8 @@ summaries:
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Image Tokenizer（画像トークナイザ / 潜在空間を作るオートエンコーダ）
@@ -163,6 +164,33 @@ Wan-VAE は 127M と極小ながら PSNR と速度の両方で競争力を持ち
 
 もう 1 つ、統一マルチモーダルモデル（[[unified-multimodal-generation]]）ではトークナイザへの要求が変わる。**VAE 特徴が生成にも理解にも使われる**からで、HunyuanImage 3.0 は条件画像について VAE の潜在と ViT の特徴を**両方連結する**二重エンコーダを採る。「理解には意味的な特徴、生成には再構成的な特徴」という分業（Qwen-Image の二重符号化・[[instruction-based-image-editing]]）を、**分けずに両方渡す**方向へ倒した設計である。
 
+## 第 3 の到達路：VAE の内側で patchify も済ませる（FLUX.2）
+
+前節は「$f8$ VAE ＋ 2×2 パッチ化」対「$f16$ VAE 単体」という 2 択として整理した。**FLUX.2**（[[summaries/2025-flux2]]）はコードを読むと**その中間**を採っている。
+
+1. conv スタックの `Downsample` が 3 段で **8×**（`ch_mult=[1,2,4,4]`）
+2. `encode` の中で `"... c (i pi) (j pj) -> (c pi pj) i j"` の **2×2 pixel-shuffle** がさらに 2×
+
+結果は **実効 $f16$・潜在 128 チャネル**（`z_channels=32` × 4）。決定的なのは、**この pixel-shuffle が VAE の内側にある**ことである。DiT 側の `img_in` はただの `Linear(128, hidden)` で、**patchify は存在しない**。
+
+つまり「圧縮を VAE で払うか patchify で払うか」という問いに対し、FLUX.2 は**patchify を VAE の中へ取り込んでしまう**という答えを出している。下流から見れば $f16$ の VAE 単体（HunyuanImage 3.0 の主張）と同じだが、内部では conv 圧縮と space-to-depth を分担させている。Sana のアブレーション（F32C32P1 が最良）が「圧縮は深いオートエンコーダに任せよ」と示したのと整合する配置である。
+
+### `scale_factor` / `shift_factor` が学習済み BatchNorm に置き換わった
+
+もう 1 つ、本ページが扱ってこなかった論点がコードから出てくる——**潜在の正規化**である。
+
+Stable Diffusion 系や FLUX.1 は、潜在を単位分散に近づけるため**大域スカラー 2 つ**（`scale_factor`, `shift_factor`）を掛けていた。FLUX.2 にはこの 2 つが**存在しない**。代わりに `affine=False` の学習済み `BatchNorm2d` が使われる。
+
+```python
+self.ps = [2, 2]
+self.bn = torch.nn.BatchNorm2d(math.prod(self.ps) * params.z_channels,  # = 128
+                               eps=1e-4, momentum=0.1, affine=False, track_running_stats=True)
+```
+
+`affine=False` なので学習されるのは running statistics だけであり、実質**「128 チャネルそれぞれに固有の (shift, scale)」** になる。大域スカラー 2 つの**チャネル単位への一般化**である。
+
+これは本ページの中心命題——**潜在空間の「形」が下流の拡散モデルの学習しやすさを決める**——の、最も素朴で見落とされやすい側面にあたる。チャネル数を増やす（$C=32 \to 128$）と各チャネルのスケールは揃わなくなるので、大域スカラーでは吸収しきれない。**高チャネル化と正規化の細粒度化はセットで進む**、と読める。
+
 ## 既存知識との接続
 
 - [[latent-diffusion]]：トークナイザは LDM の第一段階そのもの。本ページはその「第一段階」を独立した設計問題として扱う。LDM 原典（[[summaries/2022-latent-diffusion]]）が $f4$〜$f8$ を最適点としたのに対し、高解像度時代は $f16$・$f32$ へ移りつつある。
@@ -177,6 +205,7 @@ Wan-VAE は 127M と極小ながら PSNR と速度の両方で競争力を持ち
 - [[summaries/2025-hunyuanimage-3]] — HunyuanImage 3.0（**f16 の VAE 単体**が f8＋パッチ化より良いと主張。潜在 32 次元、条件画像には VAE と ViT の二重エンコーダ）
 - [[summaries/2025-wan]] — Wan-VAE（3D causal VAE。GroupNorm→RMSNorm で時間的因果性を保ち、特徴キャッシュで無限長を一定メモリで処理。127M で HunyuanVideo VAE の 2.5 倍速）
 - [[summaries/2026-qwen-image-vae-2]] — Qwen-Image-VAE-2.0（f16/f32 高圧縮 VAE。GSC・attention-free・非対称構成、KL/GAN 除去、DINOv2 中間層への意味的整合、OmniDoc-TokenBench）
+- [[summaries/2025-flux2]] — FLUX.2 の VAE（conv $f8$ ＋ 2×2 pixel-shuffle で実効 $f16$・128 チャネル。**patchify が VAE の内側にあり DiT 側には存在しない**。`scale_factor`/`shift_factor` を廃し学習済み BatchNorm へ。attention は mid-block のみ、Apache-2.0 で dev/klein 共通）
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（f16c64 を採用しネイティブ 2K 生成を実現した基盤モデル）
 - [[summaries/2025-qwen-image]] — Qwen-Image（動画対応 VAE のデコーダのみをテキスト特化微調整し、文字再現の上限を引き上げた先行例）
 - [[summaries/2022-latent-diffusion]] — Latent Diffusion Models（知覚的圧縮と意味的圧縮の分業、$f$ の選択という枠組みを確立した原典）

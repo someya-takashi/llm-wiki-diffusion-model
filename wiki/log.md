@@ -531,3 +531,58 @@
   4. **「回答の限界を明示する」の節を新設**：wiki に原典がない領域では、**原典に基づく事実と他モデルからの外挿・演繹を書き分ける**。読み返したときに信頼度を判断できることが wiki の価値を保つ。
   5. frontmatter の `description` を「必要なら成果物を questions/ として保存する」→「その成果物を questions/ として保存する」へ更新。
 - 動機: ユーザーからの指示「基本 query の内容は保存してください」。実運用でも直近 4 件の query はすべて保存しており、既定を反転させた方が実態に合う。
+
+## [2026-08-25] schema-update | source_kind に code を追加し、ingest skill にケース D（コードリポジトリ）を新設
+
+- 変更対象: `CLAUDE.md` §2、`.claude/skills/ingest/SKILL.md`、`.gitignore`
+- 動機: 論文を持たないモデル（FLUX.2）で**公式リファレンス実装が一次資料**になるケースが実際に発生した。ユーザーが `code_analysis/` を新設し解析対象リポジトリを置く運用を始めたため、受け皿を規約化した。
+- 変更点:
+  1. **`CLAUDE.md` §2**: `source_kind` に **`code`** を追加（`paper | article | blog | video | podcast | code`）。あわせて例外を明記——`source_kind: code` では `source_path` が `code_analysis/<repo>/` を指し、**`translation` フィールドを付けない**（コードは翻訳対象でないため `translations/` を作らない）。
+  2. **`ingest/SKILL.md`**: 画像の扱いの節に **ケース D: コードリポジトリ** を新設。翻訳を作らない／画像は取り込まない（`assets/` はデモ画像でありアーキテクチャ図ではない。図解が要るならコードから読み取って自分で描く）／**実装が明かす事実を最優先し、README・モデルカード・外部解説と食い違う場合はコードを正とする**／ファイル名と行番号を添える／**読んだ時点のコミットハッシュを log に記録する**。
+  3. **`.gitignore`**: エントリが `code analysis/`（スペース）で実ディレクトリ `code_analysis/`（アンダースコア）と一致せず**無視されていなかった**。修正して追跡対象外にした（`git add -A` で flux2 リポジトリ全体と入れ子の `.git` が取り込まれる事故を防ぐ）。
+- 「実装を正とする」を明文化した直接のきっかけは、この直後の ingest で**外部解説サイト由来の構成値が誤っていた**ことが判明した件（下記）。
+
+## [2026-08-25] ingest | FLUX.2（black-forest-labs/flux2 リファレンス実装）
+
+- 取り込み: `code_analysis/flux2/`（コミット `50fe516`）。**本 wiki 初の `source_kind: code`**
+- 作成: [[summaries/2025-flux2]]（**translations は作成しない**——コードは翻訳対象でないためスキーマの例外を適用）
+- 更新: [[concepts/diffusion-model-architecture]], [[concepts/position-embedding]], [[concepts/image-tokenizer]], [[concepts/noise-schedule]], [[concepts/inference-caching]], [[concepts/classifier-free-guidance]], [[concepts/diffusion-distillation]], [[concepts/prompt-enhancement]], [[concepts/low-rank-adaptation]], [[concepts/instruction-based-image-editing]], [[concepts/text-to-image-generation]], [[concepts/flow-matching]], [[overview]], [[index]]
+- **訂正**: [[questions/lora-merging-base-model-selection]]（下記）, [[questions/z-image-figure10-architecture-walkthrough]]（FLUX.2 も t=1 がノイズであることを追記して Z-Image との対比を補強）
+- 画像メモ: **取り込まない**（ケース D の規約どおり。`assets/` はデモ画像でアーキテクチャ図ではない）。図解は summary 内にデータフローを文章と表で記述した。
+- 調査方法: Explore エージェント 3 体を並列で走らせ、(1) `model.py` のアーキテクチャ、(2) `sampling.py` ＋ `cli.py` ＋ KV キャッシュ文書の推論経路、(3) `text_encoder.py` ＋ `autoencoder.py` ＋ `util.py` ＋ README の設定とエンコーダ、に分担させた。**主要な構成値はすべて自分で該当行を grep して裏取りした**。
+
+### ⚠️ 既存ページの誤りが判明し訂正した
+
+[[questions/lora-merging-base-model-selection]] は Web の二次情報（DeepWiki）に基づき FLUX.2 klein 4B を記述しており、**誤っていた**。
+
+| 項目 | 初版（誤） | コード（正） |
+| --- | --- | --- |
+| klein 4B のブロック構成 | 8 double ＋ 24 single | **5 double ＋ 20 single** |
+| klein 4B の隠れ次元 | 非公開（2048〜3072 と推定） | **3072**（ヘッド 24・head_dim 128） |
+| Orthogonal Adaptation の概念数上限 | 100〜150（推定） | **153** |
+
+DeepWiki は**変種を 1 つずらして**記述していた——「8 + 24」は klein **9B**、「8 + 48」は **dev** の値である。訂正は誤記の置換にとどめず、**「訂正の記録」節を新設して二次情報が誤っていた事実自体を残した**（結論である「klein 4B を第一推奨」は変わらない。むしろ想定より小さく、LoRA を多数学習する実験には一層有利）。
+
+### コードでしか分からなかった知見
+
+- **変調が全ブロックで共有される**。FLUX.1 のブロックごとの `img_mod.lin` / `txt_mod.lin` は**存在せず**、DiT 全体で変調に使う重みは 4 行列だけ（`double_stream_modulation_img/txt.lin`, `single_stream_modulation.lin`, `final_layer.adaLN_modulation.1`）。**Wan の adaLN 共有・Z-Image の下方射影共有と合わせて 3 例目**——「条件付け機構は安く済ませてよい」が独立した 3 チームから重ねて出ており、定石になりつつあると [[concepts/diffusion-model-architecture]] に記録した。実務的な含意として、**FLUX.1 向け LoRA レシピの `img_mod.lin` 標的が FLUX.2 では空振りする**ことを [[concepts/low-rank-adaptation]] に追記。
+- **pooled テキストベクトル（FLUX.1 の `vec_in_dim` / `y`）が廃止された**。変調ベクトルは時刻（＋ dev では guidance）だけから作られる。
+- **テキストエンコーダは最終層を使わず中間 3 層を連結する**（Mistral: 層 10/20/30 → 5120×3=15360、Qwen3: 9/18/27 → 2560×3=7680 / 4096×3=12288）。3 変種の `context_in_dim` と厳密に一致することで裏が取れた。「decoder-only LLM をテキストエンコーダに使う」潮流に**どの層を取るか**という設計変数を加えた。
+- **VAE の内側に patchify がある**。conv $f8$ ＋ 2×2 pixel-shuffle で実効 $f16$・128 チャネル、**DiT 側の `img_in` はただの Linear で patchify は存在しない**。[[concepts/image-tokenizer]] の「VAE で払うか patchify で払うか」への第 3 の答えとして記録。
+- **`scale_factor` / `shift_factor` が学習済み `BatchNorm2d`（affine=False・128 チャネル）に置換された**。大域スカラー 2 つのチャネル単位への一般化で、**高チャネル化と正規化の細粒度化はセットで進む**と読める。
+- **時刻シフトがステップ数にも依存する**。`generalized_time_snr_shift` は $\mu$ を変数名としてそのまま持ち（[[summaries/2025-flux-kontext]] の「$\alpha$ シフト ≡ $\mu=\log\alpha$ の logit-normal」がコードで確認できた）、$\mu$ は `(image_seq_len, num_steps)` の 2 次元経験フィット。**4 ステップで $s\approx9.9$、50 ステップで $7.6$**——少ステップほど高ノイズ域に予算を配る、スケジュール側からの蒸留の補完（[[concepts/noise-schedule]]）。
+- **[[concepts/inference-caching]] に第 2 の系統**。klein-9B-kv の参照 KV キャッシュは**近似ではなく厳密**——参照トークンは自分自身にしか attend せず（`causal_attn_fn`）、固定タイムステップ `ref_fixed_timestep=0.0` で変調されるので、K/V が軌道上で文字どおり不変になる。Wan の Diffusion Cache が「経験的類似性を突いて品質を賭ける」のに対し、**構造で不変性を作ってから使い回す**。代償は「参照が他を見ない」制約された注意を学習時から課す点で、非キャッシュ版とは**別チェックポイント**になる（実行時オプションではない）。
+- **4 軸 RoPE `(t,h,w,l)`、`theta=2000`**。テキストは専用の第 4 軸 `l` に置かれ、**参照画像は第 1 軸を `scale=10` 刻みでずらす**（空間座標は対象と重ねたまま）。FLUX.1 Kontext の仮想タイムステップと同型で、**刻み幅 10 という具体値までコードで確認できた**（[[concepts/position-embedding]] に系統 (7) として追加）。
+- **蒸留 guidance と真の CFG が同一リポジトリに併存する**。dev は guidance を埋め込んで加算、klein 蒸留版は**引数を受け取るが無視する**（`use_guidance_embed=False`、埋め込み層すら持たない）、klein-base はバッチ 2 倍の真の CFG。総 NFE は 50 / **4** / **100** で、ベース → 蒸留版が **25 倍**。CLI が `fixed_params` で蒸留設定を強制する（[[concepts/classifier-free-guidance]]・[[concepts/diffusion-distillation]]）。
+- **書き換えの system message が平文で読める**（[[concepts/prompt-enhancement]]）。T2I 用に「**画像内の文字は必ず引用符で囲め、さもないと gibberish になる**」という規約があり、[[concepts/visual-text-rendering]] の問題を**プロンプト側の運用**で回避している。編集用は「変える所と保つ所を両方明示」「否定を肯定に変換」で、[[concepts/instruction-based-image-editing]] の要請がそのまま規則化されている。**klein はローカル書き換えを持たない**（`Qwen3Embedder` が `NotImplementedError`）。
+- **本 wiki が FLUX.2 に持っていた 13 箇所以上の言及に、初めてリンク先ができた。**
+
+### 批判として要約に記録した点
+
+- **技術報告書がなく、学習データ・学習手順・蒸留の具体が一切不明**。コードは推論専用で、記述できるのは推論時の構造だけ。Z-Image が 314K GPU 時間・$628K まで公開したのとは透明性の水準が違う。
+- **公開ドキュメントが構成を書かない**ため二次情報が誤る（上記の DeepWiki の件）。
+- レジストリの不整合（`flux.2-dev` が `guidance_distilled: True` かつ `fixed_params: {}`）、`load_flow_model` のデバッグ分岐が共有 dataclass を破壊的に書き換える、README のライセンスリンクが 2 種類に割れている（typo を含む）。
+- KV キャッシュ版が別チェックポイントである点はドキュメントから読み取りにくい。
+- klein はローカル upsampling も安全性フィルタも持たない。
+
+- 付随修正: [[summaries/2021-adm]] に残っていた簡体字の混入（「25 步」）を「25 ステップ」に修正。

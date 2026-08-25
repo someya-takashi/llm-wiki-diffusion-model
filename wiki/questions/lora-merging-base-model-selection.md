@@ -17,6 +17,8 @@ summaries_used:
 
 # LoRA merging 実験のベースモデル選定：Z-Image / ERNIE-Image / FLUX.2 [klein] 4B
 
+> **【2026-08-25 訂正】** 本ページの FLUX.2 klein 4B の構成値は当初 Web の二次情報（DeepWiki）に基づいており、**誤っていた**。その後 [[summaries/2025-flux2]] としてコードを直接 ingest した結果、**klein 4B は「8 double + 24 single」ではなく「5 double + 20 single」**（8+24 は klein **9B** の値）、隠れ次元は**非公開ではなく 3072**であることが判明した。該当箇所は訂正済みで、訂正の内容は下部の「訂正の記録」に残してある。**結論（FLUX.2 klein 4B を第一推奨とする）は変わらない。**
+
 > 質問: LoRA merging の実験を行う拡散モデルの選定。モデルサイズとライセンスの観点から候補は Z-Image / ERNIE-Image / FLUX.2 [klein] 4B。(1) LoRA 学習可能か (2) LoRA 学習の容易性 (3) [[concepts/lora-merging]] の手法が適用可能か、で評価してほしい。
 > 回答日: 2026-08-21
 > 情報源: 本 wiki（[[summaries/2025-z-image]]・[[summaries/2026-ernie-image]] ほか）＋ Web 調査（各モデルカード・公式ドキュメント・エコシステム）
@@ -39,8 +41,8 @@ summaries_used:
 | --- | --- | --- | --- |
 | ライセンス | Apache 2.0 | Apache 2.0 | **Apache 2.0**（4B のみ。9B は非商用） |
 | DiT パラメータ | 6.15B | 8B | **4B** |
-| アーキテクチャ | **S3-DiT 完全単一ストリーム 30 層** | 単一ストリーム DiT（**詳細非公開**） | **8 DoubleStream ＋ 24 SingleStream** |
-| 隠れ次元 | **3840**（ヘッド 32・FFN 中間 10240） | 非公開 | 非公開 |
+| アーキテクチャ | **S3-DiT 完全単一ストリーム 30 層** | 単一ストリーム DiT（**詳細非公開**） | **5 DoubleStream ＋ 20 SingleStream** |
+| 隠れ次元 | **3840**（ヘッド 32・FFN 中間 10240） | 非公開 | **3072**（ヘッド 24・head_dim 128） |
 | テキストエンコーダ | **Qwen3-4B** | Ministral-3（3B） | **Qwen3-4B**（層 9/18/27 を連結、7680 次元） |
 | VAE | Flux VAE（流用） | FLUX.2 VAE（流用） | FLUX.2 VAE |
 | 非蒸留ベース版 | ✅ `Tongyi-MAI/Z-Image` | ✅ ERNIE-Image（50 steps・CFG 4.0） | ✅ `FLUX.2-klein-base-4B` |
@@ -125,7 +127,7 @@ FLUX.2 klein は FLUX.1 の直系（同じ DoubleStream / SingleStream の二相
 
 [[concepts/style-content-disentanglement]] に記録したとおり、**B-LoRA の「ブロック 4 がコンテンツ、5 が色」は SDXL の UNet（非対称なダウン／ミドル／アップ構造）に固有の経験則**で、均質な Transformer 積層では未検証である。3 モデルとも DiT なので直接は使えない。
 
-ただし **FLUX.2 klein には「8 DoubleStream ＋ 24 SingleStream」という既存の役割分化**があり、B-LoRA 流のプロンプト注入解析をかける際の**自然な仮説**になる。Z-Image は 30 層が完全に同型なので仮説がゼロから始まる。
+ただし **FLUX.2 klein 4B には「5 DoubleStream ＋ 20 SingleStream」という既存の役割分化**があり、B-LoRA 流のプロンプト注入解析をかける際の**自然な仮説**になる。Z-Image は 30 層が完全に同型なので仮説がゼロから始まる。
 
 **これは見方によっては Z-Image の利点でもある**——ブロック種別という交絡がないので、「層の位置そのものがマージ結果に影響するか」を**統制された形で測れる**唯一の候補になる。
 
@@ -139,7 +141,7 @@ FLUX.2 klein は FLUX.1 の直系（同じ DoubleStream / SingleStream の二相
 | --- | --- | --- | --- |
 | SD v1.5 | 320 | **16** | 4（320/640/768/1280） |
 | **Z-Image** | **3840** | **192** | **2**（3840・10240） |
-| FLUX.2 klein 4B | 非公開（2048〜3072 と推定） | 100〜150 | 少数 |
+| FLUX.2 klein 4B | **3072** | **153** | 少数 |
 
 Z-Image は隠れ次元が全層で 3840 に統一されており、**共有直交基底として保存すべき正方行列が実質 2 つで済む**（SD1.5 は 4 つ）。実装は SD より単純になる。**要約で「スケーラビリティ主張の中で最も検証が薄い」と批判した点が、現代の DiT では実際にはあまり効かない**——これは本 wiki の記述を更新する価値のある発見である。
 
@@ -213,7 +215,7 @@ Phase 3 — アーキテクチャ間の一般化（Z-Image Base を追加）
 
 ## この回答の限界
 
-- **本 wiki は FLUX.2 [klein] の原典を持っていない。** klein に関する記述はモデルカード・公式ブログ・コミュニティドキュメントに基づく Web 調査であり、査読された技術報告に基づくものではない。klein 4B の隠れ次元・注意ヘッド数は公開されていない。
+- ~~**本 wiki は FLUX.2 [klein] の原典を持っていない。**~~ → **解消済み。** [[summaries/2025-flux2]] としてリファレンス実装を ingest したので、構成値はコード（`src/flux2/model.py` L11–49）で確認できる。ただし **FLUX.2 には技術報告書が存在せず、学習データ・学習手順・蒸留手法は依然として不明**である点は変わらない。
 - **3 モデルのいずれについても、LoRA merging を実際に行った実験報告は本 wiki にも公開文献にも見当たらない。** 上記の適用可能性は各手法が要求する構造（cross-attention の有無、$\Delta W=BA$ の形、較正順伝播の可否）からの**演繹**である。
 - ERNIE-Image の「cross-attention なし」は「単一ストリーム DiT」という記述からの**推定**であり、原典に明示されていない。実装を読めば確定する。
 
@@ -231,8 +233,25 @@ Phase 3 — アーキテクチャ間の一般化（Z-Image Base を追加）
 - [ERNIE-Image supported by OneTrainer（Issue #8）](https://github.com/baidu/ERNIE-Image/issues/8)
 - [FLUX 2 Dev, FLUX Klein and Z Image training text encoder question（musubi-tuner #886）](https://github.com/kohya-ss/musubi-tuner/issues/886)
 
+## 訂正の記録（2026-08-25）
+
+本ページの初版は FLUX.2 klein の構成を Web の二次情報から取っていたが、[[summaries/2025-flux2]] でコードを直接読んだ結果、次の誤りが判明した。
+
+| 項目 | 初版（DeepWiki 由来・誤） | コード（正） |
+| --- | --- | --- |
+| klein 4B のブロック構成 | 8 DoubleStream ＋ 24 SingleStream | **5 DoubleStream ＋ 20 SingleStream** |
+| klein 4B の隠れ次元 | 非公開（2048〜3072 と推定） | **3072**（ヘッド 24） |
+| Orthogonal Adaptation の概念数上限 | 100〜150（推定） | **153**（$\lfloor 3072/20 \rfloor$） |
+
+DeepWiki は**変種を 1 つずらして**記述していた——「8 + 24」は実際には klein **9B** の値、「8 + 48」は **dev** の値である。
+
+**教訓**：FLUX.2 の README とモデルカードは 32B（dev）以外のパラメータ数・ブロック数を一切書かない。**一次資料がコードしかないモデルでは、二次情報を検証なしに使ってはいけない。** この経験を踏まえ、ingest skill に「ケース D: コードリポジトリ」の節を追加し、**実装と公開ドキュメントが食い違う場合はコードを正とする**ことを明文化した。
+
+なお **結論（FLUX.2 klein 4B を第一推奨とする）は変わらない**。むしろ klein 4B は想定より小さく（5+20 ブロック）、LoRA を多数学習する実験には一層有利である。
+
 ## 関連ページ
 
+- [[summaries/2025-flux2]]
 - [[concepts/lora-merging]]
 - [[concepts/model-merging]]
 - [[concepts/style-content-disentanglement]]

@@ -66,7 +66,7 @@ Diffusion Model/
 ---
 type: summary
 source_path: raw/papers/2020-ddpm.pdf
-source_kind: paper            # paper | article | blog | video | podcast
+source_kind: paper            # paper | article | blog | video | podcast | code
 title: "Denoising Diffusion Probabilistic Models"
 authors: [Jonathan Ho, Ajay Jain, Pieter Abbeel]
 year: 2020
@@ -76,6 +76,8 @@ tags: [denoising-diffusion, image-generation, generative-models, ddpm]
 translation: "[[translations/2020-ddpm]]"
 ---
 ```
+
+**`source_kind: code`（コードリポジトリ）の場合の例外**：`source_path` は `code_analysis/<repo>/` を指し、**`translation` フィールドは付けない**（コードは翻訳の対象でないため `translations/` を作成しない）。`year` はリポジトリが対象とするモデルの公開年、`authors` は開発組織でよい。
 
 ### translations/*.md
 

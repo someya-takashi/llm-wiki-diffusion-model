@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [CFG, Classifier-Free Guidance, 分類器なしガイダンス, guidance]
-tags: [classifier-free-guidance, text-to-image-generation, denoising-diffusion, generative-models]
+tags: [classifier-free-guidance, text-to-image-generation, denoising-diffusion, generative-models, flux2]
 related:
   - "[[classifier-guidance]]"
   - "[[text-to-image-generation]]"
@@ -19,7 +19,8 @@ summaries:
   - "[[summaries/2025-flow-matching-diffusion-intro]]"
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
-updated: 2026-08-18
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Classifier-Free Guidance（分類器なしガイダンス, CFG）
@@ -69,6 +70,16 @@ CFG は条件付きと無条件の予測を**両方**計算するので、推論
 - **ガイダンス蒸留**（[[diffusion-distillation]]）：2 回の評価を 1 回に畳み込む生徒モデルを**学習する**。FLUX.1 Kontext [dev] がこれで作られている（[[summaries/2025-flux-kontext]]）。
 - **CFG キャッシュ**（[[inference-caching]]）：**学習せずに**同じ冗長性を突く。[[summaries/2025-wan]] の観察は「**サンプリングの後期では条件付きと無条件の出力が似てくる**」——序盤は何を描くかが決まっておらず条件の有無で出力が大きく違うが、終盤は構図も被写体も既に決まっていて両者とも同じ絵の細部を詰めているだけになる。ならば後期に無条件側を毎回計算する意味は薄い。そこで無条件側を数ステップに 1 回だけ計算し、間は条件付きの結果を再利用する（細部の劣化を防ぐため残差補償を併用）。
 
+**両方を 1 つのリポジトリで見比べられる実例**が FLUX.2 である（[[summaries/2025-flux2]]）。同じアーキテクチャの 3 系統が並んでいる。
+
+| 変種 | guidance の扱い | 1 ステップの評価回数 | 総 NFE |
+| --- | --- | --- | --- |
+| `flux.2-dev` | **蒸留**（スカラーを $\sin/\cos$ 埋め込みして時刻ベクトルに加算） | 1 | 50 |
+| `flux.2-klein`（蒸留版） | **蒸留（しかも摘みがない）**——引数は渡されるがモデルが**無視する** | 1 | **4** |
+| `flux.2-klein-base` | **真の CFG**（バッチを 2 倍に複製して 1 回の順伝播で cond/uncond 同時） | **2** | **100** |
+
+読み取れることが 2 つある。第一に、**蒸留 guidance の実装は驚くほど軽い**——時刻埋め込みと同じ関数に通して同じ `vec` に足すだけである。第二に、**klein では guidance のスケールが完全に固定されている**。`use_guidance_embed=False` なので埋め込み層すら持たず、CLI も `guidance` 以外の値を拒否する。「品質と多様性のトレードオフを 1 つのノブで制御する」という CFG の原点にあった性質が、**蒸留の徹底とともに失われている**ことになる。$100 \to 4$ NFE（25 倍）の代償がここに現れている。
+
 後者は本ページにとって、コスト削減以上の含意を持つ。**CFG の効きがサンプリングの段階によって変わる**——序盤の条件付けは構図を決め、終盤の条件付けはほとんど何もしていない——という観察は、guidance が何をしているのかの理解そのものに関わる。冒頭で述べた「品質と多様性のトレードオフ」も、実は全ステップで一様に生じているわけではないことを示唆する。
 
 ## 既存知識との接続
@@ -82,6 +93,8 @@ CFG は条件付きと無条件の予測を**両方**計算するので、推論
 - [[multi-concept-customization]]：Multi-LoRA Composition の **LoRA Composite** は、CFG のスコア（$e_\theta(\emptyset)+s(e_\theta(c)-e_\theta(\emptyset))$）を複数 LoRA について計算し平均する形で、CFG を多 LoRA 合成に拡張した例。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux2]] — FLUX.2（蒸留 guidance と真の CFG が同一リポジトリに併存。klein は guidance 引数を受け取るが無視し、スケールを変える手段がない。base は 50 ステップ × 2 = 100 NFE、蒸留版は 4 NFE）
 
 - [[summaries/2025-wan]] — Wan（CFG キャッシュ。サンプリング後期では条件付きと無条件の出力が似てくることを利用し、学習なしで無条件側の計算を間引く）
 

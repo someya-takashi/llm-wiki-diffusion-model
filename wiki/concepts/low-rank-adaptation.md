@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [LoRA, Low-Rank Adaptation, 低ランク適応, PEFT, parameter-efficient fine-tuning]
-tags: [low-rank-adaptation, subject-driven-generation, diffusion-model-architecture, generative-models, style-content-disentanglement, model-merging]
+tags: [low-rank-adaptation, subject-driven-generation, diffusion-model-architecture, generative-models, style-content-disentanglement, model-merging, flux2]
 related:
   - "[[subject-driven-generation]]"
   - "[[latent-diffusion]]"
@@ -19,7 +19,8 @@ summaries:
   - "[[summaries/2025-k-lora]]"
   - "[[summaries/2025-np-lora]]"
   - "[[summaries/2026-ssr-merge]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Low-Rank Adaptation（LoRA, 低ランク適応）
@@ -46,6 +47,7 @@ LLM で生まれた LoRA は、拡散モデルでは **U-Net（とテキスト�
 - **派生**：HyperDreamBooth（LoRA 重みを予測）、**ED-LoRA**（[[summaries/2023-mix-of-show]]、概念トークンを layer-wise＋multi-word に分解し identity を embedding 側に残す）など。
 - **重みの疎性**：ZipLoRA（[[summaries/2024-ziplora]]）は LoRA の $\Delta W$ が**疎**で、要素の 90% を 0 にしても品質が保たれることを観察した。これが複数 LoRA を干渉なくマージできる根拠になる。
 - **低ランク性の傍証**：Custom Diffusion（[[summaries/2023-custom-diffusion]]）は cross-attention の $W^k,W^v$ を全 fine-tune した差分行列の特異値が急減することを観察し、SVD 低ランク近似で 75MB→15MB（上位 60% rank, 5× 圧縮）に圧縮しても品質が保たれることを示した——personalization の重み変化が本質的に低ランクという、LoRA の前提を裏づける結果。ただし同論文は fine-tune **中**に低ランク更新を強制すると結果が suboptimal だったとも報告する。
+- **モデルによっては「定番の標的」が存在しないことがある**：FLUX.1 向けの LoRA レシピにはブロックごとの変調層 `img_mod.lin` を標的に含めるものがあるが、**FLUX.2 にそのモジュールは存在しない**（[[summaries/2025-flux2]]）。変調はモデル最上位で 1 回だけ作られて全ブロックへ配られるので、DiT 全体で変調に使われる重みは**計 4 行列**しかない。**バックボーンが変われば標的名の前提が崩れる**という、実務上見落としやすい落とし穴である。逆にこの 4 行列に LoRA を当てると全ブロックへ一斉に効く（Z-Image の共有下方射影と同じ性質で、レバーが長すぎて制御しにくい・[[questions/z-image-architecture-and-lora-placement]]）。
 - **どこに当てるか、が設計変数になる**：LoRA は伝統的に「注意・線形層すべてに当てる」を既定としてきたが、**B-LoRA**（[[summaries/2024-b-lora]]）は SDXL の 11 transformer ブロックのうち**第 4 ブロック（コンテンツを支配）と第 5 ブロック（色／スタイルを支配）の 2 つだけ**に当てると、style と content が勝手に分離した表現が得られることを示した。保存量は 70% 減り、学習容量が絞られるため**過学習もしない**（他手法が 400 ステップで止めるところ 1000 ステップ回せる）。層は等価ではない、という認識は $\mathcal{P}+$（層ごとのテキスト埋め込み）や ED-LoRA にも共通する。詳細は [[style-content-disentanglement]]。
 - **何を学習しないか、も設計変数になる**：**Orthogonal Adaptation**（[[summaries/2024-orthogonal-adaptation]]）は $\Delta\theta = AB^\top$ の **$B$ を凍結して $A$ だけ学習する**。$B$ を共有直交基底からランダムに選んだ列に固定すれば、別々に学習された LoRA どうしが $B_i^\top B_j \approx 0$ を満たし、**素朴な足し算でマージしても干渉しない**。$B$ を凍結しても単一概念の忠実度が落ちないのは、text-to-image モデルが**過剰パラメータ化**されているためである——これは LoRA の前提（適応の内在階数は低い）をさらに一歩進めた観察と読める。
 - **$\Delta W$ の内部構造**：LoRA の低ランク空間は一様ではない。**NP-LoRA**（[[summaries/2025-np-lora]]）は $\Delta W$ を SVD し、**上位の特異ベクトル（主方向）を摂動するとスタイルの一貫性が急激に崩れる一方、微小な成分を摂動してもほとんど変わらない**ことを示した。ZipLoRA の「$\Delta W$ は疎」という観察を、**どの部分が重要かを特異値の順で特定する**ところまで進めたものである。**K-LoRA**（[[summaries/2025-k-lora]]）も同じ性質を別の形で使い、各層の重要度を**Top-K 要素の絶対値和**で測って層ごとにどちらの LoRA を使うか決める。
@@ -63,6 +65,8 @@ LLM で生まれた LoRA は、拡散モデルでは **U-Net（とテキスト�
 - [[latent-diffusion]]：拡散 LoRA は通常 Stable Diffusion（LDM）の U-Net に適用され、デコーダ／VAE はそのまま。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux2]] — FLUX.2（変調が全ブロック共有のため FLUX.1 の `img_mod.lin` を狙うレシピが空振りする。実際の標的は `img_attn.qkv` / `img_mlp.0` / `linear1` / `linear2` など。学習コードは同梱されず `strict=True` 読み込み）
 
 - [[summaries/2022-lora]] — LoRA: Low-Rank Adaptation of Large Language Models（Hu ら, ICLR 2022。$\Delta W=BA$・凍結・マージ・rank 分析）
 - [[summaries/2023-mix-of-show]] — Mix-of-Show（ED-LoRA：分解埋め込み＋LoRA）

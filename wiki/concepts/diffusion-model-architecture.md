@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Model Architecture, 拡散モデルのアーキテクチャ, ADM, AdaGN, U-Net for diffusion, DiT, Diffusion Transformer, adaLN, adaLN-Zero, patchify]
-tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion, video-diffusion, unified-multimodal-generation, position-embedding, efficient-attention]
+tags: [diffusion-model-architecture, denoising-diffusion, latent-diffusion, generative-models, image-generation, dit, mixture-of-experts-diffusion, pixel-space-diffusion, video-diffusion, unified-multimodal-generation, position-embedding, efficient-attention, flux2]
 related:
   - "[[denoising-diffusion]]"
   - "[[latent-diffusion]]"
@@ -37,7 +37,8 @@ summaries:
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
   - "[[summaries/2024-b-lora]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Diffusion Model Architecture（拡散モデルのアーキテクチャ）
@@ -116,6 +117,26 @@ DiT はクラス条件付き生成のために設計され、テキストのよ�
 - **スケーリング**：深さ $d$ で hidden=$64d$・ヘッド数=$d$ とパラメータ化し 8B までスケール。検証損失が人間評価・ベンチマークと強く相関し飽和しない。
 
 MM-DiT は DiT を text-to-image のマルチモーダル性に合わせて拡張したもので、本 wiki のアーキテクチャ系譜「改良 U-Net（ADM）→ SDXL（U-Net スケール）→ DiT（Transformer 化）→ MM-DiT（マルチモーダル化）」の主要な地点にあたる。詳細は [[summaries/2024-sd3]]。
+
+### FLUX.2（Black Forest Labs 2025–2026）——二相構成を保ち、条件付けを作り替える
+
+**FLUX.2**（[[summaries/2025-flux2]]）は FLUX.1 の二相構成（`DoubleStreamBlock` → `SingleStreamBlock`）をそのまま保つ。本 wiki で唯一、**技術報告書がなくリファレンス実装が一次資料**の原典である。
+
+| | dev | klein 9B | klein 4B |
+| --- | --- | --- | --- |
+| hidden_size / heads | 6144 / 48 | 4096 / 32 | 3072 / 24 |
+| double / single ブロック | **8 / 48** | **8 / 24** | **5 / 20** |
+| guidance 埋め込み | あり | なし | なし |
+
+変わったのは**条件付けの機構**である。
+
+**(1) 変調が全ブロックで共有される。** FLUX.1 にあったブロックごとの `img_mod.lin` / `txt_mod.lin` は**存在しない**。変調ベクトルはモデルの最上位で 1 回だけ作られ（`double_stream_modulation_img/txt`、`single_stream_modulation`）、同じタプルが全ブロックへ渡される。DiT 全体で変調に使われる重みは `final_layer.adaLN_modulation.1` を含め**計 4 行列だけ**である。
+
+これで本 wiki に**3 例目**が揃った——Wan は adaLN の MLP を全層共有し（[[summaries/2025-wan]]）、Z-Image は変調射影の下方射影を全層共有にした（[[summaries/2025-z-image]]）。**「条件付け機構は思ったより安く済ませてよい」という判断が、独立した 3 チームから重ねて出ている。** 単なる省パラメータの工夫ではなく、設計の定石になりつつあると見てよい。
+
+**(2) pooled テキストベクトルの廃止。** FLUX.1 の `vec_in_dim` / `y`（pooled CLIP 埋め込み）は FLUX.2 に存在しない。変調ベクトルは時刻（＋ dev では guidance）だけから作られ、テキストは `txt_in` の 1 経路のみで入る。SD3 が pooled と系列の 2 経路を持っていた（[[summaries/2024-sd3]]）ところからの単純化である。
+
+**(3) テキストエンコーダは LLM の中間 3 層の連結。** 最終層は使わない（Mistral-Small-3.2-24B なら層 10/20/30、Qwen3 なら 9/18/27）。「LLM の最終層は次トークン予測に特化しており、中間層の方が意味を保持している」という判断で、**decoder-only LLM をテキストエンコーダに使う**潮流（Sana → Qwen-Image → HunyuanImage 3.0 → ERNIE-Image → Z-Image）に**どの層を取るか**という新しい設計変数を加えた。
 
 ### Sana の Linear DiT（NVIDIA / MIT 2024）——注意そのものを安くする
 
@@ -260,4 +281,5 @@ SD3 と同じ系譜（Black Forest Labs）から出た **FLUX.1**（[[summaries/
 - [[summaries/2022-edm]] — EDM（preconditioning $c_{\rm skip}/c_{\rm out}/c_{\rm in}/c_{\rm noise}$＝ネット入出力の前処理設計軸）
 - [[summaries/2024-sana]] — Sana（Linear DiT＝ReLU 線形注意で $O(N)$ 化、Mix-FFN の 3×3 depthwise conv で補償、NoPE、Triton カーネル融合）
 - [[summaries/2024-b-lora]] — B-LoRA（SDXL の transformer ブロックごとの役割をプロンプト注入で同定。ブロック 4=コンテンツ / 5=色。アーキテクチャ内の創発的な役割分化の実証）
+- [[summaries/2025-flux2]] — FLUX.2（リファレンス実装。二相構成を保ちつつ**変調を全ブロック共有**、pooled ベクトル廃止、テキストエンコーダは LLM 中間 3 層の連結。dev 8+48 / klein 9B 8+24 / klein 4B 5+20）
 - [[summaries/2025-flow-matching-diffusion-intro]] — Flow Matching と拡散モデル入門（MIT 6.S184 講義ノート。U-Net・DiT・MM-DiT と条件付け変数の符号化・潜在空間動作を概観）

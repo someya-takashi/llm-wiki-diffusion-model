@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Distillation, 拡散モデルの蒸留, 少ステップ生成, Few-step Generation, DMD, Distribution Matching Distillation, Consistency Models, Progressive Distillation, One-step Generation]
-tags: [diffusion-distillation, diffusion-sampling, flow-matching, text-to-image-generation, generative-models, inference-caching]
+tags: [diffusion-distillation, diffusion-sampling, flow-matching, text-to-image-generation, generative-models, inference-caching, flux2]
 related:
   - "[[diffusion-sampling]]"
   - "[[flow-matching]]"
@@ -22,7 +22,8 @@ summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
-updated: 2026-08-18
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Diffusion Distillation（拡散モデルの蒸留 / 少ステップ生成）
@@ -159,6 +160,22 @@ $$\hat{x}_{0}=\sum_{k=1}^{K}\mathcal{W}_{k}(x_{t},\sigma,c,\mathcal{O})\cdot E_{
 
 ここで注目すべきは、蒸留が単独では足りず、**3 つの直交する軸を掛け算している**ことである——蒸留（ステップ数を減らす）、[[inference-caching]]（1 ステップの中身を削る）、量子化（1 演算を安くする・[[large-scale-training-infrastructure]]）。本ページ冒頭の表に「サンプラー vs 蒸留」を並べたが、実務ではこの 4 つ全部を積む。
 
+## 2 種類の蒸留が同じモデルに重なる（FLUX.2）
+
+本ページは**ステップ蒸留**（NFE を減らす）と**ガイダンス蒸留**（CFG の 2 回評価を 1 回に畳む）を別々に扱ってきたが、**FLUX.2 klein** はその両方を同時にかけた実例である（[[summaries/2025-flux2]]）。
+
+| | ベース（教師） | 蒸留版（生徒） |
+| --- | --- | --- |
+| ステップ数 | 50 | **4** |
+| guidance | 真の CFG（×2 評価） | 蒸留（埋め込みすら持たない） |
+| 総 NFE | **100** | **4** |
+
+**25 倍**である。しかもアーキテクチャは完全に同一（同じ `Klein4BParams` / `Klein9BParams`）で、違うのは重みだけ。**ベース版が教師で蒸留版が生徒**という関係が、同じリポジトリの別チェックポイントとして公開されている。
+
+実装上の帯留めが徹底しているのも特徴で、`fixed_params = {"guidance", "num_steps"}` が設定され、**CLI が 4 ステップ・guidance 1.0 以外を拒否して終了する**。蒸留モデルを教師の設定で回してしまう事故を、ツール側で構造的に防いでいる。
+
+さらに、**スケジュール側からの補完**がある（[[concepts/noise-schedule]]）。時刻シフト係数がステップ数に依存し、**4 ステップでは 50 ステップより大きなシフト**（$s \approx 9.9$ 対 $7.6$）が自動的に適用される。高ノイズ域に時間予算を厚く配ることで、少ステップでの構図の破綻を抑えている。**蒸留は「モデルを作り替える」だけでは完結せず、刻み方の調整とセットで効いている。**
+
 ## 限界と注意点
 
 - **教師を超えられない**（通常は）。蒸留は教師の能力を圧縮する枠組みであり、生徒の上限は教師である。**ただし敵対的蒸留（ADD/LADD）は例外**で、識別器が「本物らしさ」を直接押し上げるため、ステップ数を削りつつ鮮鋭さを増しうる。
@@ -178,6 +195,8 @@ $$\hat{x}_{0}=\sum_{k=1}^{K}\mathcal{W}_{k}(x_{t},\sigma,c,\mathcal{O})\cdot E_{
 - [[text-to-image-generation]]：蒸留の実用的な動機は、対話的な創作ワークフローでの応答速度にある。
 
 ## 参考文献（summaries）
+
+- [[summaries/2025-flux2]] — FLUX.2 klein（ステップ蒸留 4 NFE ＋ ガイダンス蒸留。ベース版 100 NFE から 25 倍。同一アーキテクチャで重みのみ異なる教師/生徒が並んで公開され、CLI が蒸留設定を強制する）
 
 - [[summaries/2026-qwen-image-2]] — Qwen-Image-2.0（20B の T2I・編集統合モデルに DMD を適用し、4 NFE の生徒が 40 ステップの教師に匹敵）
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（LADD で 1024² を 3〜5 秒に。速度だけでなく CFG 由来のアーティファクト低減も動機。[dev] はガイダンス蒸留で作られる）

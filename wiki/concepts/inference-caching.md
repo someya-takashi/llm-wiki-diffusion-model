@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Inference Caching, 推論キャッシュ, Diffusion Cache, 拡散キャッシュ, Attention Cache, CFG Cache, Feature Caching, Step Caching]
-tags: [inference-caching, diffusion-sampling, diffusion-distillation, classifier-free-guidance, video-diffusion, generative-models, efficient-attention]
+tags: [inference-caching, diffusion-sampling, diffusion-distillation, classifier-free-guidance, video-diffusion, generative-models, efficient-attention, flux2]
 related:
   - "[[diffusion-sampling]]"
   - "[[diffusion-distillation]]"
@@ -12,7 +12,8 @@ related:
   - "[[efficient-attention]]"
 summaries:
   - "[[summaries/2025-wan]]"
-updated: 2026-08-19
+  - "[[summaries/2025-flux2]]"
+updated: 2026-08-25
 ---
 
 # Inference Caching（推論キャッシュ / Diffusion Cache）
@@ -85,6 +86,32 @@ Wan 14B の text-to-video で **1.62×** の高速化。同じ推論最適化の
 ## 参考文献（summaries）
 
 - [[summaries/2025-wan]] — Wan（注意キャッシュと CFG キャッシュで 1.62×。残差補償を併用、キャッシュ間隔は検証集合で選択）
+- [[summaries/2025-flux2]] — FLUX.2 klein-9B-kv（参照画像トークンの K/V を**厳密に**キャッシュ。参照専用の注意マスク＋固定タイムステップ変調で不変性を構造的に保証。近似でないため品質劣化なし、ただし別チェックポイント）
+
+## 第 2 の系統：構造で不変性を作ってからキャッシュする（FLUX.2）
+
+本ページの Wan の Diffusion Cache は、**経験的な近似**である——「隣接ステップで注意出力が似ている」という観察を突くので、キャッシュ間隔を検証集合で選ぶ必要があり、細部の劣化を防ぐ残差補償も併用する。品質と速度のトレードオフが本質的に存在する。
+
+**FLUX.2 の klein-9B-kv**（[[summaries/2025-flux2]]）は別系統である。**参照画像トークンの K/V を、近似ではなく厳密に使い回す。**
+
+成立させているのは 2 つの設計である。
+
+1. **参照トークンは自分自身にしか attend しない。** `causal_attn_fn` が実装するブロックマスクにより、参照はテキストもノイズ付き対象も見ない。**参照の活性化は $x_t$ に依存しない。**
+2. **参照トークンは固定タイムステップで変調される。** `ref_fixed_timestep = 0.0` で別の変調ベクトルを作り、参照位置だけ差し替える。参照は毎ステップ「クリーンなデータ」として扱われる。
+
+この 2 つにより参照の K/V は軌道上で**文字どおり不変**になり、再利用は再計算と**数学的に同一**になる。品質の劣化が原理的に起こらない。
+
+| | Wan の Diffusion Cache | FLUX.2 の参照 KV キャッシュ |
+| --- | --- | --- |
+| 根拠 | ステップ間の**経験的な類似性** | **構造的な不変性** |
+| 品質への影響 | 劣化しうる（残差補償で緩和） | **なし（厳密に等価）** |
+| 調整 | キャッシュ間隔を検証集合で選ぶ | 不要 |
+| 対象 | 注意出力・CFG の無条件側 | **参照画像トークンの K/V のみ** |
+| 代償 | 汎用（どのモデルにも後付け可） | **注意が制約され、別チェックポイントになる** |
+
+**代償の所在が違う**点が要点である。Wan のキャッシュはモデルを変えずに後付けできるが品質を賭ける。FLUX.2 のそれは品質を賭けないが、**「参照が他を見ない」という制約された注意**を学習時から課す必要があり、非キャッシュ版とは別の重みになる（`flux.2-klein-9b-kv`）。実行時のオプションではない。
+
+**キャッシュ可能性を後から見つけるのではなく、設計に織り込む**——これは [[concepts/diffusion-model-architecture]] の設計判断がそのまま推論効率を決める例であり、[[concepts/instruction-based-image-editing]] のように参照画像を大量に扱うタスクで効いてくる。
 
 > 隣接する軸として、キャッシュではなく**注意演算そのものを安くする**方向がある（線形注意・疎注意・FlashAttention）。詳細は [[efficient-attention]] を参照。両者は併用でき、Wan は 8-bit FlashAttention とキャッシュを同時に積んでいる。
 

@@ -4,4 +4,5 @@
 # Obsidian
 .obsidian/
 
-code analysis/
+# 解析対象リポジトリ（wiki には要約のみを残す）
+code_analysis/
