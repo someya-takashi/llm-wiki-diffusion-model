@@ -607,3 +607,19 @@ DeepWiki は**変種を 1 つずらして**記述していた——「8 + 24」�
   - **「コードからは分からないこと」を必須の節にした。** 推論用リファレンス実装からは学習データ・学習手順・蒸留の具体・アブレーションが読み取れない。この境界を明示しないと、要約が実際より多くを主張しているように読めてしまう。
   - **ファイル名と行番号を添える／読んだコミットハッシュを log に記録する／リポジトリの画像は取り込まず図は自分で描く。**
 - 補足: CLAUDE.md §2 の `source_kind: code` と例外規定（`source_path` は `code_analysis/<repo>/`、`translation` フィールドを付けない）は前日の schema-update で追加済みで、今回は変更していない。
+
+## [2026-08-26] query | FLUX.2 klein 4B の LoRA 学習先と前景×背景の合成手法
+
+- 質問: LoRA 学習は `flux.2-klein-4b`（蒸留）と `flux.2-klein-base-4b` のどちらか／前景 LoRA と背景 LoRA を組み合わせる FLUX.2 向けの手法
+- 作成: [[questions/flux2-klein-lora-training-and-composition]]
+- 更新: [[index]]
+- 参照: [[summaries/2025-flux2]]（コード由来の構成・`fixed_params`・変調の共有・多参照の RoPE）, [[summaries/2025-k-lora]], [[summaries/2025-np-lora]], [[summaries/2026-ssr-merge]], [[summaries/2025-z-image]], [[summaries/2024-b-lora]] ／ [[concepts/lora-merging]], [[concepts/diffusion-distillation]], [[concepts/style-content-disentanglement]]
+- **Web 併用**: BFL 公式ブログ・HF ブログ・RunComfy・HF のコミュニティ LoRA。前日の ingest で「学習コードはリポジトリに存在しない」ことが分かっていたため、実運用の情報は wiki 外から補う必要があった。URL は回答末尾に列挙。
+- **新しく引き出せた接続**:
+  - **推論ステップ数が合成手法の選択を決める**——これが本 query の中心的な発見。**NP-LoRA と SSR-Merge は静的マージ（重みを 1 つ作る）なのでステップ数に依存しない**が、**K-LoRA は実行時スケジューラ**で時間依存スケール $S=\alpha t/T+\beta$ に依拠するため、**4 ステップでは選択の機会が 4 回しかなく機構が本来の粒度で働かない**。既存のどの原典にもない判断軸で、[[concepts/lora-merging]] の系統分類（重みを混ぜる/混ぜない）に**「静的か実行時か」という直交軸**を与える。
+  - **同じ手法でもバックボーンが変わると弱点の所在が移る**。K-LoRA の実務上の弱点は FLUX.1 では「生成が 2.6 倍遅い」だったが、FLUX.2 klein では 25 ブロック × 4 ステップ＝100 回の比較でしかなく速度は問題にならない。**論点が速度からスケジュールの粒度へ移る。**
+  - **共有変調の 4 行列は合成時に最悪の衝突点になる**。局所性がゼロのまま全 25 ブロックに一斉に効くため、2 つの LoRA が同時に触ると [[summaries/2025-np-lora]] の命題 1 が最悪の形で効く。**「合成予定があるなら標的から明示的に外す」**という実務ルールを導いた。Z-Image の共有下方射影・Wan の adaLN 共有と同型で、**変調機構を共有するアーキテクチャに共通する落とし穴**として一般化できる。
+  - **モダリティ分離の余地は FLUX.1 より狭まっている**。画像側限定（`img_*`）で触れるのは double-stream だけで、FLUX.1 dev 33% → FLUX.2 dev 14% → klein 4B 20%。FLUX.2 がパラメータを single-stream へ寄せた結果であり、[[questions/z-image-architecture-and-lora-placement]] で扱った「単一ストリームは選択性を失う」の中間形として位置づけられる。
+  - **FLUX.2 のネイティブ多参照が AnyDoor 系の逐次パイプラインを不要にする**。[[questions/lora-foreground-background-composition]] では「背景生成 → AnyDoor で物体を置く」を推奨したが、FLUX.2 は参照画像を系列連結して RoPE 第 1 軸で分離する機能を第一級で持つ。**LoRA 合成は「参照画像で表現できないもの」（特定の画風など）に限って使うのが合理的**という切り分けを提示した。
+  - Q1 側では、**アーキテクチャが同一（どちらも `Klein4BParams()`）だからこそ base 学習の LoRA が蒸留版に機械的にロードできる**という、BFL のブログが述べる運用の**理由**をコードから説明できた。
+- 限界の但し書き（回答に明記）: **「K-LoRA が 4 ステップで劣化する」は機構からの演繹であって実測ではない**（試す価値のある仮説）。「ベース学習→蒸留版推論で同一性がやや落ちる」はコミュニティ報告で査読された測定ではない。**FLUX.2 で LoRA merging を実施した報告は wiki にも公開文献にも存在しない**ため、適用可能性は構造からの演繹である。標的モジュール名は実装から読めるものであって BFL の推奨セットではない。
