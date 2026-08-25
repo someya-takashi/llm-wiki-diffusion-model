@@ -505,3 +505,29 @@
 - ERNIE-Image を 3 位にした理由: [[summaries/2026-ernie-image]] に批判として記録済みの**アーキテクチャ非公開**（層数・隠れ次元・注意機構・位置符号化の記述が一切ない）が、merging 研究では三重に効く——(a) どの行列に当てたかを報告できない、(b) NP-LoRA の主方向数・SSR の $Kr$・OA の $\lfloor n/r \rfloor$ を仕様から見積もれない、(c) 8B と最大で反復が遅い。
 - 実験設計として 3 フェーズを提案（klein で再現 → klein でスケール → Z-Image へ移植）。**Phase 3 が学術的に最も価値がある**——SSR-Merge が FLUX.1 で 90〜98%・Qwen-Image で 97〜99% という 7 ポイント差を「特徴空間の特性が違う」としか説明していない空白（要約に批判として記録済み）に、二相構成 対 完全単一ストリームという統制された対比で切り込める。
 - メモ: 回答末尾に限界を 3 点明記——**本 wiki は FLUX.2 klein の原典を持たない**（Web 調査ベース、隠れ次元は非公開）、**3 モデルいずれについても LoRA merging の実験報告は wiki にも公開文献にも見当たらない**（適用可能性は構造からの演繹）、**ERNIE-Image の「cross-attention なし」は「単一ストリーム DiT」からの推定**で原典に明示がない。
+
+## [2026-08-25] query | Z-Image 図10 の読み解き（入力・処理・出力、self-attention による条件付け、二重符号化、推論）
+
+- 質問: 図10 の入力・処理・出力の詳細／DiT は cross-attention で条件付けするはずだが self-attention でも条件付けになるのか／左下の SigLIP-2→Semantic Processor と VAE→Image Processor はなぜ入力するのか／推論時のデノイズ
+- 作成: [[questions/z-image-figure10-architecture-walkthrough]]
+- 更新: [[index]]
+- 参照: [[summaries/2025-z-image]], [[translations/2025-z-image]]（§4.1・§4.3・§4.7・表2）, [[summaries/2024-sd3]], [[summaries/2025-wan]], [[summaries/2025-qwen-image]], [[summaries/2025-hunyuanimage-3]], [[summaries/2025-flux-kontext]] ／ [[concepts/diffusion-model-architecture]], [[concepts/instruction-based-image-editing]], [[concepts/flow-matching]], [[concepts/noise-schedule]], [[concepts/position-embedding]], [[concepts/inference-caching]]
+- 図解: 原典の図10 を引用したうえで、**T2I の経路と Edit で追加される経路を分離して描き直した ASCII 図**を新規作成した。原典の図は 2 モデルを 1 枚に重ねており、初見では T2I にも SigLIP-2 が要ると誤読しやすい。
+- 新しく引き出した接続:
+  - **連結系列への self-attention は cross-attention を部分行列として含む**。$QK^\top$ をブロック分解すると、左下の $Q_{\text{img}}K_{\text{txt}}^\top$（画像クエリ × テキストキー）がまさに cross-attention。本 wiki は MM-DiT を「attention のときだけ連結して双方向に混ぜる」と記述してきたが、**なぜそれが条件付けとして機能するのか**を明示したのは初めて。
+  - **softmax が行全体で正規化されるため 4 ブロックは足し算でなく競合する**——これが [[summaries/2025-wan]] の「視覚トークンが数十万に達するとテキストが飲み込まれる」という判断の数学的な中身である。既存の記述に定量的な裏づけを与えた。
+  - **単一ストリームではテキストの K/V をキャッシュできない**。テキストが画像を見る経路（$Q_{\text{txt}}K_{\text{img}}^\top$）があるためテキスト表現が毎ステップ変わり、30 層すべてを毎ステップ再計算する。cross-attention 型との実推論コスト差として、[[questions/z-image-architecture-and-lora-placement]] の「単一ストリームは選択性を失う」に続くもう 1 つの代償。
+  - **Z-Image-Edit の SigLIP-2 ＋ VAE は二重符号化そのもの**。[[concepts/instruction-based-image-editing]] に Qwen-Image・HunyuanImage 3.0 の例として記録済みのパターンへ、Z-Image が独立に到達している 3 例目として接続した。原典が「編集タスクに限り」と明記している点も確認（T2I では左下 2 経路は使われない）。
+- **実装上の重要な注意として記録**: **Z-Image の時刻の向きは SD3 と逆**。原典は $x_t=t\cdot x_1+(1-t)\cdot x_0$（$x_0$＝ノイズ、$x_1$＝画像）と定義するので **$t=0$ が純ノイズ・$t=1$ がクリーン画像**であり、推論は $t:0\to1$ へ積分する。[[concepts/flow-matching]] に記録した SD3 の流儀（$z_t=(1-t)x_0+t\epsilon$、$t=0$ がデータ）とは逆向き。図10 の参照画像が $t=1$ なのは「クリーン」の意味。
+- メモ: この query を機に **query skill の既定動作を「回答は原則 questions/ に保存する」へ変更**した（下記 schema-update を参照）。
+
+## [2026-08-25] schema-update | query skill：回答の wiki 化を既定にし、log の書き方と限界明示の規約を追加
+
+- 変更対象: `.claude/skills/query/SKILL.md`
+- 変更点:
+  1. **標準フロー 4 を「成果物の wiki 化を提案」から「成果物を wiki 化する（既定）」へ変更**。ユーザーの了承を待たずに `wiki/questions/<slug>.md` を作成する。例外は「既存ページを指し示すだけで終わる短い確認で、新しい統合・比較・分析・接続を何も含まない場合」のみとし、**迷ったら保存する**（後で消すのは簡単だが失われた分析は復元できない）と明記した。
+  2. **「出力形式」に図解の方針を追加**：原典の図を引用するだけでなく、**質問の観点に合わせて描き直した図を添える**。原典の図は原典の論旨のために描かれているため、質問の観点では読み取りにくいことが多い（Z-Image 図10 の T2I / Edit 重ね描き、LoRA 当てどころの例）。
+  3. **「log.md に何を書くか」の節を新設**：回答そのものを要約し直さず、**この query で新しく引き出せた接続**（既存ページになかった関係の発見、既存記述への反証や補強、実務的判断基準への翻訳）・Web 参照の URL・限界の但し書きを書く、と規定した。これまでの運用を明文化したもの。
+  4. **「回答の限界を明示する」の節を新設**：wiki に原典がない領域では、**原典に基づく事実と他モデルからの外挿・演繹を書き分ける**。読み返したときに信頼度を判断できることが wiki の価値を保つ。
+  5. frontmatter の `description` を「必要なら成果物を questions/ として保存する」→「その成果物を questions/ として保存する」へ更新。
+- 動機: ユーザーからの指示「基本 query の内容は保存してください」。実運用でも直近 4 件の query はすべて保存しており、既定を反転させた方が実態に合う。

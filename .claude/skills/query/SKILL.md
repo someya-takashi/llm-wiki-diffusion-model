@@ -1,6 +1,6 @@
 ---
 name: query
-description: Diffusion Model LLM Wiki への質問応答。ユーザーが wiki の内容について質問してきたとき（手法の比較、概念の説明、原典をまたいだ分析など）に使う。index から関連ページを辿り、[[wikilink]] 引用付きで初学者にも分かるように回答し、必要なら成果物を questions/ として保存する。
+description: Diffusion Model LLM Wiki への質問応答。ユーザーが wiki の内容について質問してきたとき（手法の比較、概念の説明、原典をまたいだ分析など）に使う。index から関連ページを辿り、[[wikilink]] 引用付きで初学者にも分かるように回答し、その成果物を questions/ として保存する。
 tools: Read, Write, Edit, Bash, WebFetch, WebSearch
 ---
 
@@ -13,18 +13,33 @@ Diffusion Model wiki に対する質問に答える。回答の品質ルール�
 1. **index.md を読む**：まず `wiki/index.md` で関連しそうなページ（concepts / summaries / translations / overview 等）を特定する。
 2. **必要なページを読む**：drill-in し、複数ページを統合して回答する。原典に立ち戻る必要があれば `raw/` を直接読んでよい。wiki に情報が無い／薄い場合は WebSearch・WebFetch で補ってよいが、その旨を明示する。
 3. **回答する**：ユーザーの質問に対して、引用元ページを `[[wikilink]]` 形式で明示しながら回答する。**初学者にも分かるように略称展開・概念補足を入れる**（CLAUDE.md §4）。
-4. **成果物の wiki 化を提案**：回答が比較表・分析・新しい接続の発見を含む場合、`wiki/questions/<slug>.md` として保存することをユーザーに提案する。ユーザーが了承したら作成し（frontmatter は CLAUDE.md §2 の questions/*.md を参照）、`index.md` と `log.md` を更新する。
+4. **成果物を wiki 化する（既定）**：**回答は原則として `wiki/questions/<slug>.md` に保存する。ユーザーの了承を待たない。** 作成後に `index.md` と `log.md` を更新する（詳細は下記「questions ページ化の流れ」）。
+    - **例外**：既存ページを指し示すだけで終わる短い確認（例：「DDIM は何の略か」「latent-diffusion のページはどこか」）で、新しい統合・比較・分析・接続を何も含まない場合は保存しなくてよい。**迷ったら保存する**（後で消すのは簡単だが、失われた分析は復元できない）。
+    - 保存しないと判断した場合は、その旨を一言添える。
 5. **git add & commit**：**ファイルを作成・更新した場合は必ずコミットする**。作成した `wiki/questions/<slug>.md` と、更新した `index.md`・`log.md` をまとめて `git add` し `git commit` する。コミットメッセージは 1 行目を `query: <質問の要点>` とし、本文に作成・更新したページを箇条書きする。
-    - **回答しただけでファイルを作らなかった場合はコミット不要**（ワークツリーを汚さない）。
+    - **例外に該当して保存しなかった場合はコミット不要**（ワークツリーを汚さない）。
 
 ## 出力形式
 
 質問に応じて選ぶ：markdown ページ、比較表、Marp スライド、matplotlib チャート、canvas 等。比較・トレードオフを問う質問（例: 「DDPM と DDIM のサンプリング速度・品質の長短」「Stable Diffusion と Imagen の比較」）では表形式が有効なことが多い。
 
+図解を求められた場合、原典の図をローカルパス（`../../raw/assets/<source-slug>/...`）で引用するだけでなく、**質問の観点に合わせて描き直した図（コードブロック内の ASCII 図など）を添えると価値が高い**。原典の図は原典の論旨のために描かれているため、質問の観点（例：「どこに LoRA を当てられるか」）では読み取りにくいことが多い。
+
 ## questions ページ化の流れ
 
-ユーザーが了承した場合：
-
-1. `wiki/questions/<slug>.md` を作成（frontmatter に `type: question` / `asked` / `question` / `summaries_used` を付与）。
+1. `wiki/questions/<slug>.md` を作成（frontmatter に `type: question` / `asked` / `question` / `summaries_used` を付与。CLAUDE.md §2 の questions/*.md を参照）。
 2. `wiki/index.md` の Questions セクションに 1 行追記。
-3. `wiki/log.md` に `## [YYYY-MM-DD] query | <タイトル>` 形式で追記（取り込んだ／参照したページ、作成したページを箇条書き）。
+3. `wiki/log.md` に `## [YYYY-MM-DD] query | <タイトル>` 形式で追記。
+
+### log.md に何を書くか
+
+**回答そのものを要約し直さない。** ページ本体を読めば分かることを log に複製しても価値がない。代わりに次を書く。
+
+- 作成／更新したページと、参照した summaries / concepts
+- **この query で新しく引き出せた接続**（既存ページに書かれていなかった関係の発見、既存の記述への反証や補強、実務的な判断基準への翻訳など）
+- Web で補った場合はその旨と、参照した URL
+- 回答に付した**限界の但し書き**（wiki が原典を持たない領域、演繹と実証の区別など）
+
+### 回答の限界を明示する
+
+wiki に原典がない領域へ踏み込んだ場合、**どこまでが原典に基づく事実で、どこからが他モデルからの外挿・演繹なのかを回答内で書き分ける**。ページ冒頭に注記を置くとよい。読み返したときに信頼度を判断できることが、この wiki の価値を保つ。
