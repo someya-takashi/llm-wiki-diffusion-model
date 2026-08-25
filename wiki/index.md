@@ -48,6 +48,7 @@
 - [[summaries/2024-b-lora]] — B-LoRA（Frenkel ら / テルアビブ大・ライヒマン大 2024・ECCV 2024・arXiv:2403.14572）。SDXL の**ブロック 4=コンテンツ / ブロック 5=色**をプロンプト注入解析で同定し、その 2 つだけを単一画像から共同学習して style/content を暗黙分離。マージ機構も組合せごとの再最適化も不要、保存量 70% 減、過学習しない
 - [[summaries/2024-sana]] — Sana（NVIDIA / MIT / 清華大学 2024・arXiv:2410.10629・ICLR 2025）。0.6B で FLUX-12B に匹敵。**深圧縮 AE（F32C32P1）・ReLU 線形注意＋Mix-FFN・Gemma-2 テキストエンコーダ＋CHI・Flow-DPM-Solver** の 4 本柱で、4096px で 104× のスループット、16GB ラップトップ GPU でサブ秒生成。NoPE、マルチキャプション CLIP サンプラ、W8A8＋Triton 融合
 - [[summaries/2025-flux2]] — **FLUX.2**（Black Forest Labs 2025–2026・`code_analysis/flux2/` コミット `50fe516`）。**本 wiki で唯一コードが一次資料**の原典（技術報告書なし）。dev 8+48 / klein 9B 8+24 / klein 4B 5+20 ブロック、**変調が全ブロック共有**、pooled ベクトル廃止、テキストエンコーダは LLM 中間 3 層の連結、4 軸 RoPE で参照を 10 刻み分離、VAE 内に patchify、参照 KV の厳密キャッシュ、klein は 4 NFE 蒸留
+- [[summaries/2026-ai-toolkit]] — **ai-toolkit**（ostris 2026・`code_analysis/ai-toolkit/` v0.12.26 コミット `8436c40`・MIT）。34 アーキテクチャの LoRA / LoKr / フルファインチューンを 1 つの YAML で回す学習ツール。**コードが一次資料**の 2 件目。`get_transformer_block_names()` が標的・凍結・量子化の 3 境界を同時に決める、`peft_format` により **`linear_alpha` が黙って無視される**、FLUX.2 の既定は一様時刻＋**flex.1-alpha 由来の 1003 行ハードコード損失重み**、蒸留打ち消しの assistant LoRA（multiplier −1）、ARA、ブロック単位量子化。**マージは素朴な線形和と SVD 抽出のみ**
 - [[summaries/2025-flux-kontext]] — FLUX.1 Kontext（Black Forest Labs 2025・arXiv:2506.15742）。コンテキスト画像をトークン列に連結するだけで T2I と編集を単一 rectified flow に統一。仮想タイムステップ・LADD で 1024² 3〜5 秒・KontextBench・bakeyness 批判
 
 ### article / 講義ノート
@@ -138,6 +139,7 @@
 - [[pixel-space-diffusion]] — ピクセル空間拡散（VAE を経由せず生画素で拡散。latent-diffusion の前提への異議、Unified Transformer、LLM バックボーン、ハイブリッド注意）
 - [[mixture-of-experts-diffusion]] — 拡散モデルの混合エキスパート（FFN を疎な MoE に。ルーター・共有エキスパート・活性化パラメータ、容量↑で計算量据え置き）
 - [[character-consistency]] — キャラクタ／被写体の一貫性（複数枚・多ターンで同一性を保つ。visual drift・学習型 vs 文脈型・AuraFace 定量化）
+- [[ai-toolkit]] — LoRA 学習ツール ai-toolkit（**CLAUDE.md §1「ツールに専用ページを作らない」への明示的例外**。標的選択・時刻分布・量子化・マージの実装が、理論側の蓄積とどれだけずれているかを読むためのページ）
 
 略称リダイレクト：
 - DDPM → [[denoising-diffusion]]
@@ -231,6 +233,10 @@
 - K-LoRA / Top-K 選択 / 固定選択 / NP-LoRA / 零空間射影 / Null Space Projection / ソフト射影 / 主方向 → [[lora-merging]]
 - B-LoRA / スタイル-コンテンツ分離 / Style Transfer / スタイル転送 / 画像スタイライゼーション / StyleDrop / StyleAligned / InstantStyle / IP-Adapter / Neural Style Transfer / NST → [[style-content-disentanglement]]
 - FLUX.2 / FLUX.2 dev / FLUX.2 klein / DoubleStreamBlock / SingleStreamBlock / 変調の全ブロック共有 → [[summaries/2025-flux2]] ・ [[diffusion-model-architecture]]
+- ai-toolkit / ostris / `get_transformer_block_names` / `transformer_only` / `only_if_contains` / `peft_format` / `timestep_type` → [[ai-toolkit]] ・ [[summaries/2026-ai-toolkit]]
+- assistant LoRA / de-distillation adapter / 蒸留打ち消しアダプタ → [[diffusion-distillation]] ・ [[ai-toolkit]]
+- ARA / Accuracy Recovery Adapter / ブロック単位量子化 / レイヤオフロード / パラメータスワップ → [[large-scale-training-infrastructure]] ・ [[ai-toolkit]]
+- LoKr / LoHa / DoRA → [[low-rank-adaptation]]
 - generalized_time_snr_shift / ステップ数依存のシフト → [[noise-schedule]]
 - 参照 KV キャッシュ / ref_fixed_timestep / 厳密キャッシュ → [[inference-caching]]
 - Sana / Linear DiT / 線形注意 / Linear Attention / ReLU Linear Attention / Mix-FFN / GLUMBConv / EfficientViT → [[efficient-attention]]

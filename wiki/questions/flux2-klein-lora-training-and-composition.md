@@ -17,6 +17,8 @@ summaries_used:
 > 質問: LoRA 学習は `flux.2-klein-4b`（蒸留）と `flux.2-klein-base-4b`（ベース）のどちらで行うべきか。また前景 LoRA と背景 LoRA を組み合わせる手法として FLUX.2 に適したものは何か。
 > 回答日: 2026-08-26
 > 出典: [[summaries/2025-flux2]]（コード由来）＋ Web 調査（BFL 公式ブログ・コミュニティ報告）
+>
+> **【2026-08-26 追記】** その後 [[summaries/2026-ai-toolkit]] としてトレーナ側のコードを取り込み、本ページの推奨が**実装でどう扱われているか**が確認できた。**結論は変わらないが、3 点が「既定で満たされている／選択の余地がない」ことが判明した**ので、該当箇所に追記した（詳細は下部の「ツール側での裏づけ」）。
 
 ## 結論
 
@@ -50,6 +52,8 @@ summaries_used:
 **3. 蒸留は多様性を狭め、LoRA はさらに狭める。** [[concepts/diffusion-distillation]] の既知の限界で、Z-Image では OneIG Diversity がベース 0.194 → Turbo 0.139 まで落ちる（[[summaries/2025-z-image]]）。狭まった分布の上に LoRA を積むと過学習の兆候が早く出る。
 
 ### 運用：ベースで学習 → 蒸留版で推論
+
+> **【追記】ai-toolkit ではそもそも選べない。** 登録されている arch は `flux2_klein_4b` → `flux-2-klein-base-4b.safetensors`、`flux2_klein_9b` → `flux-2-klein-base-9b.safetensors` で、**蒸留版の arch が存在しない**。さらに、蒸留モデルを学習するための **assistant LoRA（de-distillation アダプタ）は Z-Image・Krea2・Minimax-H3・Wan22・FLUX.1-schnell には用意されているが flux2 には無い**。実装自体も `if not sd.is_flux: raise ValueError(...)` と FLUX.1 専用である（[[summaries/2026-ai-toolkit]]）。
 
 BFL 公式ブログが明言している。
 
@@ -100,6 +104,8 @@ FLUX.2 の変調は**モデル全体で 1 回だけ**作られ、同じタプル
 
 **ここに 2 つの LoRA が同時に触ると、局所性がゼロのまま全ブロックで衝突する。** [[summaries/2025-np-lora]] の命題 1（加重和では干渉が原理的に消せない）が最悪の形で効く場所である。**合成する予定があるなら標的から明示的に外すこと。**
 
+> **【追記】ai-toolkit では既定で外れている。** `Flux2Model.get_transformer_block_names()` が `["double_blocks", "single_blocks"]` を返し、`transformer_only` が既定 `True` なので、**名前にそのブロック名を含む leaf しか標的にならない**。共有変調はモデル最上位にあるため自動的に除外される。`img_in` / `txt_in` / `time_in` / `guidance_in` / `final_layer` も同様。**明示的な設定は不要である**（[[summaries/2026-ai-toolkit]]）。
+
 これは Z-Image の共有下方射影と同型の問題で（[[questions/z-image-architecture-and-lora-placement]]）、**変調機構を共有するアーキテクチャに共通する落とし穴**として一般化できる。Wan の adaLN 共有も同じ性質を持つはずである。
 
 ### ② モダリティ選択は使えるが、範囲が狭い
@@ -125,6 +131,7 @@ FLUX.2 は FLUX.1 よりパラメータを single-stream 側へ寄せている�
 除外:  共有変調の 4 行列（合成する予定があるなら必須）
 rank:  8（NP-LoRA / K-LoRA の検証設定に合わせる。rank を変えると
        NP-LoRA の主方向 V_k の意味が変わる）
+       ※ alpha は設定しても無視される（後述）
 統一:  前景・背景とも同じトレーナ・同じ rank・同じ標的で学習する
        （マージ手法は「同じ流儀で学習されている」ことを暗黙に仮定する）
 合成:  蒸留版で推論する  → NP-LoRA（μ=0.5 から。同一性が崩れたら下げる）
@@ -132,6 +139,25 @@ rank:  8（NP-LoRA / K-LoRA の検証設定に合わせる。rank を変える�
 評価:  content 類似度と style 類似度を単独で見ない。
        NP-LoRA の調和平均 S_harm を使う（[[concepts/style-content-disentanglement]]）
 ```
+
+## ツール側での裏づけ（2026-08-26 追記）
+
+[[summaries/2026-ai-toolkit]] を取り込んだ結果、本ページの推奨が実装でどう扱われているかが分かった。
+
+| 本ページの推奨 | ai-toolkit での扱い |
+| --- | --- |
+| base で学習する | **選択の余地がない**（klein は base の arch しか登録されていない） |
+| 共有変調の 4 行列を標的から外す | **既定で外れている**（ブロック名フィルタの副作用） |
+| rank 8 に揃える | 設定可能（既定は 4） |
+| 前景・背景で同じトレーナ・同じ標的を使う | 同じ arch なら自動的に揃う |
+
+### 新たに分かった注意点 3 つ
+
+**① `linear_alpha` は無視される。** transformer 系モデルでは `peft_format` が強制され、alpha が rank で上書きされる（`lora_special.py` L423–433）。**設定ファイルに書けるのに効果がなく、スケールは常に 1.0 になる。**
+
+**② 学習時の時刻分布がモデルの事前学習と違う。** FLUX.2 の UI 既定は `timestep_type: 'weighted'` で、**時刻は 1000 個の線形グリッドから一様に引かれる**。推論側にある解像度依存シフトは学習では使われない。しかも `weighted` が掛ける損失重みは **flex.1-alpha という別モデルで算出されたハードコード表**である。細部の忠実度を上げたい場合、`timestep_type` を変える（`linear` / `shift` / `sigmoid`）ことが調整の余地になりうる——ただし**どれが良いかの根拠はコードにもドキュメントにもない**。
+
+**③ 合成手法は自前で実装する必要がある。** ai-toolkit が持つのは**素朴な線形和と SVD 抽出だけ**である。複数ネットワークを同時に適用すると `out = base(x) + Δ₁(x) + Δ₂(x)` という activation 空間の加算になり、これは [[concepts/lora-merging]] が「破綻する」と記録している合成そのものである。**K-LoRA・NP-LoRA・SSR-Merge はいずれも実装されていない。** 本ページで推奨した手法を使うには、K-LoRA の公式 FLUX 実装を持ち込むか、NP-LoRA の射影を自分で書く必要がある。
 
 ## この回答の限界
 

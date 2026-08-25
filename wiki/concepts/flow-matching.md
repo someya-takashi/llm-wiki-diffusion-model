@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Flow Matching, FM, フローマッチング, Conditional Flow Matching, CFM, CNF, Continuous Normalizing Flow]
-tags: [flow-matching, probability-flow-ode, score-based-generative-models, generative-models, optimal-transport, flux2]
+tags: [flow-matching, probability-flow-ode, score-based-generative-models, generative-models, optimal-transport, flux2, ai-toolkit]
 related:
   - "[[probability-flow-ode]]"
   - "[[score-based-generative-models]]"
@@ -13,6 +13,7 @@ related:
   - "[[image-tokenizer]]"
   - "[[diffusion-distillation]]"
   - "[[video-diffusion]]"
+  - "[[ai-toolkit]]"
 summaries:
   - "[[summaries/2023-flow-matching]]"
   - "[[summaries/2024-sd3]]"
@@ -28,7 +29,8 @@ summaries:
   - "[[summaries/2025-hunyuanimage-3]]"
   - "[[summaries/2024-sana]]"
   - "[[summaries/2025-flux2]]"
-updated: 2026-08-25
+  - "[[summaries/2026-ai-toolkit]]"
+updated: 2026-08-26
 ---
 
 # Flow Matching（フローマッチング）
@@ -106,6 +108,14 @@ $$
 **同一条件での直接比較。** SD3 の 61 定式化の比較は大規模かつ包括的だが、比較対象が定式化の組合せなので「flow matching そのものがどれだけ効いたか」は読み取りにくい。**Sana**（[[summaries/2024-sana]]）は同じ 120K ステップ・同じアーキテクチャで DDPM と flow matching だけを差し替えた比較を示しており、**FID 19.5 → 16.9、CLIP 24.6 → 25.7** と一貫した改善を報告する。小規模ながら統制の効いた対照実験として補強材料になる。
 
 Sana はさらに、flow の速度予測モデルを**サンプリング時にデータ予測へ変換する**（$x_\theta = x_t - \tilde{\sigma}_t v_\theta$）ことで DPM-Solver++ を移植し、10–20 ステップで収束させている。**flow matching で学習したモデルを、拡散側で成熟した高次ソルバーの資産に接続する**という橋渡しであり、両系譜が実装レベルで融合しつつあることを示す（[[diffusion-sampling]]）。
+
+## 実装上の落とし穴：学習側と推論側で定式化を揃える
+
+本ページは flow matching と拡散を「同じものの別表現」として扱ってきたが、**実装の上では別物として扱われる**。学習ツールでは学習時のノイズ付与（`train.noise_scheduler`）とサンプリング（`sample.sampler`）が別の設定項目になっており、**`flowmatch` を両方に指定しないと、学習した速度場と評価時のソルバーが噛み合わない**（[[concepts/ai-toolkit]]・[[summaries/2026-ai-toolkit]]）。
+
+理屈の上では自明——速度場 $v_\theta$ を学習したのに $\epsilon$ 予測を前提としたソルバーで積分すれば当然壊れる——だが、**設定ファイルでは 2 箇所に分かれて書かれるため、片方だけ直して破綻する**という事故が起きうる。FLUX.2・SD3・Z-Image のような flow matching 系モデルを扱うときは、この 2 つが一致しているかを最初に確認するとよい。
+
+同じ設定系には `linear_timesteps` / `timestep_type` という時刻分布の指定もある（[[noise-schedule]]）。**flow matching では時刻 $t$ が $[0,1]$ 上の実数で、どこをどれだけ引くかが自由**なので、拡散の離散ステップよりも設計の余地が大きい。この自由度が実装側では「複数の設定項目に散らばった選択肢」として現れている。
 
 ## 既存知識との接続
 

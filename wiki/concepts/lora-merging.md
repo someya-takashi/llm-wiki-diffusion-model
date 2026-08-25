@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [LoRA Merging, LoRA Fusion, LoRA Merge, Gradient Fusion, Weight Fusion, ED-LoRA, ZipLoRA, LoRAHub]
-tags: [lora-merging, low-rank-adaptation, multi-concept-customization, subject-driven-generation, generative-models, style-content-disentanglement, orthogonal-adaptation, model-merging]
+tags: [lora-merging, low-rank-adaptation, multi-concept-customization, subject-driven-generation, generative-models, style-content-disentanglement, orthogonal-adaptation, model-merging, ai-toolkit]
 related:
   - "[[low-rank-adaptation]]"
   - "[[multi-concept-customization]]"
@@ -10,6 +10,7 @@ related:
   - "[[latent-diffusion]]"
   - "[[style-content-disentanglement]]"
   - "[[model-merging]]"
+  - "[[ai-toolkit]]"
 summaries:
   - "[[summaries/2023-custom-diffusion]]"
   - "[[summaries/2023-mix-of-show]]"
@@ -20,7 +21,8 @@ summaries:
   - "[[summaries/2025-k-lora]]"
   - "[[summaries/2025-np-lora]]"
   - "[[summaries/2026-ssr-merge]]"
-updated: 2026-08-19
+  - "[[summaries/2026-ai-toolkit]]"
+updated: 2026-08-26
 ---
 
 # LoRA Merging / Fusion（複数 LoRA の重みマージ／融合）
@@ -170,6 +172,25 @@ LoRA を 1 枚に合成する手法は、重みマージ（本ページ）以外
 - **(c) 復号中心の合成**：Multi-LoRA Composition（[[summaries/2024-multi-lora-composition]]）の LoRA Switch / Composite。各ノイズ除去ステップで LoRA を切替・平均。**K-LoRA**（[[summaries/2025-k-lora]]）はこれを重みの統計量で駆動する形に発展させたもので、各注意層で両 LoRA の **Top-K 要素の絶対値和**を比較して片方を丸ごと使う（$K=r_c\cdot r_s$）。加えて時間依存のスケール $S=\alpha t/T+\beta$ でスタイル側を傾け、**初期ステップは content、後期は style が勝ちやすく**する——「初期は構図、後期は細部」という [[diffusion-sampling]] の性質を合成のスケジューリングに使った例である。出所の違うコミュニティ LoRA の重み規模差を吸収する $\gamma$ も持つ。
 
 重みマージは「**1 度融合すれば追加推論コストがない**（推論は 1 モデル）」のが利点で、(b)(c) は「**重みを保つので元 LoRA を壊さず柔軟**」だが推論が重い、というトレードオフがある。この代償は実測されている——NP-LoRA の計測（[[summaries/2025-np-lora]] 表 III）では **K-LoRA の画像あたり生成時間は 60.4 秒で、直接マージ（22.9 秒）の 2.6 倍**である。「学習不要」を謳う手法のコストが推論側へ移っている点は、選択の際に見落としやすい。
+
+## 実務のツールが提供するのは、系統 (1) だけ
+
+本ページは素朴な線形和の破綻から出発し、gradient fusion・学習係数マージ・零空間射影・信号ルーティングと積み上げてきた。ところが**実際に広く使われている学習ツールが提供するのは、最も素朴なものだけ**である。
+
+[[concepts/ai-toolkit]]（[[summaries/2026-ai-toolkit]]）を例に取ると：
+
+| 機能 | 中身 | 本ページの系統 |
+| --- | --- | --- |
+| 複数ネットワークの同時適用 | 各モジュールが `forward` を patch して連鎖し `out = base(x) + \Delta_1(x) + \Delta_2(x)` | **(1) 素朴な線形和**（activation 空間） |
+| `merge_in` | ベース重みに $\Delta W = BA$ を直接足し込む | **(1) 素朴な線形和**（重み空間） |
+| `extract` | 学習済みモデルから **SVD で LoRA を抽出** | （マージではない） |
+| `rescale_lora` | LoRA の強度を書き換える | （マージではない） |
+
+**(2)〜(7) の手法——gradient fusion・ZipLoRA・Orthogonal Adaptation・NP-LoRA・SSR-Merge——も、K-LoRA も B-LoRA も、いずれも実装されていない。**
+
+これは本ページの記述に実務的な含意を与える。**論文で提案された干渉対策を使うには、自分で実装するか、著者の公開実装を持ち込むしかない。** [[summaries/2025-np-lora]] が「K-LoRA のみが FLUX の公式実装を提供している」と述べたことの重みが、ここで具体的になる——**公式実装があるかどうかが、その手法を実際に試せるかどうかを決めている。**
+
+理論側で 10 年分の工夫が積み上がっても、ツール側の既定が素朴な和のままであれば、現場で起きている合成の大半は本ページ冒頭の「破綻する」ケースだと考えたほうがよい。
 
 ## 既存知識との接続
 

@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [LoRA, Low-Rank Adaptation, 低ランク適応, PEFT, parameter-efficient fine-tuning]
-tags: [low-rank-adaptation, subject-driven-generation, diffusion-model-architecture, generative-models, style-content-disentanglement, model-merging, flux2]
+tags: [low-rank-adaptation, subject-driven-generation, diffusion-model-architecture, generative-models, style-content-disentanglement, model-merging, flux2, ai-toolkit]
 related:
   - "[[subject-driven-generation]]"
   - "[[latent-diffusion]]"
@@ -10,6 +10,7 @@ related:
   - "[[lora-merging]]"
   - "[[style-content-disentanglement]]"
   - "[[model-merging]]"
+  - "[[ai-toolkit]]"
 summaries:
   - "[[summaries/2022-lora]]"
   - "[[summaries/2023-mix-of-show]]"
@@ -20,7 +21,8 @@ summaries:
   - "[[summaries/2025-np-lora]]"
   - "[[summaries/2026-ssr-merge]]"
   - "[[summaries/2025-flux2]]"
-updated: 2026-08-25
+  - "[[summaries/2026-ai-toolkit]]"
+updated: 2026-08-26
 ---
 
 # Low-Rank Adaptation（LoRA, 低ランク適応）
@@ -53,6 +55,20 @@ LLM で生まれた LoRA は、拡散モデルでは **U-Net（とテキスト�
 - **$\Delta W$ の内部構造**：LoRA の低ランク空間は一様ではない。**NP-LoRA**（[[summaries/2025-np-lora]]）は $\Delta W$ を SVD し、**上位の特異ベクトル（主方向）を摂動するとスタイルの一貫性が急激に崩れる一方、微小な成分を摂動してもほとんど変わらない**ことを示した。ZipLoRA の「$\Delta W$ は疎」という観察を、**どの部分が重要かを特異値の順で特定する**ところまで進めたものである。**K-LoRA**（[[summaries/2025-k-lora]]）も同じ性質を別の形で使い、各層の重要度を**Top-K 要素の絶対値和**で測って層ごとにどちらの LoRA を使うか決める。
 - **rank 方向は連結できる**：$K$ 個の LoRA を足すことは、下方射影を縦に・上方射影を横に並べた 1 つの LoRA と厳密に等しい（$\sum_k B_kA_k = \mathbf{B}_\text{comb}\mathbf{A}_\text{comb}$）。**SSR-Merge**（[[summaries/2026-ssr-merge]]）はこの構造を使い、間にルータを挿すことで信号を制御する。低ランク構造に固有の性質で、詳細は [[model-merging]]。
 - **複数概念の合成（[[multi-concept-customization]]）と重みマージ（[[lora-merging]]）**：単一概念 LoRA を複数組み合わせて 1 枚に合成する研究が派生した。素朴な重みマージ（LoRA Merge $W'=W_0+\sum_i w_i B_iA_i$）は数が増えると identity loss・列干渉で不安定なため、推論挙動を整合させる gradient fusion（Mix-of-Show）や学習係数マージ（ZipLoRA）といった**重みマージ系（[[lora-merging]]）**、および重みを混ぜない注意制御（LoRA-Composer）・復号過程合成（Multi-LoRA Composition）が提案されている。
+
+## 実務側では「どこに当てるか」がどう決まっているか
+
+本ページは B-LoRA（[[summaries/2024-b-lora]]）以降「**どこに当てるか**が設計変数になる」ことを追ってきた。実際の学習ツールでは、この判断がどう実装されているのか——[[concepts/ai-toolkit]]（[[summaries/2026-ai-toolkit]]）がその一例を見せる。
+
+**標的はモデル側が宣言する 1 つのメソッドでほぼ決まる。** `get_transformer_block_names()` が返すブロック名のリストに含まれる leaf の Linear だけが対象になり（`transformer_only` の既定は `True`）、**それ以外は自動的に凍結される**。FLUX.2 なら `["double_blocks", "single_blocks"]` なので、**共有変調・入出力射影・時刻埋め込みはすべて対象外**である。
+
+ユーザー側からは `only_if_contains` / `ignore_if_contains` / `full_if_contains` で絞り込める。ただし**除外側は照合する名前が片方だけ**という非対称があり、アンダースコア表記の除外パターンは黙って無効になる。
+
+**そして transformer 系モデルでは `linear_alpha` が無視される。** `peft_format` が強制的に有効になり、alpha が rank で上書きされるため、**スケールは常に 1.0** になる。
+
+$$\Delta W x \cdot \frac{\alpha}{r} \quad\longrightarrow\quad \alpha := r \;\Rightarrow\; \text{scale} = 1.0$$
+
+設定ファイルに書けるのに効果がないという実装の癖で、**論文が報告する alpha の値をそのまま移植しても再現しない**可能性がある点は実務上重要である。
 
 ## 既存知識との接続
 

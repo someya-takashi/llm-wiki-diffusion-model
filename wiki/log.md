@@ -623,3 +623,26 @@ DeepWiki は**変種を 1 つずらして**記述していた——「8 + 24」�
   - **FLUX.2 のネイティブ多参照が AnyDoor 系の逐次パイプラインを不要にする**。[[questions/lora-foreground-background-composition]] では「背景生成 → AnyDoor で物体を置く」を推奨したが、FLUX.2 は参照画像を系列連結して RoPE 第 1 軸で分離する機能を第一級で持つ。**LoRA 合成は「参照画像で表現できないもの」（特定の画風など）に限って使うのが合理的**という切り分けを提示した。
   - Q1 側では、**アーキテクチャが同一（どちらも `Klein4BParams()`）だからこそ base 学習の LoRA が蒸留版に機械的にロードできる**という、BFL のブログが述べる運用の**理由**をコードから説明できた。
 - 限界の但し書き（回答に明記）: **「K-LoRA が 4 ステップで劣化する」は機構からの演繹であって実測ではない**（試す価値のある仮説）。「ベース学習→蒸留版推論で同一性がやや落ちる」はコミュニティ報告で査読された測定ではない。**FLUX.2 で LoRA merging を実施した報告は wiki にも公開文献にも存在しない**ため、適用可能性は構造からの演繹である。標的モジュール名は実装から読めるものであって BFL の推奨セットではない。
+
+## [2026-08-26] ingest | ai-toolkit（ostris/ai-toolkit）— FLUX.2 の LoRA 学習ツール
+
+- 取り込み: `code_analysis/ai-toolkit/`（v0.12.26・コミット `8436c40`・MIT・ostris）
+- 作成: [[summaries/2026-ai-toolkit]], [[concepts/ai-toolkit]]
+- 更新: [[concepts/low-rank-adaptation]], [[concepts/lora-merging]], [[concepts/noise-schedule]], [[concepts/diffusion-distillation]], [[concepts/large-scale-training-infrastructure]], [[concepts/flow-matching]], [[summaries/2025-flux2]], [[questions/flux2-klein-lora-training-and-composition]], [[overview]], [[index]], `CLAUDE.md`
+- ユーザーの依頼: 「flux2 は ai-toolkit を使って LoRA 学習する予定です。まずはこの ai-toolkit がどのようなものか調査して下さい。flux2 系もサポートされているようです。」 スコープは**全体＋FLUX.2 詳細**を選択。
+- **スキーマ例外（ユーザー判断）**: CLAUDE.md §1 は「ツール・ライブラリの専用ページを作らない」だが、**ユーザーの明示的な指示により [[concepts/ai-toolkit]] を作成**した。あわせて CLAUDE.md §1 に例外を認める規定を追記し、現時点の例外がこの 1 ページのみであることを明記（lint で規約違反として検出されないようにするため）。
+- **翻訳なし**（`source_kind: code` の規定どおり）。`code_analysis/` はコミットしない（`.gitignore` 済み）ため `git add` はファイル指定で実施。
+- 読解方法: 3 領域（FLUX.2 サポート／LoRA 機構／スコープと設定）に分けて並列調査したのち、**主要な設定値はすべて自分で `grep`／`sed` して裏取り**（skill の規定どおり）。
+- **独立確認**: ai-toolkit は BFL の FLUX.2 dataclass を vendoring しており、**全フィールドが [[summaries/2025-flux2]] の表と一致**した。前日訂正した **klein 4B = 5 double + 20 single・hidden 3072・heads 24** が、2 つの独立した実装で支持される事実になった。
+- **新しく引き出せた接続**:
+  - **理論側の蓄積と実務側の既定値との落差**が、この ingest の中心的な収穫。[[concepts/lora-merging]] が 7 系統を積み上げたのに対し、**ツールが実装するのは素朴な線形和と SVD 抽出のみ**——K-LoRA / NP-LoRA / SSR-Merge / B-LoRA はいずれも無い。[[summaries/2025-np-lora]] の「K-LoRA のみが FLUX の公式実装を提供している」という記述の実務的な重みが具体化した。
+  - `get_transformer_block_names()` という**1 つのメソッドが、LoRA 標的・凍結範囲・量子化範囲の 3 つの境界を同時に決める**。FLUX.2 では `["double_blocks","single_blocks"]` なので、**共有変調 4 行列は既定で学習対象外**。前日の query で導いた「合成予定があるなら共有変調を標的から外す」という実務ルールが、**既定でそうなっている**ことが確認できた。
+  - **`peft_format` が alpha を rank で上書きするため `linear_alpha` が黙って無視される**（scale は常に 1.0）。設定に書けるのに効かないという実装の癖で、論文の alpha をそのまま移植しても再現しない。[[concepts/low-rank-adaptation]] に記録。
+  - **FLUX.2 の既定 `timestep_type: weighted` は時刻を一様に引き、損失側に flex.1-alpha 由来の 1003 行ハードコード表を掛ける**。[[concepts/noise-schedule]] が [[summaries/2025-flux-kontext]] から導出し [[summaries/2025-flux2]] のコードで確認した解像度依存シフトは、**学習では働いていない**。実務は「flow matching なら似た重み付けでよい」という経験則に落ち着いている。
+  - **蒸留を打ち消しながら学習する assistant LoRA（multiplier −1）** を [[concepts/diffusion-distillation]] に追加。Z-Image / Krea2 / Minimax-H3 / Wan22 / FLUX.1-schnell に用意され、**FLUX.2 にはない**（base 版が公開されているため不要）。`if not sd.is_flux: raise ValueError(...)` でゲートされている。
+  - [[concepts/large-scale-training-infrastructure]] に**逆方向の最適化**（consumer GPU 1 枚に載せる）を追加。Wan の FP8 GEMM が*演算単位*の量子化だったのに対し、**ブロック単位の量子化**はピーク VRAM 自体を下げる別種の手段。**ARA（Accuracy Recovery Adapter）**は LoRA を「適応」ではなく「数値誤差の補償」に転用した例。
+  - [[concepts/flow-matching]] に実装上の落とし穴（`train.noise_scheduler` と `sample.sampler` の双方に `flowmatch` を指定する必要）を追加。
+  - **学習側では KV キャッシュ経路（`forward_kv_extract` / `causal_attn_fn` / `_blend_*_mods`）が削除されており、素の full attention で学習される**。キャッシュは数学的に等価な最適化なので整合するが、cached 側の因果マスクは学習では効いていない。[[summaries/2025-flux2]] に追記。
+  - `ignore_if_contains` は `clean_name` のみ照合するのに `only_if_contains` は両方照合するという**非対称**（除外パターンが黙って無効になりうる）。
+  - **登録されている klein チェックポイントは `-base-` のみ**——学習は非蒸留版で行う、というツール側の判断が [[questions/flux2-klein-lora-training-and-composition]] の Q1 の結論を裏づける。
+- **コードからは分からないこと**（要約に明記）: 各設定の品質への影響は測定されていない。量子化 qtype ごとの劣化、`timestep_type` の比較、ARA の有効性、いずれもアブレーションが公開されていない。

@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Large-Scale Training Infrastructure, 大規模学習インフラ, 分散学習, Distributed Training, Context Parallelism, Ring Attention, Ulysses, FSDP, Activation Offloading, 量子化, Quantization, FP8, 8-bit FlashAttention]
-tags: [large-scale-training-infrastructure, video-diffusion, diffusion-model-architecture, inference-caching, generative-models, efficient-attention]
+tags: [large-scale-training-infrastructure, video-diffusion, diffusion-model-architecture, inference-caching, generative-models, efficient-attention, ai-toolkit]
 related:
   - "[[video-diffusion]]"
   - "[[diffusion-model-architecture]]"
@@ -10,11 +10,13 @@ related:
   - "[[diffusion-distillation]]"
   - "[[data-curation]]"
   - "[[efficient-attention]]"
+  - "[[ai-toolkit]]"
 summaries:
   - "[[summaries/2025-wan]]"
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2024-sana]]"
-updated: 2026-08-19
+  - "[[summaries/2026-ai-toolkit]]"
+updated: 2026-08-26
 ---
 
 # Large-Scale Training Infrastructure（大規模な学習・推論インフラ）
@@ -116,6 +118,24 @@ Wan は 3 つを掛け算する。
 なお Sana の線形注意は、本ページの守備範囲であるインフラ側の工夫ではなく**アーキテクチャ側で注意のコストを消す**アプローチにあたる（下の「限界と注意点」で述べる「アルゴリズムとインフラの境界が動く」の典型例）。詳細は [[efficient-attention]] を参照。
 
 **クラスタの信頼性**についても短く触れられている。数千 GPU 規模の学習では**ノード故障が日常的に起きる**ので、起動時のハードウェア検査、故障ノードの隔離と修復、タスクの自動再起動と再開が前提設備になる。研究の議論には現れにくいが、大規模学習が成立する条件の一部である。
+
+## 逆方向の最適化 — consumer GPU 1 枚に載せる
+
+本ページは Wan の分散学習を「**1 サンプルの中間状態すら単一 GPU に載らない**」規模への応答として記録してきた。対極にあるのが、**consumer GPU 1 枚で学習を成立させる**方向の最適化である（[[concepts/ai-toolkit]]・[[summaries/2026-ai-toolkit]]）。
+
+| 手段 | 効き方 | 本ページの記述との関係 |
+| --- | --- | --- |
+| 勾配チェックポイント | 活性化を捨てて再計算 | Wan も全 DiT 層で実装。**こちらでは既定 True** |
+| 量子化 | 重みのビット幅を落とす | Wan の FP8 GEMM は**スループット**目的、こちらは**載せる**目的 |
+| **ブロック単位の量子化** | 1 ブロックずつ GPU へ載せて量子化し CPU へ戻す | **ピーク VRAM が 1 ブロック分で済む** |
+| レイヤオフロード | 層を CPU と GPU で出し入れ | Wan の活性化オフロードの重み版 |
+| パラメータスワップ | 一部のパラメータだけ活性にする（既定 10%） | 分散側に対応物がない |
+
+**量子化の粒度が本ページにとって新しい。** Wan は FP8 GEMM と 8-bit FlashAttention という**演算単位**の量子化だったが、こちらは**ブロック単位で載せ替えながら量子化する**ことでピークメモリ自体を下げる。量子化バックエンドも 3 系統が同居し（optimum.quanto・torchao・独自実装）、`uint2` から `uint8`、`nvfp4`、1.58bit の bitnet まで選べる。
+
+**ARA（Accuracy Recovery Adapter）** という発想も記録に値する。低ビット量子化で失われた精度を、**LoRA 状の補正アダプタ**で埋め戻す。[[concepts/low-rank-adaptation]] の道具を「適応」ではなく「**数値誤差の補償**」に転用したもので、`qtype: "uint4|<adapter path>"` のように 1 つの設定値に量子化方式とアダプタを詰め込む。
+
+本ページが Wan について記録した「**量子化の品質影響が定量化されていない**」という批判は、こちらにも当てはまる。どの qtype がどれだけ品質を落とすかの測定は公開されていない。
 
 ## 限界と注意点
 

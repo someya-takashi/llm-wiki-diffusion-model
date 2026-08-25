@@ -1,13 +1,14 @@
 ---
 type: concept
 aliases: [Noise Schedule, ノイズスケジュール, noise schedule, sigma schedule, σ schedule, time discretization, noise distribution]
-tags: [noise-schedule, diffusion-sampling, denoising-diffusion, score-based-generative-models, generative-models, flux2]
+tags: [noise-schedule, diffusion-sampling, denoising-diffusion, score-based-generative-models, generative-models, flux2, ai-toolkit]
 related:
   - "[[diffusion-sampling]]"
   - "[[denoising-diffusion]]"
   - "[[score-based-generative-models]]"
   - "[[probability-flow-ode]]"
   - "[[flow-matching]]"
+  - "[[ai-toolkit]]"
 summaries:
   - "[[summaries/2022-edm]]"
   - "[[summaries/2025-flux-kontext]]"
@@ -16,7 +17,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2024-sana]]"
   - "[[summaries/2025-flux2]]"
-updated: 2026-08-25
+  - "[[summaries/2026-ai-toolkit]]"
+updated: 2026-08-26
 ---
 
 # Noise Schedule（ノイズスケジュール）
@@ -119,6 +121,28 @@ $\sigma=1$ ならこれは標準のシフト $t'=st/(1+(s-1)t)$ と代数的に�
 理由は本ページの中心的な論点から素直に導ける。logit-normal は中間タイムステップに学習を集中させる——ノイズと画像が拮抗する「一番情報量のある」領域に予算を割く戦略である。これは**ゼロから生成の骨格を学ぶ事前学習**には理にかなう。しかし SFT の目的は美的品質・写実性・細部の詰めであり、**それらが決まるのは $t$ が小さい後期のノイズ除去ステップ**（すでに大まかな構図はできていて、質感や細かい形状を整える段階）である。一様サンプリングに戻せば、後期ステップにも均等に学習の重みが回る。
 
 「スケジュールは 1 つ選んで固定するもの」という暗黙の前提を崩し、**学習フェーズごとに使い分ける**という発想であり、EDM が「学習時のノイズ分布」と「推論時の時間離散化」を分離したのと同じ種類の細分化と見ることができる。
+
+## 実務では「モデルの事前学習と違う分布」で学習される
+
+本ページは学習時のノイズ分布を設計変数として追ってきた——SD3 の logit-normal、HiDream-O1 が SFT で一様へ切り替えたこと、FLUX の解像度依存シフト、Sana の Flow-DPM-Solver。実際の学習ツールではこれが **`timestep_type` という 1 つの設定**に集約されている（[[concepts/ai-toolkit]]・[[summaries/2026-ai-toolkit]]）。
+
+| 設定値 | 本ページの記述との対応 |
+| --- | --- |
+| `sigmoid`（全体の既定） | 中央に厚い。SD3 の logit-normal と同じ動機 |
+| `linear` | 一様。HiDream-O1 が SFT で採った方針 |
+| `weighted` | **スケジュールは linear、損失側で重み付け** |
+| `shift` / `flux_shift` | **推論の動的シフトに合わせる** |
+| `one_step` / `four_step` / `eight_step` | 少ステップ蒸留モデル向けに時刻を固定 |
+
+理論側の選択肢がほぼそのまま設定値になっている点は素直だが、**2 つ引っかかる事実がある**。
+
+**第一に、FLUX.2 の既定が `weighted`（＝時刻は一様）であり、推論側の解像度依存シフトを学習では使わない。** 本ページは「$\alpha$ シフト ≡ $\mu=\log\alpha$ の logit-normal」という同定を記録し、[[summaries/2025-flux2]] ではそれがコードに $\mu$ という変数名で現れることまで確認した。ところが**その機構は学習では働いていない**。学習時の時刻分布はモデルの事前学習・推論の分布と一致していない。
+
+**第二に、`weighted` が掛ける損失重みは 1003 行のハードコード表で、出自が別モデルである。** 実装のコメントが明かす。
+
+> these weights were calculated using **flex.1-alpha**. A similar weighing scheme has been seen with other flowmatch models as well.
+
+**flow matching モデルなら似た重み付けでよい、という経験則で使い回されている。** 本ページが積み上げてきた「どの時刻に予算を配るかが品質を決める」という主張に対し、実務側はモデル横断の経験則に落ち着いている。どちらが妥当かを判定する材料は本 wiki にはないが、**論文の設定をそのまま再現しようとしても、ツールの既定は別のことをしている**という点は把握しておく価値がある。
 
 ## 既存知識との接続
 

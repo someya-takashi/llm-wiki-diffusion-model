@@ -1,7 +1,7 @@
 ---
 type: concept
 aliases: [Diffusion Distillation, 拡散モデルの蒸留, 少ステップ生成, Few-step Generation, DMD, Distribution Matching Distillation, Consistency Models, Progressive Distillation, One-step Generation]
-tags: [diffusion-distillation, diffusion-sampling, flow-matching, text-to-image-generation, generative-models, inference-caching, flux2]
+tags: [diffusion-distillation, diffusion-sampling, flow-matching, text-to-image-generation, generative-models, inference-caching, flux2, ai-toolkit]
 related:
   - "[[diffusion-sampling]]"
   - "[[flow-matching]]"
@@ -14,6 +14,7 @@ related:
   - "[[video-diffusion]]"
   - "[[large-scale-training-infrastructure]]"
   - "[[aesthetic-scoring]]"
+  - "[[ai-toolkit]]"
 summaries:
   - "[[summaries/2026-qwen-image-2]]"
   - "[[summaries/2025-flux-kontext]]"
@@ -23,7 +24,8 @@ summaries:
   - "[[summaries/2025-z-image]]"
   - "[[summaries/2026-ernie-image]]"
   - "[[summaries/2025-flux2]]"
-updated: 2026-08-25
+  - "[[summaries/2026-ai-toolkit]]"
+updated: 2026-08-26
 ---
 
 # Diffusion Distillation（拡散モデルの蒸留 / 少ステップ生成）
@@ -183,6 +185,20 @@ $$\hat{x}_{0}=\sum_{k=1}^{K}\mathcal{W}_{k}(x_{t},\sigma,c,\mathcal{O})\cdot E_{
 - **能力の偏った劣化**。全体の見た目は保てても、細部（小さな文字、細かいテクスチャ）が先に崩れることがある。Qwen-Image-2.0 が「テキストレンダリングを含む多様なシナリオで保つのが難しい」と明示するのはこの点である。
 - **学習コスト**。生徒の学習に加え、DMD では偽スコアモデルの学習も要る。「学習済みモデルをそのまま速くする」サンプラー改良と比べると重い。
 - **評価が難しい**。教師との定性比較に頼りがちで、何がどれだけ失われたかを定量化する標準がまだない（Qwen-Image-2.0 も定性比較のみ）。
+
+## 蒸留モデルの上で学習する — 「アダプタを −1 倍で当てる」
+
+本ページは蒸留を「モデルを作り替える」操作として扱ってきたが、**作り替えられたモデルの上でさらに LoRA を学習したい**という実務的な要求がある。蒸留版は速いので、そこにユーザーの被写体や画風を足したい——ところが蒸留で歪んだ軌道の上に LoRA を積むと干渉しうる。
+
+[[concepts/ai-toolkit]] の答えは拍子抜けするほど単純である——**蒸留の逆写像を学習した LoRA を、学習中に `multiplier = -1.0` で適用する**（de-distillation adapter / assistant LoRA）。これで蒸留の効果が打ち消され、勾配は「素のモデルのように振る舞うもの」に届く。
+
+$$\text{学習時のモデル} = \text{蒸留済みモデル} - \text{蒸留アダプタ} + \Delta W_{\text{学習中の LoRA}}$$
+
+DMD や consistency のような理論的枠組みとは独立した、純粋に運用上の回避策である。**「蒸留は可逆な写像として近似できる」という前提**が暗黙に置かれているが、その妥当性は検証されていない。
+
+用意されているのは **Z-Image（Turbo）・Krea2・Minimax-H3・Wan22・FLUX.1-schnell** で、**FLUX.2 には無い**（[[summaries/2026-ai-toolkit]]）。FLUX.2 では非蒸留の base 版が公開されているので、そちらで学習すればよい——**蒸留版とベース版を両方公開するという BFL の判断が、de-distillation アダプタを不要にしている**とも読める。
+
+なお本ページが記録してきた「蒸留は多様性を狭める」（Z-Image で OneIG Diversity 0.194 → 0.139）という性質は、この回避策では戻らない。打ち消しているのは軌道の歪みであって、失われた分布の広がりではない。
 
 ## 既存知識との接続
 
