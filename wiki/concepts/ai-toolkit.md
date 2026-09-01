@@ -25,15 +25,15 @@ updated: 2026-08-26
 
 本 wiki は 2025–2026 の基盤モデルを 40 本近く取り込んできたが、**そのほとんどが ai-toolkit で学習可能な状態にある**。
 
-| wiki の要約 | `arch` | 特記 |
-| --- | --- | --- |
-| [[summaries/2025-flux2]] | `flux2` / `flux2_klein_4b` / `flux2_klein_9b` | **klein は base のみ**。蒸留版の arch は無い |
-| [[summaries/2025-z-image]] | `zimage` / `zimage_l2p` | **de-distillation アダプタあり**（Turbo を学習できる） |
-| [[summaries/2025-qwen-image]] / [[summaries/2026-qwen-image-2]] | `qwen_image` ほか 3 種 | 編集版も別 arch |
-| [[summaries/2026-ernie-image]] | `ernie_image` | |
-| [[summaries/2025-hidream-i1]] / [[summaries/2026-hidream-o1-image]] | `hidream` / `hidream_e1` / `hidream_o1` | |
-| [[summaries/2025-wan]] | `wan22_5b` / `wan22_14b` / `wan22_14b_i2v` | de-distillation アダプタあり |
-| [[summaries/2025-flux-kontext]] | `flux_kontext` | |
+| wiki の要約                                                            | `arch`                                        | 特記                                       |
+| ------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------- |
+| [[summaries/2025-flux2]]                                            | `flux2` / `flux2_klein_4b` / `flux2_klein_9b` | **klein は base のみ**。蒸留版の arch は無い        |
+| [[summaries/2025-z-image]]                                          | `zimage` / `zimage_l2p`                       | **de-distillation アダプタあり**（Turbo を学習できる） |
+| [[summaries/2025-qwen-image]] / [[summaries/2026-qwen-image-2]]     | `qwen_image` ほか 3 種                           | 編集版も別 arch                               |
+| [[summaries/2026-ernie-image]]                                      | `ernie_image`                                 |                                          |
+| [[summaries/2025-hidream-i1]] / [[summaries/2026-hidream-o1-image]] | `hidream` / `hidream_e1` / `hidream_o1`       |                                          |
+| [[summaries/2025-wan]]                                              | `wan22_5b` / `wan22_14b` / `wan22_14b_i2v`    | de-distillation アダプタあり                   |
+| [[summaries/2025-flux-kontext]]                                     | `flux_kontext`                                |                                          |
 
 **この表は「読んだ理論を試せるか」の地図として使える。** 逆に言えば、arch が無いモデルは自前で実装しない限り触れない。
 
